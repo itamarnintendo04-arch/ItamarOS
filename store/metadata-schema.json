@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "description": "Metadata for verified Windows installer listings. Unknown fields must remain null, never inferred.",
+  "fields": {
+    "id": "string",
+    "name": "string|null",
+    "publisher": "string|null",
+    "version": "string|null",
+    "iconUrl": "string|null",
+    "ageRating": "string|null",
+    "languages": "string[]",
+    "installerUrl": "string",
+    "installerType": "exe|msi",
+    "fileSizeBytes": "number|null",
+    "sha256": "string|null",
+    "signature": {
+      "status": "verified|invalid|unsigned|not_checked",
+      "subject": "string|null"
+    },
+    "source": "official|user_suggested",
+    "reviewStatus": "pending|approved|rejected",
+    "lastCheckedAt": "ISO8601|null"
+  }
+}
