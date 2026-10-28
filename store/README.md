@@ -18,3 +18,13 @@ The browser Store currently links to official developer sites and saves suggesti
 An EXE's resources may be missing, misleading or packed. The EXE may be a downloader rather than the full app. EXE/MSI files are Windows formats; the Linux desktop build would need a compatibility layer such as Wine, and compatibility is not guaranteed.
 
 The web emulator cannot install or execute EXE/MSI files.
+
+## First-party download architecture (planned, not deployed)
+
+The Store must serve approved installer bytes through an ItamarOS download endpoint rather than redirecting users to third-party developer pages. Downloads are fetched from publisher-approved sources, scanned, and stored in a private immutable object store, keyed by SHA-256. Publish only after human review, legal redistribution approval, and malware scanning. The catalog points to the approved immutable artifact; clients verify the hash after download. Use signed, short-lived download URLs or a streaming proxy, with rate limits and logging.
+
+The scanner must **not** be an unrestricted computer. Run static PE/MSI parsing in an unprivileged isolated worker with CPU, memory, file-size and time limits; optionally run behavioral analysis in a disposable VM without access to production credentials, internal network, or persistent volumes. Quarantine unreviewed submissions. Avoid executing unknown binaries on Render's production web service.
+
+Static analysis cannot reliably recover source code from compiled EXE files. Multiple scanners and sandbox observations reduce risk but cannot guarantee safety. A file must not be labeled “100% safe.” Reject or hold files with ambiguous or failed checks.
+
+This is an architecture specification only. There is currently no live scanner, no installer archive, no direct-download API, and no automated publication of submitted executables.
