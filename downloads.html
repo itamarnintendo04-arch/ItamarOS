@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Download ItamarOS · Official Releases</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#f1f6ff;background:#08162d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 80% 0,#294e91,#08162d 62%)}main{max-width:860px;margin:auto;padding:26px 20px 90px}
+nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}nav a{color:#c6dcff;text-decoration:none;padding:10px}
+h1{font-size:clamp(30px,6vw,50px);margin:64px 0 12px}.intro{font-size:18px;color:#c1d2ed;line-height:1.6}
+.card{background:#132c51c9;border:1px solid #47658d;border-radius:18px;padding:25px;margin:24px 0;box-shadow:0 14px 40px #030b2040}
+.card p{color:#c8d7ef;line-height:1.6}.badge{font-size:13px;background:#243f62;padding:8px 12px;border-radius:30px}
+.btn{display:inline-block;background:#82aafa;color:#071b39!important;border-radius:10px;text-decoration:none;padding:12px 18px;margin:5px 8px 5px 0;font-weight:650}
+.btn.alt{background:#284a76;color:#f6f9ff!important}.release{border-top:1px solid #47658d;padding:18px 0}.release h3{margin:0 0 7px}.release a{color:#bbdaff;overflow-wrap:anywhere}
+details{margin-top:16px}summary{cursor:pointer}footer{padding:24px 0;color:#99b7df;font-size:13px}
+</style>
+</head><body><main>
+<nav><strong>◈ ItamarOS</strong><div><a href="/">Web Emulator</a><a href="https://github.com/itamarnintendo04-arch/ItamarOS" target="_blank" rel="noopener noreferrer">GitHub repository</a></div></nav>
+<h1>ItamarOS downloads</h1>
+<p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
+<section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
+<section class="card" aria-live="polite"><h2>Release files</h2><p id="status">Checking GitHub Releases…</p><div id="releases"></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub</a></section>
+<section class="card"><h2>Installation support</h2><p>Desktop ISO, Android packages, TV packages and other system installers will only appear above after they are built, tested and published. A file appearing in GitHub is not proof of compatibility or safety.</p><a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/INSTALLATION.md" target="_blank" rel="noopener noreferrer" style="color:#c6dcff">Read installation guidance</a></section>
+<footer>ItamarOS is a development project. Do not overwrite an existing operating system without a verified compatible release and backup.</footer>
+</main><script>
+const api='https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases';
+const releaseRoot='https://github.com/itamarnintendo04-arch/ItamarOS/releases/';
+function addLink(parent,label,url){if(typeof url!=='string'||!url.startsWith(releaseRoot))return;const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=label;parent.append(a)}
+(async()=>{const status=document.getElementById('status'),root=document.getElementById('releases');try{const res=await fetch(api,{headers:{Accept:'application/vnd.github+json'}});if(!res.ok)throw Error('GitHub returned '+res.status);const releases=await res.json();if(!Array.isArray(releases))throw Error('Invalid release response');if(!releases.length){status.textContent='No release installers have been published yet.';return}status.textContent='Showing '+releases.length+' published release(s).';for(const release of releases){const section=document.createElement('div');section.className='release';const title=document.createElement('h3');title.textContent=release.name||release.tag_name||'Release';section.append(title);const assets=Array.isArray(release.assets)?release.assets:[];if(!assets.length){const p=document.createElement('p');p.textContent='No downloadable installation assets attached.';section.append(p)}else{const list=document.createElement('ul');for(const asset of assets){const item=document.createElement('li');addLink(item,asset.name||'Download',asset.browser_download_url);if(item.childNodes.length)list.append(item)}section.append(list)}const more=document.createElement('p');addLink(more,'Release notes',release.html_url);section.append(more);root.append(section)}}catch(e){status.textContent='Could not reach GitHub Releases: '+e.message+'. You can open GitHub directly using the button below.'}})();
+</script></body></html>
