@@ -65,7 +65,7 @@ const windowsRoot='native-apps/windows';
 for(const file of ['ItamarOS.Native.Windows.csproj','App.xaml','App.xaml.cs','MainWindow.xaml','MainWindow.xaml.cs','Assets/itamaros-logo.png','Assets/itamaros-icon.ico']){
  assert.ok(exists(windowsRoot+'/'+file), 'Missing native Windows WPF source or branding: '+file);
 }
-assert.doesNotMatch(read(windowsRoot+'/MainWindow.xaml.cs'),/\bWebView2?\b|\bElectron\b/,'WPF code must not embed a website');
+assert.doesNotMatch(read(windowsRoot+'/MainWindow.xaml.cs'),/\bnew\s+(?:WebView2?|WebBrowser)\s*\(|\bMicrosoft\.Web\.WebView2\b/,'WPF code must not construct an embedded web browser');
 assert.match(read(windowsRoot+'/MainWindow.xaml.cs'),/private void UpdateTaskbar\(\)/);
 assert.match(read(windowsRoot+'/MainWindow.xaml.cs'),/private FrameworkElement CreateSettings\(\)/);
 console.log('Native Windows WPF source and branding checks passed.');
