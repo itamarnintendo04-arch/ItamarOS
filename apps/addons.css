@@ -1,0 +1,42 @@
+
+/* ItamarOS integrated applications – shared responsive styles */
+.ios-feature{font:inherit;color:#1a2e4e;line-height:1.4}
+.ios-feature h2{margin:0 0 12px}
+.ios-feature .ios-row{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:10px 0}
+.ios-feature .ios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.ios-feature .ios-pane{background:#e6effb;border:1px solid #c9dcf5;border-radius:12px;padding:12px;margin:10px 0}
+.ios-feature .ios-btn,.ios-feature button{background:#e0ebfb;color:#173555;border:1px solid #b3c9e7;border-radius:8px;padding:9px 12px;min-height:40px;cursor:pointer}
+.ios-feature button:focus-visible{outline:3px solid #1474df}
+.ios-feature button:disabled{opacity:.45;cursor:default}
+.ios-feature input[type=range]{accent-color:#2878d4}
+.ios-feature label{font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ios-feature .ios-caption{color:#4c6381;font-size:13px}
+.ios-feature .ios-danger{color:#a62a2a}
+.ios-feature .ios-success{color:#166735}
+.ios-feature .ios-active{background:#295998!important;color:white!important}
+.ios-feature .ios-link{color:#165bb1;overflow-wrap:anywhere}
+.ios-feature .ios-notice{border:1px solid #b8cce7;border-radius:9px;padding:10px;background:#f2f7ff}
+.ios-feature .ios-list{list-style:none;padding:0;margin:10px 0;max-height:240px;overflow:auto}
+.ios-feature .ios-list li{border-bottom:1px solid #d0def0;display:flex;align-items:center;gap:8px;padding:6px}
+.ios-feature .ios-list li button:first-child{flex:1;text-align:left;overflow-wrap:anywhere}
+.ios-feature .ios-drop{padding:12px;border:2px dashed #93aed0;border-radius:12px;text-align:center;margin:12px 0}
+.ios-feature .ios-drop.dragging{border-color:#1973d1;background:#ddeaff}
+.ios-feature video{width:100%;background:#080e1b;border-radius:10px;max-height:min(52vh,430px)}
+.ios-feature .ios-board{display:grid;gap:7px;width:min(100%,390px);margin:15px auto}
+.ios-feature .ios-2048{grid-template-columns:repeat(4,1fr);background:#91a8c2;padding:10px;border-radius:13px}
+.ios-feature .ios-2048 div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:clamp(17px,4vw,31px);border-radius:8px;background:#c1d1e4;color:#143154}
+.ios-feature .ios-2048 div[data-number="2"],.ios-feature .ios-2048 div[data-number="4"]{background:#f4e2bb}
+.ios-feature .ios-2048 div[data-number="8"],.ios-feature .ios-2048 div[data-number="16"]{background:#f1ba86}
+.ios-feature .ios-2048 div[data-number="32"],.ios-feature .ios-2048 div[data-number="64"]{background:#e59c82}
+.ios-feature .ios-2048 div[data-number="128"],.ios-feature .ios-2048 div[data-number="256"],.ios-feature .ios-2048 div[data-number="512"],.ios-feature .ios-2048 div[data-number="1024"],.ios-feature .ios-2048 div[data-number="2048"]{background:#e2c56b}
+.ios-feature .ios-memory{grid-template-columns:repeat(4,minmax(0,1fr));max-width:380px}
+.ios-feature .ios-memory button{aspect-ratio:1;font-size:clamp(26px,5vw,39px);padding:2px;min-height:65px}
+.ios-feature .ios-memory button.found{background:#ceeacb}
+.ios-feature .ios-dpad{display:grid;grid-template-columns:repeat(3,70px);gap:6px;justify-content:center;margin:10px auto}
+.ios-feature .ios-dpad button{min-height:50px}
+.ios-feature .ios-snake{width:min(100%,410px);aspect-ratio:1;display:block;margin:10px auto;border-radius:10px;background:#112841;touch-action:none}
+#ios-update-toast{position:fixed;bottom:76px;right:18px;z-index:18;width:min(400px,calc(100vw - 30px));background:#f0f6ff;color:#132f53;border:1px solid #7f9cc9;border-radius:14px;padding:16px;box-shadow:0 12px 45px #0007}
+#ios-update-toast[hidden]{display:none}
+#ios-update-toast p{margin:8px 0}
+#ios-update-toast button{padding:9px 13px;margin:4px;background:#d9e9ff;border:1px solid #9ebbe3;border-radius:7px;color:#18385f;cursor:pointer}
+@media(max-width:500px){.ios-feature .ios-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ios-update-toast{right:9px;bottom:72px}.ios-feature .ios-memory button{min-height:55px}}
