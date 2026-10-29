@@ -17,7 +17,7 @@ lb config \
   --distribution trixie \
   --architectures amd64 \
   --binary-images iso-hybrid \
-  --bootloaders "grub-efi,syslinux" \
+  --bootloaders "grub-efi syslinux" \
   --archive-areas "main contrib non-free-firmware" \
   --debian-installer none \
   --iso-application "ItamarOS Linux Live $VERSION" \
@@ -26,6 +26,9 @@ lb config \
   --image-name "ItamarOS-$VERSION-amd64" \
   --memtest none
 cp -a "$SCRIPT_DIR/config/." config/
+# Bundle the already-reviewed web games assets for the native offline games hub.
+cp "$REPO_DIR/apps/games.js" config/includes.chroot/usr/local/share/itamaros/games.js
+cp "$REPO_DIR/apps/addons.css" config/includes.chroot/usr/local/share/itamaros/games.css
 echo "Starting live-build. This downloads many Debian packages and may take significant disk space."
 lb build
 shopt -s nullglob
