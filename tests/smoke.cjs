@@ -35,7 +35,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
+for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -46,6 +46,19 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 }
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
+assert.ok(html.includes('data-tv-only="true"'), 'TV Streaming must be TV-only in the desktop grid');
+assert.ok(html.includes("document.body.dataset.device==='tv'||n!=='TV Streaming'"), 'TV Streaming must be hidden from search on all other devices');
+assert.ok(html.includes("if(id==='streaming'&&document.body.dataset.device!=='tv')"), 'Direct launching must be blocked outside TV mode');
+assert.ok(load('desktop/prepare.cjs').includes('apps/tv-streaming.js'), 'Offline desktop package should include TV streaming script');
+assert.ok(load('sw.js').includes('/apps/tv-streaming.js?v=1.1.0'), 'PWA offline cache should include TV script');
+const downloads=load('downloads.html');
+assert.ok(downloads.includes('Windows demo security alert — download paused'));
+assert.ok(downloads.includes('EXE download on hold pending security review'));
+assert.ok(!downloads.includes("link(p,'Download Windows demo"), 'Do not offer a direct EXE download while antivirus alert is unresolved');
+const publishingWorkflow=load('.github/workflows/desktop-demo.yml');
+assert.ok(!publishingWorkflow.includes('gh release upload'), 'Disable auto-publish of unreviewed Windows EXE');
+assert.ok(publishingWorkflow.includes('Get-FileHash'), 'Test builds should have checksums');
+
 assert.ok(!html.includes("launch('itamio')"));
 assert.ok(html.includes('auto-device-label'));
 assert.ok(!html.includes('<select id="device-select"'));

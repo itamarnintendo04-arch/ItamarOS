@@ -62,3 +62,19 @@
 .brand-start-btn img{width:23px;height:23px;object-fit:contain}
 .about-brand-image{display:block;width:min(260px,75%);height:auto;margin:0 auto 16px}
 @media(max-width:600px){.itamaros-brand-mark{width:34px;height:34px}}
+
+/* Streaming is a television-only system app; never appears on desktop/phone/tablet. */
+body:not([data-device="tv"]) .app[data-tv-only="true"]{display:none!important}
+.tv-stream{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;color:#1c365a}
+.tv-stream h2{font-size:clamp(24px,3vw,38px);margin:0 0 12px}
+.tv-stream .tv-help{font-size:14px;color:#536984}
+.tv-region{font-weight:650;padding:12px 15px;background:#e1ecfa;border-radius:12px}
+.tv-region-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0}
+.tv-region-controls select{font:inherit;padding:12px;min-height:50px;border:1px solid #8baacd;border-radius:9px;background:white;color:#1b3655}
+.tv-platform{font-size:13px;color:#3f5b7a}
+.tv-stream-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0}
+.tv-stream button.tv-provider{min-height:118px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:15px;border-radius:16px!important;background:linear-gradient(138deg,#122e57,#1c4b83)!important;border:1px solid #547bad!important;color:#fff!important;font-weight:700;font-size:17px;cursor:pointer;box-shadow:0 6px 16px #061c3a25}
+.tv-stream .tv-provider:hover,.tv-stream .tv-provider:focus-visible{background:#2762a9!important;outline:4px solid #f9a54a;outline-offset:2px;transform:scale(1.02)}
+.tv-provider-mark{font-size:28px;display:grid;place-items:center;min-width:60px;min-height:56px;background:#ffffff1c;border-radius:12px;padding:4px}
+.tv-stream-status{background:#eaf2fb;border-left:4px solid #2576c0;border-radius:8px;padding:12px;min-height:54px}
+body[data-device="tv"] .tv-stream .tv-stream-list{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
