@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+# This hook does not partition or format disks; it only registers a user timer.
+install -d /etc/systemd/user/timers.target.wants
+ln -sfn ../itamaros-update-check.timer /etc/systemd/user/timers.target.wants/itamaros-update-check.timer
