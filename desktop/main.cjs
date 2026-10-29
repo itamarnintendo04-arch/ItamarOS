@@ -1,14 +1,51 @@
 'use strict';
 /* Secure, single-user Electron wrapper around the ItamarOS browser demo.
  * Never runs installers, changes partitions, or exposes a Node bridge. */
-const {app,BrowserWindow,shell}=require('electron');
+const {app,BrowserWindow,shell,ipcMain,session}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.svg':'image/svg+xml'};
 let local=null;
+let mainWindow=null;
+let youtubeWindow=null;
+let localOrigin='';
 const trustedExternal=u=>{try{const url=new URL(u);return url.protocol==='https:'}catch{return false}};
 async function openExternal(url){if(trustedExternal(url))await shell.openExternal(url)}
+
+function isYouTubeHost(host){
+ const h=String(host).toLowerCase();
+ return h==='youtube.com'||h.endsWith('.youtube.com')||h==='youtu.be';
+}
+function openYouTubeWebView(){
+ if(youtubeWindow&&!youtubeWindow.isDestroyed()){youtubeWindow.focus();return true}
+ const youtubeSession=session.fromPartition('persist:itamaros-youtube');
+ // WebView browsing cannot access the desktop OS without explicit trusted permissions.
+ youtubeSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
+ youtubeWindow=new BrowserWindow({
+   width:1160,height:760,minWidth:620,minHeight:450,
+   title:'YouTube WebView · ItamarOS',
+   backgroundColor:'#0c1020',autoHideMenuBar:true,
+   webPreferences:{
+     partition:'persist:itamaros-youtube',
+     nodeIntegration:false,contextIsolation:true,sandbox:true,
+     webSecurity:true,allowRunningInsecureContent:false,webviewTag:false
+   }
+ });
+ youtubeWindow.on('closed',()=>{youtubeWindow=null});
+ youtubeWindow.webContents.setWindowOpenHandler(({url})=>{
+   if(trustedExternal(url))openExternal(url).catch(()=>{});
+   return {action:'deny'}
+ });
+ youtubeWindow.webContents.on('will-navigate',(event,destination)=>{
+   let allowed=false;try{const u=new URL(destination);allowed=u.protocol==='https:'&&isYouTubeHost(u.hostname)}catch{}
+   if(!allowed){event.preventDefault();openExternal(destination).catch(()=>{})}
+ });
+ youtubeWindow.webContents.on('will-attach-webview',event=>event.preventDefault());
+ youtubeWindow.loadURL('https://www.youtube.com/').catch(()=>{if(youtubeWindow&&!youtubeWindow.isDestroyed())youtubeWindow.loadURL('https://www.youtube.com/').catch(()=>{})});
+ return true;
+}
+
 async function main(){
  const root=path.resolve(app.getAppPath(),'web');
  if(!fs.existsSync(path.join(root,'index.html')))throw Error('Missing packaged emulator files. Run npm start from the desktop directory.');
@@ -27,11 +64,20 @@ async function main(){
  const url='http://127.0.0.1:'+local.address().port+'/';
  const win=new BrowserWindow({width:1270,height:820,minWidth:850,minHeight:590,autoHideMenuBar:true,title:'ItamarOS Demo 1.1',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,preload:path.join(__dirname,'preload.cjs')}});
  const origin=new URL(url).origin;
+ localOrigin=origin;
+ mainWindow=win;
  win.webContents.setWindowOpenHandler(details=>{openExternal(details.url).catch(()=>{});return {action:'deny'}});
  win.webContents.on('will-navigate',(event,target)=>{if(new URL(target).origin!==origin){event.preventDefault();openExternal(target).catch(()=>{})}});
  win.webContents.on('will-redirect',(event,target)=>{if(new URL(target).origin!==origin){event.preventDefault();openExternal(target).catch(()=>{})}});
  await win.loadURL(url)
 }
-app.whenReady().then(main).catch(error=>{console.error(error);app.quit()});
+app.whenReady().then(()=>{
+  ipcMain.handle('itamaros:youtube-webview',event=>{
+    if(!mainWindow||mainWindow.isDestroyed()||event.sender!==mainWindow.webContents)return false;
+    try{if(new URL(event.senderFrame.url).origin!==localOrigin)return false}catch{return false}
+    return openYouTubeWebView()
+  });
+  return main();
+}).catch(error=>{console.error(error);app.quit()});
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',()=>{if(local)local.close()});
