@@ -14,6 +14,8 @@ npm start
 
 Build on Windows with `npm run build:win` for a portable `.exe` and on Linux with `npm run build:linux` for an AppImage. Result is in `desktop/build`. Generated binaries are **not** code-signed. Do not disable OS security warnings blindly: only use artifacts you trust and verify.
 
+The package includes 16 games, the Itamio video launcher, the demo player and update checks. A demo update only opens verified download listings; it never silently replaces its executable.
+
 The Electron process binds an ephemeral **localhost-only** HTTP port, serves an allowlisted set of bundled files, disables renderer Node access, and opens external HTTPS links in the system browser.
 
 ## Updates
