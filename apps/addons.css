@@ -125,3 +125,7 @@ body[data-contrast="high"]{filter:contrast(1.25)}
 .window{zoom:var(--it-scale,1)}
 @media(max-width:650px){.it-taskbar-apps{max-width:none;flex:1}.taskbar{gap:3px}.taskbar button.it-taskbar-app{min-width:37px;padding:4px}.it-settings{grid-template-columns:1fr;gap:5px}.it-settings-sidebar{max-height:142px;overflow:auto}.it-settings-tabs{display:flex;overflow-x:auto;gap:5px;padding-bottom:3px}.it-settings-tabs button{white-space:nowrap;flex:none}.it-settings-main h2{font-size:19px}}
 @media(min-width:1100px){.taskbar button.it-taskbar-app span{display:inline}}
+
+/* Only apps designed for TV remote and screen are shown on TV. */
+body[data-device="tv"] main.desktop .app:not([data-tv-compatible="true"]){display:none!important}
+header .site-repo-link[href="/feedback.html"]{display:inline-flex;align-items:center;border:1px solid #5b93d175;background:#0b366d70;border-radius:8px;padding:7px 12px}

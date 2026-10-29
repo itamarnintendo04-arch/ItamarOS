@@ -108,7 +108,7 @@ function renderCategory(){
  case 'apps':{
   const p=wrap('Apps & Taskbar','Pinned apps remain on your taskbar. Open apps appear there until closed.');
   const list=node('div',undefined,'it-settings-apps');
-  const ids=Object.keys(window.ItamarTaskbar?.labels||{}).filter(id=>id!=='welcome'&&(id!=='streaming'||document.body.dataset.device==='tv'));
+  const ids=Object.keys(window.ItamarTaskbar?.labels||{}).filter(id=>id!=='welcome'&&(document.body.dataset.device!=='tv'?id!=='streaming':['player','games','streaming','settings','browser','youtubewebview','weather','clock','about'].includes(id)));
   for(const id of ids){
    const item=node('label',undefined,'it-settings-app');
    const box=node('input');box.type='checkbox';box.checked=window.ItamarTaskbar?.getPinned?.().includes(id)||false;

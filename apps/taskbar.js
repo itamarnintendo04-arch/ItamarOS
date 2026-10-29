@@ -5,9 +5,10 @@ const KEY='itamaros-taskbar-v1';
 const DEFAULT=['files','browser','player','games','settings'];
 const LABELS={welcome:'Start',notes:'Notepad',files:'Files',terminal:'Terminal',calculator:'Calculator',browser:'Browser',settings:'Settings',store:'Store',player:'ItamarOS Player',games:'ItamarOS Games',youtubewebview:'YouTube WebView',github:'GitHub',streaming:'TV Streaming',weather:'Weather',contacts:'Contacts',journal:'Journal',converter:'Converter',passwords:'Password Tools',timer:'Timer',stopwatch:'Stopwatch',whiteboard:'Whiteboard',bookmarks:'Bookmarks',downloads:'Downloads',about:'About',shortcuts:'Shortcuts',reader:'Reader',random:'Random',colors:'Colors',json:'JSON Viewer'};
 const ICONS={welcome:'itamaros',notes:'notes',json:'json',streaming:'streaming',youtubewebview:'youtubewebview'};
-const supported=id=>Object.hasOwn(LABELS,id)&&!(id==='streaming'&&document.body.dataset.device!=='tv');
+const TV_SUPPORTED=new Set(['welcome','player','games','streaming','settings','browser','youtubewebview','weather','clock','about']);
+const supported=id=>Object.hasOwn(LABELS,id)&&(document.body.dataset.device==='tv'?TV_SUPPORTED.has(id):id!=='streaming');
 const $=id=>document.getElementById(id);
-function readPins(){try{const v=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(v))return [...new Set(v.filter(id=>typeof id==='string'&&supported(id)))].slice(0,30)}catch{}return DEFAULT.slice()}
+function readPins(){try{const v=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(v))return [...new Set(v.filter(id=>typeof id==='string'&&supported(id)))].slice(0,30)}catch{}return DEFAULT.filter(supported)}
 let pinned=readPins();const running=new Map();
 let active=null;
 let popup=null;
@@ -67,7 +68,7 @@ function togglePin(id){
  if(pinned.includes(id))pinned=pinned.filter(n=>n!==id);else pinned.push(id);
  savePins();render();window.dispatchEvent(new CustomEvent('itamaros:pins-changed',{detail:{pins:[...pinned]}}))
 }
-function resetPins(){pinned=DEFAULT.slice();savePins();render()}
+function resetPins(){pinned=DEFAULT.filter(supported);savePins();render()}
 function render(){
  const bar=$('taskbar-apps');if(!bar)return;bar.replaceChildren();
  const ids=[...new Set([...pinned,...running.keys()])].filter(supported);
