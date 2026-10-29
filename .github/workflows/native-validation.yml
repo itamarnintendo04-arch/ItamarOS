@@ -1,0 +1,29 @@
+name: Native ItamarOS Code Validation
+on:
+  push:
+    branches: [main, updates]
+    paths: ['native/**', 'tests/native-smoke.py', 'updates/native-stable.json', '.github/workflows/native-validation.yml']
+  pull_request:
+    branches: [main]
+    paths: ['native/**', 'tests/native-smoke.py', 'updates/native-stable.json', '.github/workflows/native-validation.yml']
+jobs:
+  validate-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Syntax check for Linux image build helper
+        run: bash -n native/build.sh
+      - name: Compile all native Python modules without executing installers
+        run: python -m compileall -q native/config/includes.chroot/usr/local/share/itamaros native/version.py
+      - name: Run read-only hardware and updater tests
+        run: python tests/native-smoke.py
+      - name: Verify app desktop links exist
+        run: |
+          test -f native/config/includes.chroot/usr/share/applications/itamaros-control-center.desktop
+          test -f native/config/includes.chroot/usr/share/applications/itamaros-preinstall.desktop
+          test -f native/config/includes.chroot/usr/share/applications/itamaros-games.desktop
+          test -f native/config/includes.chroot/usr/share/applications/itamaros-itamio.desktop
