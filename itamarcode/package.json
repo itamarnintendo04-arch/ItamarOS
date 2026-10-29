@@ -1,0 +1,78 @@
+{
+  "private": true,
+  "name": "itamarcode-desktop",
+  "productName": "ItamarCODE",
+  "version": "0.1.0",
+  "description": "Standalone desktop code editor based on Eclipse Theia; optional, not built into ItamarOS",
+  "main": "lib/backend/electron-main.js",
+  "license": "EPL-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0",
+  "theia": {
+    "target": "electron",
+    "frontend": {
+      "config": {
+        "applicationName": "ItamarCODE",
+        "reloadOnReconnect": true,
+        "electron": {
+          "appUserModelId": "org.itamaros.itamarcode"
+        }
+      }
+    },
+    "backend": {
+      "config": {
+        "frontendConnectionTimeout": -1,
+        "configurationFolder": ".itamarcode",
+        "resolveSystemPlugins": true
+      }
+    }
+  },
+  "scripts": {
+    "build": "theia build --app-target electron",
+    "rebuild": "theia rebuild:electron",
+    "start": "electron lib/backend/electron-main.js",
+    "dev": "yarn rebuild && yarn build && yarn start",
+    "validate": "node scripts/check-features.cjs"
+  },
+  "dependencies": {
+    "@theia/bulk-edit": "1.76.0",
+    "@theia/callhierarchy": "1.76.0",
+    "@theia/console": "1.76.0",
+    "@theia/core": "1.76.0",
+    "@theia/debug": "1.76.0",
+    "@theia/editor": "1.76.0",
+    "@theia/editor-preview": "1.76.0",
+    "@theia/electron": "1.76.0",
+    "@theia/file-search": "1.76.0",
+    "@theia/filesystem": "1.76.0",
+    "@theia/getting-started": "1.76.0",
+    "@theia/git": "1.76.0",
+    "@theia/keymaps": "1.76.0",
+    "@theia/markers": "1.76.0",
+    "@theia/messages": "1.76.0",
+    "@theia/mini-browser": "1.76.0",
+    "@theia/monaco": "1.76.0",
+    "@theia/navigator": "1.76.0",
+    "@theia/notebook": "1.76.0",
+    "@theia/outline-view": "1.76.0",
+    "@theia/output": "1.76.0",
+    "@theia/plugin-ext": "1.76.0",
+    "@theia/plugin-ext-vscode": "1.76.0",
+    "@theia/preferences": "1.76.0",
+    "@theia/process": "1.76.0",
+    "@theia/scm": "1.76.0",
+    "@theia/search-in-workspace": "1.76.0",
+    "@theia/task": "1.76.0",
+    "@theia/terminal": "1.76.0",
+    "@theia/typehierarchy": "1.76.0",
+    "@theia/variable-resolver": "1.76.0",
+    "@theia/vsx-registry": "1.76.0",
+    "@theia/workspace": "1.76.0"
+  },
+  "devDependencies": {
+    "@theia/cli": "1.76.0",
+    "electron": "42.8.1",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
