@@ -1,0 +1,8 @@
+{
+  "version": "1.1",
+  "channel": "stable",
+  "upstream": "Debian 13 Trixie",
+  "target": "amd64",
+  "buildType": "linux-live-preview",
+  "readyForInstall": false
+}
