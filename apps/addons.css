@@ -40,3 +40,11 @@
 #ios-update-toast p{margin:8px 0}
 #ios-update-toast button{padding:9px 13px;margin:4px;background:#d9e9ff;border:1px solid #9ebbe3;border-radius:7px;color:#18385f;cursor:pointer}
 @media(max-width:500px){.ios-feature .ios-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ios-update-toast{right:9px;bottom:72px}.ios-feature .ios-memory button{min-height:55px}}
+
+/* Scrolling desktop icon grid and compact equalizer sliders */
+.desktop{overflow-y:auto;overflow-x:hidden;max-height:calc(100dvh - 142px);scrollbar-width:thin}
+.ios-feature .ios-eq{align-items:flex-end}
+.ios-feature .ios-eq label{flex-direction:column;min-width:54px;max-width:70px;font-size:11px}
+.ios-feature .ios-eq input[type=range]{width:62px}
+.ios-feature .ios-eq select{max-width:170px}
+@media(max-width:600px){.desktop{max-height:calc(100dvh - 78px)}}
