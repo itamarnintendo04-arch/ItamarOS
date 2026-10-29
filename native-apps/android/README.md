@@ -9,7 +9,7 @@ This is **real native Kotlin / Jetpack Compose source**. It does not embed the I
 
 ## Build and install
 
-1. Open `native-apps/android` in a recent Android Studio with Android SDK 37 / JDK 17 and Gradle 9.3.1 supported by the selected Android Gradle Plugin.
+1. Open `native-apps/android` in a recent Android Studio with Android SDK 36 / JDK 17 and Gradle 9.3.1 supported by the selected Android Gradle Plugin.
 2. Sync Gradle. Use `gradle :app:assembleDebug` or Android Studio Build to create a **test APK**.
 3. Test on Android phone/tablet emulators and authorized Android TV emulator/hardware.
 4. Debug APK installation must use Android's normal developer/debug deployment; app store public distribution requires independent QA and signing. No APK or AAB has yet been published as a signed release.
