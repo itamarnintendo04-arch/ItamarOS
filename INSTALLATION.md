@@ -5,8 +5,8 @@
 | Package | Availability | What it does |
 |---|---|---|
 | Browser demo | [Open online](https://itamaros-web-emulator.onrender.com/) | Runs inside your current OS/browser. No installation or disk modifications. |
-| Windows demo app | [Check GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases) | Portable Electron shell showing the web demo. **Not a Linux installer.** |
-| Native ItamarOS Linux amd64 ISO | **Not yet built, boot-tested or released** | Source recipe at [native/](native/README.md). Do not treat it as ready for installation. |
+| Windows demo app | [Check GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases) | Portable Electron shell showing the web demo. **Not a PC OS installer.** |
+| Native ItamarOS PC amd64 ISO | **Not yet built, boot-tested or released** | Source recipe at [native/](native/README.md). Do not treat it as ready for installation. |
 | Android/iOS/iPadOS/TV native OS installer | **Not available** | Devices require separately supported kernels, bootloaders, drivers and software signing. |
 
 The current website **does not detect exact motherboard/CPU/RAM/storage/vendor** because web browsers restrict hardware access. The native ItamarOS installer obtains those details directly from Linux and displays them before Calamares opens.
@@ -27,7 +27,7 @@ The current website **does not detect exact motherboard/CPU/RAM/storage/vendor**
 
 ## How does update checking work?
 
-The native Linux edition has a user-session systemd timer that checks the official stable manifest after login and every 15 minutes. It can announce newer verified releases; it never silently downloads and executes installers. KDE Discover handles security and application updates from signed Debian repositories. If the device is shut down or offline, update checks cannot run until it is online.
+The native PC edition has a user-session systemd timer that checks the official stable manifest after login and every 15 minutes. It can announce newer verified releases; it never silently downloads and executes installers. KDE Discover handles security and application updates from signed Debian repositories. If the device is shut down or offline, update checks cannot run until it is online.
 
 The **web demo** uses a separate stable manifest and refreshes its website to update. The Windows desktop demo wraps the web experience, and an offline-capable emulator source also exists for Windows/Linux; neither is a self-updating native operating system.
 
