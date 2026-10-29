@@ -1,6 +1,10 @@
 package org.itamaros.nativeapp
 
 import android.os.Build
+import android.net.Uri
+import android.widget.VideoView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,6 +47,7 @@ fun NativeAppScreen(
     status: String,
     updateStatus: String,
     bestScore: Int,
+    selectedMedia: Uri?,
     onCheckUpdates: () -> Unit,
     onLaunchService: (String?, String) -> Unit,
     onChooseUSB: () -> Unit,
@@ -93,8 +98,22 @@ fun NativeAppScreen(
                     "Player" -> item {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Text("Native media", style = MaterialTheme.typography.headlineMedium)
-                            Text("Open audio or video with your installed Android player. No website or WebView is used.")
-                            Button(onClick = onChooseMedia) { Text("Choose local media") }
+                            Text("Local playback uses Android VideoView and the system MediaPlayer engine, not a website.")
+                            if (selectedMedia != null) {
+                                key(selectedMedia) {
+                                    AndroidView(
+                                        factory = { context ->
+                                            VideoView(context).apply {
+                                                setVideoURI(selectedMedia)
+                                                setMediaController(android.widget.MediaController(context))
+                                                setOnPreparedListener { start() }
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp)
+                                    )
+                                }
+                            }
+                            Button(onClick = onChooseMedia) { Text("Choose local audio/video") }
                         }
                     }
                     "Streaming" -> if (isTv) item {

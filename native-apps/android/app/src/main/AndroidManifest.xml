@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -19,8 +19,7 @@
         android:allowBackup="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
-        android:usesCleartextTraffic="false"
-        android:installLocation="auto">
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:screenOrientation="unspecified"

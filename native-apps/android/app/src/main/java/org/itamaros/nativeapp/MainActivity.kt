@@ -26,6 +26,8 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     private var status by mutableStateOf("Native app ready")
     private var selectedTree by mutableStateOf<Uri?>(null)
+    private var selectedMedia by mutableStateOf<Uri?>(null)
+    private var bestScore by mutableIntStateOf(0)
     private var updateStatus by mutableStateOf("Not checked yet")
     private var isTv = false
     private val prefs by lazy { getSharedPreferences("itamaros_native", MODE_PRIVATE) }
@@ -53,16 +55,11 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            // A native media player app handles the selected document, not a WebView.
             try {
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, contentResolver.getType(uri) ?: "video/*")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivity(intent)
-                status = "Media handed to a native Android player."
+                selectedMedia = uri
+                status = "Opened selected media inside ItamarOS native Android Player."
             } catch (e: Exception) {
-                status = "No compatible native media app installed."
+                status = "Unable to open local media: ${e.localizedMessage}"
             }
         }
     }
@@ -73,6 +70,7 @@ class MainActivity : ComponentActivity() {
         isTv = uiMode.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
             packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         selectedTree = prefs.getString("usbFolder", null)?.let(Uri::parse)
+        bestScore = prefs.getInt("bestGuess", 0)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 NativeAppScreen(
@@ -80,14 +78,18 @@ class MainActivity : ComponentActivity() {
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
-                    bestScore = prefs.getInt("bestGuess", 0),
+                    bestScore = bestScore,
+                    selectedMedia = selectedMedia,
                     onCheckUpdates = ::checkUpdates,
                     onLaunchService = ::launchTVService,
                     onChooseUSB = { chooseUSB.launch(null) },
                     onExport = ::exportToSelectedFolder,
                     onStorageSettings = ::openAppStorageSettings,
                     onChooseMedia = { chooseMedia.launch(arrayOf("audio/*", "video/*")) },
-                    onSaveScore = { value -> prefs.edit().putInt("bestGuess", value).apply() }
+                    onSaveScore = { value ->
+                        bestScore = value
+                        prefs.edit().putInt("bestGuess", value).apply()
+                    }
                 )
             }
         }
