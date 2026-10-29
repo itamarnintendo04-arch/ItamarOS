@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Clipora
+Comment=YouTube viewer using official embedded videos
+Exec=xdg-open file:///usr/local/share/itamaros/clipora.html
+Icon=applications-multimedia
+Terminal=false
+Categories=Network;Video;AudioVideo;
