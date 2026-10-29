@@ -47,7 +47,11 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
 assert.ok(html.includes('data-tv-only="true"'), 'TV Streaming must be TV-only in the desktop grid');
-assert.ok(html.includes("document.body.dataset.device==='tv'||n!=='TV Streaming'"), 'TV Streaming must be hidden from search on all other devices');
+assert.ok(html.includes("if(!tv&&n==='TV Streaming')return false"), 'TV Streaming must be hidden outside TV mode');
+assert.ok(html.includes("if(!btn?.dataset.tvCompatible)return false"), 'TV search should exclude apps without TV support');
+assert.ok(html.includes('data-tv-compatible="true"'), 'TV supported app flags must be present');
+assert.ok(html.includes('href="/feedback.html"'), 'Feedback nav link must be visible');
+assert.ok(html.includes("storeTab(\\'optional\\')"), 'Optional app store tab must be available');
 assert.ok(html.includes("if(id==='streaming'&&document.body.dataset.device!=='tv')"), 'Direct launching must be blocked outside TV mode');
 assert.ok(load('desktop/prepare.cjs').includes('apps/tv-streaming.js'), 'Offline desktop package should include TV streaming script');
 assert.ok(load('sw.js').includes('/apps/tv-streaming.js?v=1.1.0'), 'PWA offline cache should include TV script');
