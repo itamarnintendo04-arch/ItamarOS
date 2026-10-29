@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Games
+Comment=Play built-in browser games without installation
+Exec=xdg-open file:///usr/local/share/itamaros/games-extra.html
+Icon=applications-games
+Terminal=false
+Categories=Game;
