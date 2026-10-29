@@ -55,7 +55,7 @@ function setup(){
  const timers=new Map();let t=0;
  const setInterval=fn=>{timers.set(++t,fn);return t};
  const clearInterval=id=>timers.delete(id);
- const context={window:{},document,localStorage:storage,setInterval,clearInterval,setTimeout:setInterval,clearTimeout:clearInterval,confirm:()=>true,console};
+ const context={window:{},document,localStorage:storage,setInterval,clearInterval,setTimeout:setInterval,clearTimeout:clearInterval,confirm:()=>true,console,URL};
  return {content,document,data,timers,context};
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
