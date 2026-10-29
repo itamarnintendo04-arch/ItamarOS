@@ -19,10 +19,19 @@ struct NativeGameView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 26) {
-                    GroupBox("Number Guess") {
+                    VStack(spacing: 10) {
+                        Text("Number Guess").font(.title2.bold())
                         VStack(spacing: 14) {
                             Text(result)
+                            #if os(tvOS)
+                            HStack(spacing: 18) {
+                                Button("−") { guess = max(1, guess - 1) }
+                                Text("Guess: \(guess)").font(.title2)
+                                Button("+") { guess = min(20, guess + 1) }
+                            }
+                            #else
                             Stepper("Guess: \(guess)", value: $guess, in: 1...20)
+                            #endif
                             Button("Submit guess") { submitGuess() }
                                 .buttonStyle(.borderedProminent)
                             Text("Streak: \(streak) · Best: \(best)")
@@ -30,7 +39,9 @@ struct NativeGameView: View {
                         }
                         .padding()
                     }
-                    GroupBox("Tic-Tac-Toe · 2 players") {
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    VStack(spacing: 10) {
+                        Text("Tic-Tac-Toe · 2 players").font(.title2.bold())
                         VStack(spacing: 16) {
                             Text(winner.isEmpty ? "Turn: \(turn)" : "Result: \(winner)")
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
@@ -53,6 +64,7 @@ struct NativeGameView: View {
                         }
                         .padding()
                     }
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
                 .frame(maxWidth: 650)
                 .frame(maxWidth: .infinity)
