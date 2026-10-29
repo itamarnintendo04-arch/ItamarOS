@@ -17,7 +17,24 @@ function button(txt,fn){const b=el('button',txt);b.type='button';b.addEventListe
 function officialURL(v){try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='github.com'&&u.pathname.startsWith('/'+REPO+'/releases/download/')}catch{return false}}
 function validManifest(m){return m&&m.schemaVersion===1&&/^\d+\.\d+\.\d+$/.test(m.version)&&Array.isArray(m.components)&&m.components.every(c=>c&&typeof c.id==='string'&&/^\d+\.\d+\.\d+$/.test(c.version)&&['web'].includes(c.platform)&&['reload','bundled'].includes(c.delivery))}
 function newAvailable(){return latest&&compare(latest.version,BUILD)>0}
-function showToast(force=false){if(!newAvailable())return;const p=saved();if(!force&&p.deferVersion===latest.version&&Date.now()<(p.deferUntil||0))return;let root=id('ios-update-toast');if(!root){root=el('section');root.id='ios-update-toast';root.setAttribute('role','status');document.body.append(root)}root.replaceChildren();root.append(el('strong','ItamarOS update available: '+latest.version));root.append(el('p','A newer web version is ready. Installing the web update reloads this page; local saves stay on this device.'));root.append(button('Update now',applyUpdate));root.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});root.hidden=true}));root.append(button('View details',()=>{root.hidden=true;openSettings()}));root.hidden=false}
+function showToast(force=false){if(!newAvailable())return;const p=saved();if(!force&&p.deferVersion===latest.version&&Date.now()<(p.deferUntil||0))return;let root=id('ios-update-toast');if(!root){root=el('section');root.id='ios-update-toast';root.setAttribute('role','status');document.body.append(root)}root.replaceChildren();root.append(el('strong','ItamarOS update available: '+latest.version));root.append(el('p','A newer web version is ready. Installing the web update reloads this page; local saves stay on this device.'));root.append(button('Install update',applyUpdate));root.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});root.hidden=true}));root.append(button('View details',()=>{root.hidden=true;openSettings()}));root.hidden=false}
+function tryAutoWebUpdate(){
+ if(!newAvailable())return false;
+ const prefs=saved();
+ if(prefs.deferVersion===latest.version&&Date.now()<(prefs.deferUntil||0))return false;
+ const active=$('itamar-player')||$('itamar-games');
+ const focused=document.activeElement;
+ const editing=focused&&['INPUT','TEXTAREA','SELECT'].includes(focused.tagName);
+ if(active||editing||document.fullscreenElement)return false;
+ try{
+  if(sessionStorage.getItem('itamaros-auto-applied')===latest.version)return false;
+  sessionStorage.setItem('itamaros-auto-applied',latest.version);
+ }catch{return false}
+ const url=new URL(location.href);
+ url.searchParams.set('itamaros-update',Date.now().toString());
+ location.replace(url.href);
+ return true;
+}
 function applyUpdate(){if(!newAvailable())return;const msg='Update now? The page will reload. Unsaved edits and media playback may stop. Saved games and notes remain in this browser.';if(!confirm(msg))return;save({deferVersion:null,deferUntil:0});const u=new URL(location.href);u.searchParams.set('itamaros-update',Date.now().toString());location.replace(u.href)}
 async function check(manual=false){
  if(checking)return checking;
@@ -29,7 +46,7 @@ async function check(manual=false){
     const m=await response.json();if(!validManifest(m))throw Error('Invalid update manifest');
     latest=m;lastError='';lastCheck=Date.now();
     save({lastChecked:lastCheck});render();
-    if(newAvailable())showToast(manual);
+    if(newAvailable()){if(!manual&&tryAutoWebUpdate())return m;showToast(manual)}
     else if(manual)displayMessage('You have the latest web version ('+BUILD+').');
     return m;
    }catch(e){lastCheck=Date.now();lastError=e.message||'Unknown error';render();if(manual)displayMessage('Update check failed: '+lastError);return null}
