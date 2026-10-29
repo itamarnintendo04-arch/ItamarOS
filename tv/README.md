@@ -32,3 +32,7 @@ Official platform resources:
 ## Testing
 
 The `tests/tv-streaming.cjs` test validates timezone detection, country-specific service filtering, and platform launcher calls. Real-world native opening still requires testing on physical TVs with permitted app IDs.
+
+## New true native TV applications
+
+The native Apple TV app lives at [native-apps/apple/](../native-apps/apple/) and uses SwiftUI, no browser/WebView. A tvOS sandbox has no universal third-party application launcher, so catalog buttons explain opening the streaming provider from Apple TV Home. The native Android TV app lives at [native-apps/android/](../native-apps/android/) and can request installed TV app launch via Android PackageManager (with user-facing error when unavailable), select a USB data backup folder via SAF, and open official Android app storage settings where supported. Neither is a universal USB television firmware installer.

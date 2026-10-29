@@ -90,3 +90,18 @@ See [TV app integration notes](tv/README.md).
 ## Security notice — unsigned Windows EXE temporarily paused
 
 A user reported an Avast antivirus detection for the Windows desktop demo. We have **not** verified this file is safe or that the detection is mistaken. Do **not** bypass or disable antivirus. The official downloads page will not directly link to the affected EXE until investigated; automatic GitHub Release uploads for Windows were suspended. See [SECURITY.md](SECURITY.md) for the evidence needed (exact file, SHA-256, detection name and alert ID), independent verification and responsible review. The browser demo remains usable without executable downloads.
+
+## Native Apple and Android applications — source ready for validation
+
+The project now includes **independent real native app code** rather than WebView wrappers:
+
+- [SwiftUI native apps](native-apps/apple/) for **iPhone/iPad, Apple TV, Mac, Apple Watch and Apple Vision Pro**. iPhone/iPad and Mac support an in-app AVKit media player and local games. tvOS uses a native remote-friendly streaming catalog. The Apple TV app does not claim to control third-party installed apps, because tvOS does not expose a universal application launcher.
+- [Kotlin/Jetpack Compose native apps](native-apps/android/) for **Android phones/tablets and Android TV/Google TV**. Native VideoView, local games, device settings, TV-only installed-app launcher and Android Storage Access Framework external data export.
+- [Native app version manifest](updates/native-apps.json), explicitly marked **source-only**: there are currently **no verified signed APK/IPA releases**.
+- [USB and platform compatibility](native-apps/TV_COMPATIBILITY.md): Apple TV app relocation to USB and arbitrary USB TV OS replacement are unsupported; Android TV app movement depends on system support, and backup to user-selected USB folders may be supported.
+
+All editions use the original ItamarOS logo in **platform-appropriate icon sizes**. More Xcode/device tests and official signing and store distribution are required before a public installable package exists.
+
+## Taskbar and expanded settings
+
+The browser demo now has a Windows-like taskbar with pinned apps saved locally, automatic running-app indicators until apps are closed, minimize/restore, right-click to pin/unpin, and 16 settings categories for visual preferences, display scaling, audio, network status, storage, application pins, device details, account explanation, privacy, accessibility, time, power, software updates and local backup. These controls affect the demo only; the native PC system uses KDE for host-level hardware settings.
