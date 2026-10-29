@@ -28,3 +28,5 @@ These are official **project** assets; they do not imply completed operating sys
 3. Test in browsers and rebuild Windows/Mac/Linux desktop packages. Previously released EXE/DMG/AppImage binaries **do not change just because the website or GitHub source changes**.
 4. Only publish an OS ISO icon/splash after the image has actually been built and verified in a VM.
 
+
+For a smoother display of the full wordmark in the About screen, `itamaros-logo.webp` is a high-quality transparent 768px copy of the original. The `.png` remains a broad-compatibility and social-preview fallback.

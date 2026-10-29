@@ -5,7 +5,7 @@ const repo=path.resolve(__dirname,'..'),out=path.join(__dirname,'web');
 const list=['index.html','setup.html','downloads.html','manifest.webmanifest','sw.js',
 'apps/addons.css','apps/player.js','apps/games.js','apps/more-games.js','apps/updates.js',
 'assets/itamaros-icon.svg',
-'assets/branding/itamaros-logo.png','assets/branding/itamaros-mark-512.png',
+'assets/branding/itamaros-logo.png','assets/branding/itamaros-logo.webp','assets/branding/itamaros-mark-512.png',
 'assets/branding/itamaros-icon-192.png','assets/branding/itamaros-maskable-512.png',
 'assets/branding/itamaros-apple-touch-180.png','assets/branding/itamaros-favicon-32.png',
 'updates/stable.json','updates/native-stable.json'];
