@@ -26,6 +26,8 @@ lb config \
   --image-name "ItamarOS-$VERSION-amd64" \
   --memtest none
 cp -a "$SCRIPT_DIR/config/." config/
+# GitHub contents API files are not executable by default; make live-build hooks executable.
+find config/hooks -type f -name "*.hook.chroot" -exec chmod 0755 {} +
 # Bundle the already-reviewed web games assets for the native offline games hub.
 cp "$REPO_DIR/apps/games.js" config/includes.chroot/usr/local/share/itamaros/games.js
 cp "$REPO_DIR/apps/addons.css" config/includes.chroot/usr/local/share/itamaros/games.css
