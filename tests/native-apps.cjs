@@ -10,7 +10,7 @@ const platformManifest=JSON.parse(read('updates/native-apps.json'));
 assert.equal(platformManifest.version,'1.1.0');
 assert.equal(platformManifest.status,'source-only');
 assert.equal(platformManifest.signedBinariesPublished,false);
-assert.equal(platformManifest.components.length,7);
+assert.equal(platformManifest.components.length,8);
 assert.ok(platformManifest.components.every(c=>c.package===null),'Do not invent native downloadable binaries');
 
 const appleRoot='native-apps/apple';
@@ -60,3 +60,12 @@ assert.ok(read('apps/settings.js').includes("name:'Storage & Files'"));
 assert.ok(read('apps/settings.js').includes("name:'Apps & Taskbar'"));
 assert.ok(read('apps/settings.js').includes("name:'Accessibility'"));
 console.log('ItamarOS native Apple/Android sources, platform branding, taskbar, settings and USB compatibility assertions passed.');
+
+const windowsRoot='native-apps/windows';
+for(const file of ['ItamarOS.Native.Windows.csproj','App.xaml','App.xaml.cs','MainWindow.xaml','MainWindow.xaml.cs','Assets/itamaros-logo.png','Assets/itamaros-icon.ico']){
+ assert.ok(exists(windowsRoot+'/'+file), 'Missing native Windows WPF source or branding: '+file);
+}
+assert.doesNotMatch(read(windowsRoot+'/MainWindow.xaml.cs'),/\bWebView2?\b|\bElectron\b/,'WPF code must not embed a website');
+assert.match(read(windowsRoot+'/MainWindow.xaml.cs'),/private void UpdateTaskbar\(\)/);
+assert.match(read(windowsRoot+'/MainWindow.xaml.cs'),/private FrameworkElement CreateSettings\(\)/);
+console.log('Native Windows WPF source and branding checks passed.');

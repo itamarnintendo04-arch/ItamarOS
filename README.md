@@ -105,3 +105,5 @@ All editions use the original ItamarOS logo in **platform-appropriate icon sizes
 ## Taskbar and expanded settings
 
 The browser demo now has a Windows-like taskbar with pinned apps saved locally, automatic running-app indicators until apps are closed, minimize/restore, right-click to pin/unpin, and 16 settings categories for visual preferences, display scaling, audio, network status, storage, application pins, device details, account explanation, privacy, accessibility, time, power, software updates and local backup. These controls affect the demo only; the native PC system uses KDE for host-level hardware settings.
+
+- [Native Windows WPF desktop app](native-apps/windows/) provides a fully Windows-native UI without WebView/Electron, including pinned/running taskbar apps, local notes, native media controls, games and Windows host Settings launchers. This is a **source-only experimental build**; unsigned Windows executables remain on hold due to the reported Avast alert.
