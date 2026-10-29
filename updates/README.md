@@ -17,7 +17,7 @@ The deployed copy `/updates/stable.json` is a fallback only.
 
 ## Browser behavior
 
-The web app checks on load/return to foreground and periodically, and offers **Update now** or **Remind me later** if a newer web build is published. **Settings → Software Updates → Check for updates** triggers a fresh check. A browser update is a reload to the latest deployed web version. The browser cannot flash an OS, replace system apps or execute native installers.
+The web app checks on load/return to foreground and periodically, and automatically reloads when it is safe to do so. If a player, game, focused input or fullscreen session is active, it offers **Install update** or **Remind me later** instead. A session guard prevents infinite automatic reload loops if the manifest is published before the site deploy finishes. **Settings → Software Updates → Check for updates** triggers a fresh check. A browser update is a reload to the latest deployed web version; on active apps users can postpone it. The browser cannot flash an OS, replace system apps or execute native installers.
 
 For native ItamarOS editions, use the same release manifest as **metadata only**. A separately implemented native updater will need privileged package management, signed artifacts, digest/signature validation, compatibility enforcement, rollback and explicit user consent. No native updater or native installer has been built yet.
 
