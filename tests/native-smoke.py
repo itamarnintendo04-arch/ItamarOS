@@ -36,9 +36,9 @@ class NativeSmoke(unittest.TestCase):
             {"type": "part", "fstype": "ext4", "path": "/dev/sda4",
              "label": "Linux", "size": 1048576000, "mountpoints": ["/"], "ro": 0}
         ]}]}
-        with mock.patch.object(shared_storage.shutil, "which", return_value="/usr/bin/lsblk"), \\
-             mock.patch.object(shared_storage.subprocess, "run", return_value=SimpleNamespace(
-                 returncode=0, stdout=json.dumps(sample))) as ran:
+        with (mock.patch.object(shared_storage.shutil, "which", return_value="/usr/bin/lsblk"),
+              mock.patch.object(shared_storage.subprocess, "run", return_value=SimpleNamespace(
+                  returncode=0, stdout=json.dumps(sample))) as ran):
             items = shared_storage.discover()
             self.assertEqual(len(items), 1)
             self.assertEqual(items[0]["filesystem"], "ntfs")
