@@ -12,12 +12,16 @@ SECTIONS = [
     ("Display & Brightness", "screen", "Resolution, scaling, Night Color and multiple displays"),
     ("Sound & Microphone", "audio", "Speakers, microphone, output and input devices"),
     ("Network & Wi-Fi", "network", "Wi-Fi, Ethernet, VPN and hotspot"),
-    ("Bluetooth", "bluetooth", "Pair and manage Bluetooth devices"),
+    ("Bluetooth", "bluetooth", "Pair headphones, controllers, keyboards and other Bluetooth devices"),
+    ("Connected Devices & USB", "devices", "Inspect removable drives, peripherals and device information"),
     ("Power & Battery", "power", "Battery, sleep, lid and energy modes"),
-    ("Mouse & Touchpad", "input", "Pointer speed, taps and gestures"),
+    ("Mouse & Touchpad", "input", "Pointer speed, scrolling, tapping, clicks and gestures"),
+    ("Game Controllers", "controllers", "Controller support and device configuration"),
+    ("Touchscreen & Tablet", "tablet", "Touch input, stylus and connected drawing tablets"),
     ("Keyboard", "keyboard", "Layout, shortcuts and accessibility"),
     ("Printers & Scanners", "print", "Printers and scanning devices"),
     ("Storage & Disks", "storage", "Mounted devices, free capacity and disk information"),
+    ("Files & Backups", "files", "Browse files and configure backup destinations"),
     ("Accounts & Passwords", "users", "Users, account changes and passwords"),
     ("Language & Region", "locale", "Languages, fonts and regional formats"),
     ("Date & Time", "clock", "Clock, time zones and automatic time"),
@@ -26,6 +30,10 @@ SECTIONS = [
     ("Accessibility", "accessibility", "Screen reader, text and accessibility"),
     ("Appearance & Wallpapers", "appearance", "Theme, colors, wallpaper and icons"),
     ("Security & Firewall", "security", "Firewall and security through system settings"),
+    ("Camera", "camera", "Manage connected cameras and application access"),
+    ("Search & Indexing", "search", "File search, indexing and desktop search settings"),
+    ("Startup & Login", "startup", "Login screen, autostart apps and session management"),
+    ("Information & Firmware", "firmware", "Check firmware and connected device information"),
     ("Software Updates", "updates", "ItamarOS version checks and signed Debian updates"),
     ("Apps & App Store", "apps", "Install and manage apps through KDE Discover"),
     ("About & Hardware", "hardware", "CPU, RAM, disks, vendor and system information"),
@@ -57,7 +65,7 @@ def make() -> None:
     ttk.Label(header,
               text=f"{data['device_type'].title()}  ·  {data['architecture']}  ·  "
                    f"{data['cpu']}  ·  RAM {data['ram']}", wraplength=800).pack(anchor="w", pady=(8, 0))
-    ttk.Label(header, text="Native Linux computer settings; hardware information is read-only.",
+    ttk.Label(header, text="ItamarOS computer settings; hardware information is read-only.",
               foreground="#52657b").pack(anchor="w", pady=(8, 0))
     top_buttons = ttk.Frame(root, padding=(20, 4))
     top_buttons.pack(fill="x")
