@@ -13,7 +13,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/itamio.js','apps/updates.js','sw.js','desktop-app/main.js']){
+for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/itamio.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -24,6 +24,10 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 }
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
+assert.ok(html.includes("launch('itamio')"));
+assert.ok(html.includes('auto-device-label'));
+assert.ok(!html.includes('<select id="device-select"'));
+assert.equal(manifest.version,'1.1.0');
 assert.ok(html.includes("launch('itamio')"));
 assert.ok(!html.includes('id="device-select"'), 'Device layout must remain auto-detected');
 assert.ok(html.includes("Software Updates"));
@@ -43,7 +47,7 @@ class Element{
  load(){}
  getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
- querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if(selector==='[data-game]'&&e.dataset.game)found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
+ querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if((selector==='[data-game]'&&e.dataset.game)||(selector==='[data-mini]'&&e.dataset.mini))found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
 function setup(){
  const content=new Element();content.id='content';
@@ -60,8 +64,11 @@ function setup(){
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
 const game=setup();vm.runInNewContext(load('apps/games.js'),game.context);
+vm.runInNewContext(load('apps/more-games.js'),game.context);
 assert.equal(typeof game.context.window.ItamarGames.mount,'function');
 game.context.window.ItamarGames.mount();
+assert.equal(all(game.content,e=>Boolean(e.dataset.mini)).length,6,'Expected six extra game tabs');
+assert.equal(game.content.querySelectorAll('[data-mini]').length,6,'Extra game switcher accessible');
 let saved=JSON.parse(game.data.get('itamaros-games-v1'));
 assert.equal(saved.game2048.board.filter(Boolean).length,2);
 const tabs=all(game.content,e=>Boolean(e.dataset.game));tabs.find(e=>e.dataset.game==='snake').events.click();
@@ -96,4 +103,4 @@ assert.equal(itamio.context.window.Itamio.videoId('https://evil.example/watch?v=
 itamio.context.window.Itamio.mount();
 assert.ok(itamio.document.getElementById('itamio-app'));
 
-console.log('ItamarOS v'+manifest.version+': syntax, 10 games, player, Itamio and manifest checks passed.');
+console.log('ItamarOS v'+manifest.version+': syntax, 16 games, native/desktop launcher, Player, Itamio and manifest checks passed.');

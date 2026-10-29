@@ -12,7 +12,7 @@ This folder is a **source recipe**, not a built/tested operating-system installe
 - `itamaros-update-check.timer`: persistent per-user timer checks at login and every 15 minutes while the machine and user session are active. A powered-off computer cannot check.
 - ItamarOS Player: **VLC engine** launched from the desktop, giving actual VLC codec support on native Linux (subject to installed codecs/licensing). The separately written browser Player is a limited demo.
 - **Itamio**: a YouTube viewer/launcher for officially embedded videos, separate from YouTube and not an alternative hosting service.
-- ItamarOS Games: launch a local browser hub with offline HTML games and browser-stored scores.
+- ItamarOS Games: launch a local browser hub with 16 offline HTML mini-games and browser-stored scores.
 
 ## Build prerequisites (Debian 13 amd64 dedicated machine/VM)
 

@@ -17,9 +17,10 @@ function button(txt,fn){const b=el('button',txt);b.type='button';b.addEventListe
 function officialURL(v){try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='github.com'&&u.pathname.startsWith('/'+REPO+'/releases/download/')}catch{return false}}
 function validManifest(m){return m&&m.schemaVersion===1&&/^\d+\.\d+\.\d+$/.test(m.version)&&Array.isArray(m.components)&&m.components.every(c=>c&&typeof c.id==='string'&&/^\d+\.\d+\.\d+$/.test(c.version)&&['web'].includes(c.platform)&&['reload','bundled'].includes(c.delivery))}
 function newAvailable(){return latest&&compare(latest.version,BUILD)>0}
-function showToast(force=false){if(!newAvailable())return;const p=saved();if(!force&&p.deferVersion===latest.version&&Date.now()<(p.deferUntil||0))return;let root=id('ios-update-toast');if(!root){root=el('section');root.id='ios-update-toast';root.setAttribute('role','status');document.body.append(root)}root.replaceChildren();root.append(el('strong','ItamarOS update available: '+latest.version));root.append(el('p','A newer web version is ready. Installing the web update reloads this page; local saves stay on this device.'));root.append(button('Install update',applyUpdate));root.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});root.hidden=true}));root.append(button('View details',()=>{root.hidden=true;openSettings()}));root.hidden=false}
+function localDesktopDemo(){return window.ItamarRuntime?.edition==='desktop-demo'||location.hostname==='127.0.0.1'}
+function showToast(force=false){if(!newAvailable())return;const p=saved();if(!force&&p.deferVersion===latest.version&&Date.now()<(p.deferUntil||0))return;let root=id('ios-update-toast');if(!root){root=el('section');root.id='ios-update-toast';root.setAttribute('role','status');document.body.append(root)}root.replaceChildren();root.append(el('strong','ItamarOS update available: '+latest.version));root.append(el('p',localDesktopDemo()?'A newer version exists. This desktop demo cannot replace its own executable: download a verified installer from official GitHub Releases.':'A newer web version is ready. Installing the web update reloads this page; local saves stay on this device.'));root.append(button(localDesktopDemo()?'View downloads':'Install update',applyUpdate));root.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});root.hidden=true}));root.append(button('View details',()=>{root.hidden=true;openSettings()}));root.hidden=false}
 function tryAutoWebUpdate(){
- if(!newAvailable())return false;
+ if(!newAvailable()||localDesktopDemo())return false;
  const prefs=saved();
  if(prefs.deferVersion===latest.version&&Date.now()<(prefs.deferUntil||0))return false;
  const active=$('itamar-player')||$('itamar-games');
@@ -35,7 +36,7 @@ function tryAutoWebUpdate(){
  location.replace(url.href);
  return true;
 }
-function applyUpdate(){if(!newAvailable())return;const msg='Update now? The page will reload. Unsaved edits and media playback may stop. Saved games and notes remain in this browser.';if(!confirm(msg))return;save({deferVersion:null,deferUntil:0});const u=new URL(location.href);u.searchParams.set('itamaros-update',Date.now().toString());location.replace(u.href)}
+function applyUpdate(){if(!newAvailable())return;if(localDesktopDemo()){window.open('https://github.com/itamarnintendo04-arch/ItamarOS/releases','_blank','noopener');return}const msg='Update now? The page will reload. Unsaved edits and media playback may stop. Saved games and notes remain in this browser.';if(!confirm(msg))return;save({deferVersion:null,deferUntil:0});const u=new URL(location.href);u.searchParams.set('itamaros-update',Date.now().toString());location.replace(u.href)}
 async function check(manual=false){
  if(checking)return checking;
  checking=(async()=>{
@@ -74,9 +75,9 @@ function render(){
  root.append(status);
  const tools=el('div',undefined,'ios-row');
  tools.append(button('Check for updates',()=>check(true)));
- if(newAvailable()){tools.append(button('Update now',applyUpdate));tools.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});const toast=id('ios-update-toast');if(toast)toast.hidden=true;displayMessage('Reminder postponed for 24 hours.')}))}
+ if(newAvailable()){tools.append(button(localDesktopDemo()?'View downloads':'Update now',applyUpdate));tools.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});const toast=id('ios-update-toast');if(toast)toast.hidden=true;displayMessage('Reminder postponed for 24 hours.')}))}
  root.append(tools);
- root.append(el('p','When a new web version is published to GitHub and deployed on Render, it can be installed by reloading this page. Native OS packages require a separate signed system updater.','ios-caption'));
+ root.append(el('p',localDesktopDemo()?'Desktop demo packages must be updated using a verified published desktop release. This program cannot replace its own binary.':'When a new web version is published to GitHub and deployed on Render, it can be installed by reloading this page. Native OS packages require a separate signed system updater.','ios-caption'));
  const msg=el('p','','ios-caption');msg.id='ios-updates-message';root.append(msg);
  const headings=el('h3','Installed applications');root.append(headings);
  if(latest){for(const c of latest.components)rowComponent(root,c);

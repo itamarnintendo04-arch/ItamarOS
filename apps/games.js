@@ -26,6 +26,7 @@ function mount(){
  const area=make('div');area.id='itamar-game-area';wrapper.append(area);
  const foot=make('p','Saves are local to this browser. Clearing browser data also clears these saves.','ios-caption');wrapper.append(foot);
  switchTo(current);
+ if(window.ItamarMoreGames)window.ItamarMoreGames.mount(wrapper);
 }
 function switchTo(game){
  stopTimers();current=game;
