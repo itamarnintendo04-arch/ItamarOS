@@ -11,7 +11,7 @@ This folder is a **source recipe**, not a built/tested operating-system installe
 - `itamaros-updater`: check GitHub stable manifest, show a notification on newer version, and open KDE Discover to update through the signed Debian repository. **No unsigned arbitrary executable is downloaded or run.**
 - `itamaros-update-check.timer`: persistent per-user timer checks at login and every 15 minutes while the machine and user session are active. A powered-off computer cannot check.
 - ItamarOS Player: **VLC engine** launched from the desktop, giving actual VLC codec support on native Linux (subject to installed codecs/licensing). The separately written browser Player is a limited demo.
-- **Clipora**: a YouTube viewer/launcher for officially embedded videos, separate from YouTube and not an alternative hosting service.
+- **Itamio**: a YouTube viewer/launcher for officially embedded videos, separate from YouTube and not an alternative hosting service.
 - ItamarOS Games: launch a local browser hub with offline HTML games and browser-stored scores.
 
 ## Build prerequisites (Debian 13 amd64 dedicated machine/VM)
@@ -24,7 +24,7 @@ sudo apt install live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-
 sudo bash native/build.sh
 ```
 
-The output *if it successfully builds* is `dist/*.iso` and a matching `.sha256`. It is **not automatically released**, certified, signed, boot-tested or guaranteed to boot every computer. Perform a clean VM boot test and installer dry-run before distribution.
+The source build script bundles the offline game hub JavaScript and stylesheet from the main `apps/` folder. The output *if it successfully builds* is `dist/*.iso` and a matching `.sha256`. It is **not automatically released**, certified, signed, boot-tested or guaranteed to boot every computer. Perform a clean VM boot test and installer dry-run before distribution.
 
 ## Safe installation procedure — only after real, tested ISO release
 
