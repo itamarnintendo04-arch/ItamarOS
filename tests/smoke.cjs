@@ -13,7 +13,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/updates.js','sw.js']){
+for(const file of ['apps/player.js','apps/games.js','apps/itamio.js','apps/updates.js','sw.js','desktop-app/main.js']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -24,12 +24,15 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 }
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
+assert.ok(html.includes("launch('itamio')"));
+assert.ok(!html.includes('id="device-select"'), 'Device layout must remain auto-detected');
 assert.ok(html.includes("Software Updates"));
 assert.ok(load('apps/updates.js').includes("const BUILD='"+manifest.version+"'"));
 assert.ok(load('apps/updates.js').includes("/main/updates/stable.json"));
 
 class Element{
  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.events={};this.dataset={};this.style={};this.attrs={};this.textContent='';this.value='';this.id='';this.volume=1;this.paused=true;this.currentTime=0;this.duration=0;this.classList={add(){},remove(){},toggle(){},contains:()=>false}}
+ get childNodes(){return this.children}
  append(...nodes){this.children.push(...nodes);return this}
  replaceChildren(...nodes){this.children=[...nodes]}
  addEventListener(type,fn){this.events[type]=fn}
@@ -39,6 +42,7 @@ class Element{
  play(){this.paused=false;return Promise.resolve()}
  load(){}
  getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+ querySelector(selector){return this.querySelectorAll(selector)[0]||null}
  querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if(selector==='[data-game]'&&e.dataset.game)found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
 function setup(){
@@ -71,6 +75,11 @@ tabs.find(e=>e.dataset.game==='memory').events.click();
 saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.memory.cards.length,16);
 tabs.find(e=>e.dataset.game==='tictactoe').events.click();
 saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.tictactoe.board.length,9);
+assert.equal(tabs.length,10,'Expected ten no-install games');
+for(const extra of ['guess','reaction','rps','math','word','pattern']){
+ tabs.find(e=>e.dataset.game===extra).events.click();
+ assert.ok(all(game.content,e=>e.tagName==='H3').length>0,extra+' should render');
+}
 
 const player=setup();
 player.context.URL={createObjectURL:()=> 'blob:mock',revokeObjectURL(){}};
@@ -80,4 +89,11 @@ player.context.window.ItamarPlayer.mount();
 assert.equal(all(player.content,e=>e.tagName==='VIDEO').length,1);
 assert.ok(all(player.content,e=>e.tagName==='BUTTON').length>=10);
 
-console.log('ItamarOS v'+manifest.version+': syntax, manifest, games, player smoke tests passed.');
+const itamio=setup();itamio.context.window.open=()=>{};
+vm.runInNewContext(load('apps/itamio.js'),itamio.context);
+assert.equal(itamio.context.window.Itamio.videoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),'dQw4w9WgXcQ');
+assert.equal(itamio.context.window.Itamio.videoId('https://evil.example/watch?v=dQw4w9WgXcQ'),null);
+itamio.context.window.Itamio.mount();
+assert.ok(itamio.document.getElementById('itamio-app'));
+
+console.log('ItamarOS v'+manifest.version+': syntax, 10 games, player, Itamio and manifest checks passed.');
