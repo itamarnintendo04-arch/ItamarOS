@@ -30,3 +30,7 @@ These are official **project** assets; they do not imply completed operating sys
 
 
 For a smoother display of the full wordmark in the About screen, `itamaros-logo.webp` is a high-quality transparent 768px copy of the original. The `.png` remains a broad-compatibility and social-preview fallback.
+
+## Native Apple and Android logos
+
+New device-specific asset catalogs are in [Apple](../../native-apps/apple/) (iPhone/iPad, Apple TV, Mac, Apple Watch, Vision Pro), plus Android/Android TV resources in [Android](../../native-apps/android/). Apple iOS icons use a 1024px master export; tvOS has a wide icon and top-shelf art; Android TV has a wide 320×180 banner. Colors, identity and mark remain consistent across devices.

@@ -1,0 +1,41 @@
+name: Validate Native Apple
+on:
+  push:
+    branches: [main, updates]
+    paths:
+      - 'native-apps/apple/**'
+      - '.github/workflows/native-apple.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'native-apps/apple/**'
+      - '.github/workflows/native-apple.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apple-project-check:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate native SwiftUI project for Apple platforms
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: List targets
+        working-directory: native-apps/apple
+        run: xcodebuild -list -project ItamarOSNative.xcodeproj
+      - name: Compile native iPhone/iPad app (unsigned simulator)
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOSiOS -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Compile native Mac app (unsigned)
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOSmacOS -configuration Debug -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+      - name: Compile native Apple TV app (unsigned simulator)
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOStvOS -configuration Debug -sdk appletvsimulator -destination 'generic/platform=tvOS Simulator' CODE_SIGNING_ALLOWED=NO build

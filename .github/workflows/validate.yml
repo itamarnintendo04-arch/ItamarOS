@@ -20,3 +20,5 @@ jobs:
         run: |
           node tests/smoke.cjs
           node tests/tv-streaming.cjs
+          node tests/native-apps.cjs
+          node tests/taskbar.cjs
