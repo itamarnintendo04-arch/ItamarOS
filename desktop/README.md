@@ -33,3 +33,7 @@ The demo checks GitHub metadata while the app runs. A new version requires downl
 `.github/workflows/desktop-demo.yml` builds installable test artifacts on GitHub Actions. Test artifacts are not automatically advertised as stable Releases. Publish a GitHub Release only after Windows/Linux smoke testing, a human review and verifying checksums.
 
 The offline demo bundles unique original SVG icons for the protected core apps, which are not uninstallable from ItamarOS Store. This does not prevent someone from uninstalling the entire host operating-system app.
+
+## Branding
+
+Both offline Windows/Linux/Mac demos and the online Windows demo have the official ItamarOS emblem configured as their application icon. Mac packages use the 512px PNG input; Windows uses the multi-resolution `.ico`. Rebuild the desktop packages for the taskbar/launcher icon to change; existing binaries keep their old icon.

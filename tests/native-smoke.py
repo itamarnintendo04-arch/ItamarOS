@@ -66,6 +66,14 @@ class NativeSmoke(unittest.TestCase):
             self.assertFalse(info["update_available"])
             self.assertTrue(info["source_preview_only"])
 
+    def test_native_official_logo_assets(self):
+        self.assertTrue((ROOT / "native/config/includes.chroot/usr/share/pixmaps/itamaros.png").is_file())
+        self.assertTrue((ROOT / "native/config/includes.chroot/usr/share/icons/hicolor/512x512/apps/itamaros.png").is_file())
+        self.assertTrue((SOURCE / "about.py").is_file())
+        launcher = ROOT / "native/config/includes.chroot/usr/share/applications/itamaros-about.desktop"
+        self.assertIn("Icon=itamaros", launcher.read_text())
+        self.assertIn("About ItamarOS", json.loads((SOURCE / "builtins.json").read_text())["apps"])
+
     def test_native_manifests_are_valid(self):
         native = json.loads((ROOT / "updates/native-stable.json").read_text())
         self.assertEqual(native["version"], "1.1")

@@ -44,3 +44,7 @@ No auto-partitioning of a detected drive, silent erasure, bypassing boot protect
 ## Status
 
 **Unverified build recipe**: ISO and installer are *not yet available as downloadable ItamarOS releases*. Published GitHub Releases and checksums must be treated as the authoritative release source.
+
+## ItamarOS official logo
+
+The logo created for ItamarOS is installed at `/usr/share/pixmaps/itamaros.png` and as a freedesktop hicolor app icon at `/usr/share/icons/hicolor/512x512/apps/itamaros.png`. **About ItamarOS**, ItamarOS Control Center, and the preinstallation review display the same original blue/cyan emblem. These files are part of the native OS build's system-owned assets; the icon/launcher is not removable through the ItamarOS Store. A root administrator can still modify system files. Boot splash and full login theme integration will need separate testing on a bootable ISO.

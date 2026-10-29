@@ -61,6 +61,15 @@ def make() -> None:
     root.configure(bg="#e9f1fd")
     header = ttk.Frame(root, padding=20)
     header.pack(fill="x")
+    try:
+        brand = tk.PhotoImage(file="/usr/share/pixmaps/itamaros.png")
+        root.brand_icon = brand
+        root.iconphoto(True, brand)
+        compact = brand.subsample(max(1, brand.width() // 67))
+        root.brand_compact = compact
+        ttk.Label(header, image=compact).pack(side="left", padx=(0, 16))
+    except (tk.TclError, OSError):
+        pass
     ttk.Label(header, text=f"ItamarOS 1.1 — {name} {product}",
               font=("Sans", 18, "bold"), wraplength=840).pack(anchor="w")
     ttk.Label(header,
