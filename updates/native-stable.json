@@ -16,9 +16,35 @@
       "name": "ItamarOS Linux",
       "platform": "linux-amd64",
       "version": "1.1",
-      "status": "prototype",
+      "delivery": "system-image",
+      "status": "source-preview",
       "installerAsset": null,
       "sha256": null
+    },
+    {
+      "id": "itamio",
+      "name": "Itamio",
+      "platform": "linux-amd64",
+      "version": "1.1",
+      "delivery": "bundled",
+      "status": "source-preview"
+    },
+    {
+      "id": "itamaros-games",
+      "name": "ItamarOS Games",
+      "platform": "linux-amd64",
+      "version": "1.1",
+      "delivery": "bundled",
+      "status": "source-preview"
+    },
+    {
+      "id": "itamaros-player",
+      "name": "ItamarOS Player (VLC engine)",
+      "platform": "linux-amd64",
+      "version": "1.1",
+      "delivery": "debian-package",
+      "package": "vlc",
+      "status": "source-preview"
     }
   ],
   "installers": [],
