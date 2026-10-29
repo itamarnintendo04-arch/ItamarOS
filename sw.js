@@ -1,6 +1,6 @@
 /* Browser-only offline cache for static ItamarOS resources. No native OS updates. */
-const CACHE='itamaros-static-0.4.0';
-const FILES=['/','/index.html','/apps/addons.css?v=0.4.0','/apps/player.js?v=0.4.0','/apps/games.js?v=0.4.0','/apps/updates.js?v=0.4.0','/assets/itamaros-icon.svg','/manifest.webmanifest','/downloads.html','/setup.html'];
+const CACHE='itamaros-static-1.1.0';
+const FILES=['/','/index.html','/apps/addons.css?v=1.1.0','/apps/player.js?v=1.1.0','/apps/games.js?v=1.1.0','/apps/itamio.js?v=1.1.0','/apps/updates.js?v=1.1.0','/assets/itamaros-icon.svg','/updates/stable.json','/manifest.webmanifest','/downloads.html','/setup.html'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('itamaros-static-')&&key!==CACHE).map(key=>caches.delete(key)))));self.clients.claim()});
 self.addEventListener('fetch',event=>{
