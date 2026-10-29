@@ -1,7 +1,7 @@
 {
   "id": "/index.html",
-  "name": "ItamarOS 1.1 Web Demo",
-  "short_name": "ItamarOS 1.1",
+  "name": "ItamarOS 1.1 · Web Demo",
+  "short_name": "ItamarOS",
   "description": "Browser demo of ItamarOS 1.1. Not a native OS installer.",
   "start_url": "/",
   "scope": "/",
@@ -10,10 +10,28 @@
   "theme_color": "#1c4a8d",
   "icons": [
     {
+      "src": "/assets/branding/itamaros-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/branding/itamaros-mark-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/branding/itamaros-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/assets/itamaros-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

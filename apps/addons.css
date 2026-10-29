@@ -54,3 +54,11 @@
 .builtin-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .builtin-row strong{flex:1}
 .builtin-row button:disabled{opacity:.7;cursor:not-allowed;background:#e1e7f1;color:#35526e}
+
+/* Official ItamarOS master logo shared by site, desktop demo, mobile PWA and Linux. */
+.itamaros-brand-heading{display:flex;align-items:center;gap:10px;font-weight:750}
+.itamaros-brand-mark{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 4px 7px #001e5065)}
+.brand-start-btn{display:inline-flex;gap:6px;align-items:center;justify-content:center}
+.brand-start-btn img{width:23px;height:23px;object-fit:contain}
+.about-brand-image{display:block;width:min(260px,75%);height:auto;margin:0 auto 16px}
+@media(max-width:600px){.itamaros-brand-mark{width:34px;height:34px}}
