@@ -96,6 +96,39 @@ def device_category() -> str:
         return "desktop"
     return "computer"
 
+def battery_status() -> list[dict]:
+    """Read battery status from sysfs; no control or write access."""
+    root = Path("/sys/class/power_supply")
+    if not root.is_dir():
+        return []
+    result = []
+    try:
+        devices = list(root.iterdir())
+    except OSError:
+        return []
+    for device in devices:
+        if read(device / "type").lower() != "battery":
+            continue
+        try:
+            value = int(read(device / "capacity", "-1"))
+        except ValueError:
+            value = -1
+        result.append({
+            "name": device.name,
+            "charge_percent": value if 0 <= value <= 100 else None,
+            "status": read(device / "status", "Unknown"),
+        })
+    return result
+
+def graphics_devices() -> list[str]:
+    """Report graphics adapters for compatibility review."""
+    output = run(["lspci", "-mm"])
+    found = []
+    for line in output.splitlines():
+        if any(name in line.lower() for name in ("vga compatible", "3d controller", "display controller")):
+            found.append(line[:320])
+    return found[:8]
+
 def uptime_seconds() -> int:
     text = read(Path("/proc/uptime"))
     try:
@@ -121,7 +154,8 @@ def detect() -> dict:
         "ram_bytes": total_memory(),
         "ram": human_size(total_memory()),
         "kernel": platform.release(),
-        "graphics": run(["lspci", "-mm"])[:12000],
+        "graphics": graphics_devices(),
+        "batteries": battery_status(),
         "storage": physical_disks(),
         "network": sorted(x.name for x in Path("/sys/class/net").iterdir() if x.name != "lo") if Path("/sys/class/net").exists() else [],
         "desktop": os.environ.get("XDG_CURRENT_DESKTOP", "Unknown"),
