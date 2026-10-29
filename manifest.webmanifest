@@ -1,8 +1,8 @@
 {
   "id": "/index.html",
-  "name": "ItamarOS Web Emulator",
-  "short_name": "ItamarOS",
-  "description": "ItamarOS web emulator with a player and offline-capable games",
+  "name": "ItamarOS 1.1 Web Demo",
+  "short_name": "ItamarOS 1.1",
+  "description": "Browser demo of ItamarOS 1.1. Not a native OS installer.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
