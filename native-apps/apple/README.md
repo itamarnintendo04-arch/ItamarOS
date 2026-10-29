@@ -2,7 +2,7 @@
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
-**Targets:** `ItamarOSiOS` for iOS/iPadOS 17+, `ItamarOStvOS` for tvOS 17+. Support for each actual device depends on the platform SDK and available Apple developer signing. The Apple App Store's app thinning selects architecture/device-appropriate assets once a signed app is published. See `project.yml`.
+**Targets:** `ItamarOSiOS` for iOS/iPadOS 17+, `ItamarOStvOS` for tvOS 17+, `ItamarOSmacOS` for macOS 14+, `ItamarOSvisionOS` for visionOS 2+, and `ItamarOSwatchOS` for watchOS 10+. watchOS uses its own SwiftUI Watch app; other targets share the native SwiftUI implementation. Support depends on an appropriate SDK and developer signing. The Apple App Store's app thinning selects architecture/device-appropriate assets once a signed app is published. See `project.yml`.
 
 ## Build on Mac
 
@@ -25,3 +25,5 @@ The original ItamarOS blue/cyan emblem is used in the `BrandMark` asset, 1024px 
 - Does **not** install ItamarOS as a replacement for iOS/tvOS, mount USB drives as an app install destination or modify system Settings. No universal USB OS installer exists for Apple TV.
 
 Privacy: no location permission, no account requirement, and no private device data sent to ItamarOS services.
+
+Additional targets include a standalone native **macOS** app (not Electron), **Apple Watch** with a compact native game, and **visionOS**. HomePod does not accept general-purpose third-party apps. These new targets are **source code only**, not validated signed apps or App Store listings.

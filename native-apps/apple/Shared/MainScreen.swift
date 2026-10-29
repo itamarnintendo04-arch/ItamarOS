@@ -36,7 +36,11 @@ struct DashboardView: View {
                     Text("Native app • Version 1.1")
                         .foregroundStyle(.secondary)
                     #if os(tvOS)
-                    Label("Designed for Apple TV remote and tvOS", systemImage: "play.tv")
+                    Label("Native Apple TV app with remote support", systemImage: "play.tv")
+                    #elseif os(macOS)
+                    Label("Native macOS app using SwiftUI", systemImage: "desktopcomputer")
+                    #elseif os(visionOS)
+                    Label("Native Apple Vision Pro app", systemImage: "visionpro")
                     #else
                     Label("Built for iPhone and iPad with SwiftUI", systemImage: "iphone")
                     #endif

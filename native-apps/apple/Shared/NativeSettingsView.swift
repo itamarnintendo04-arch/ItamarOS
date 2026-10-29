@@ -22,6 +22,10 @@ struct NativeSettingsView: View {
                 Section("Device") {
                     #if os(tvOS)
                     LabeledContent("Platform", value: "Apple TV · tvOS")
+                    #elseif os(macOS)
+                    LabeledContent("Platform", value: "Mac · macOS")
+                    #elseif os(visionOS)
+                    LabeledContent("Platform", value: "Apple Vision Pro · visionOS")
                     #else
                     LabeledContent("Platform", value: "iPhone / iPad · iOS / iPadOS")
                     #endif
