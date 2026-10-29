@@ -1,0 +1,20 @@
+name: Validate ItamarOS
+on:
+  push:
+    branches: [main, updates]
+  pull_request:
+    branches: [main]
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          for file in apps/*.js sw.js; do node --check "$file"; done
+      - name: Run smoke tests
+        run: node tests/smoke.cjs

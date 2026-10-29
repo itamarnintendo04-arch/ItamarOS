@@ -1,0 +1,19 @@
+{
+  "id": "/index.html",
+  "name": "ItamarOS Web Emulator",
+  "short_name": "ItamarOS",
+  "description": "ItamarOS web emulator with a player and offline-capable games",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1c3a",
+  "theme_color": "#1c4a8d",
+  "icons": [
+    {
+      "src": "/assets/itamaros-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
