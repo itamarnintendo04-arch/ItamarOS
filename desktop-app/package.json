@@ -1,0 +1,43 @@
+{
+  "name": "itamaros-web-demo",
+  "version": "1.1.0",
+  "description": "ItamarOS web emulator desktop companion; not a native operating system",
+  "private": true,
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "org.itamaros.webdemo",
+    "productName": "ItamarOS Demo",
+    "asar": true,
+    "files": [
+      "main.js",
+      "assets/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}"
+    },
+    "extraMetadata": {
+      "description": "Browser emulator only — does not install or replace a real operating system"
+    }
+  }
+}
