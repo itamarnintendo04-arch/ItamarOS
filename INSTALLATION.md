@@ -29,7 +29,7 @@ The current website **does not detect exact motherboard/CPU/RAM/storage/vendor**
 
 The native Linux edition has a user-session systemd timer that checks the official stable manifest after login and every 15 minutes. It can announce newer verified releases; it never silently downloads and executes installers. KDE Discover handles security and application updates from signed Debian repositories. If the device is shut down or offline, update checks cannot run until it is online.
 
-The **web demo** uses a separate stable manifest and refreshes its website to update. The Windows desktop demo wraps the web experience; it is **not** a self-updating native operating system.
+The **web demo** uses a separate stable manifest and refreshes its website to update. The Windows desktop demo wraps the web experience, and an offline-capable emulator source also exists for Windows/Linux; neither is a self-updating native operating system.
 
 ## Version numbering
 
