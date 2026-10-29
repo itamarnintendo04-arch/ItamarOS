@@ -59,7 +59,7 @@ public partial class MainWindow : Window
 
     private Button Button(string text, Action action) {
         var b = new Button {
-            Content = text, Padding = new Thickness(15, 9),
+            Content = text, Padding = new Thickness(15, 9, 15, 9),
             Margin = new Thickness(6), MinHeight = 38
         };
         b.Click += (_, _) => action();
