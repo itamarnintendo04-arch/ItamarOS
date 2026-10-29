@@ -34,7 +34,8 @@
           ]
         }
       ],
-      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}"
+      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}",
+      "icon": "assets/itamaros-icon.ico"
     },
     "extraMetadata": {
       "description": "Browser emulator only — does not install or replace a real operating system"

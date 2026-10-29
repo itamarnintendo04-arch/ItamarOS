@@ -4,7 +4,11 @@ const fs=require('node:fs'),path=require('node:path');
 const repo=path.resolve(__dirname,'..'),out=path.join(__dirname,'web');
 const list=['index.html','setup.html','downloads.html','manifest.webmanifest','sw.js',
 'apps/addons.css','apps/player.js','apps/games.js','apps/more-games.js','apps/updates.js',
-'assets/itamaros-icon.svg','updates/stable.json','updates/native-stable.json'];
+'assets/itamaros-icon.svg',
+'assets/branding/itamaros-logo.png','assets/branding/itamaros-mark-512.png',
+'assets/branding/itamaros-icon-192.png','assets/branding/itamaros-maskable-512.png',
+'assets/branding/itamaros-apple-touch-180.png','assets/branding/itamaros-favicon-32.png',
+'updates/stable.json','updates/native-stable.json'];
 for(const icon of fs.readdirSync(path.join(repo,'assets','icons'))){if(icon.endsWith('.svg'))list.push('assets/icons/'+icon)}
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(out,{recursive:true});
 for(const relative of list){const source=path.resolve(repo,relative);

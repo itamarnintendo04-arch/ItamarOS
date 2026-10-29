@@ -11,6 +11,7 @@ function makeWindow(){
  const win=new BrowserWindow({
   width:1280,height:800,minWidth:720,minHeight:540,backgroundColor:'#0b1b35',
   title:'ItamarOS Demo 1.1',autoHideMenuBar:true,show:false,
+  icon:path.join(__dirname,'assets','itamaros-icon.ico'),
   webPreferences:{
    nodeIntegration:false,contextIsolation:true,sandbox:true,
    webSecurity:true,allowRunningInsecureContent:false,webviewTag:false,
@@ -31,6 +32,7 @@ function makeWindow(){
  return win;
 }
 app.whenReady().then(()=>{
+ if(process.platform==='win32')app.setAppUserModelId('org.itamaros.webdemo');
  session.defaultSession.setPermissionRequestHandler((contents,permission,callback)=>{
   // The web demo does not require webcam/mic/geolocation notifications by default.
   callback(false);

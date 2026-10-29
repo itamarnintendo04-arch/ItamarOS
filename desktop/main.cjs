@@ -5,7 +5,7 @@ const {app,BrowserWindow,shell,ipcMain,session}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.svg':'image/svg+xml'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 let local=null;
 let mainWindow=null;
 let youtubeWindow=null;
@@ -24,7 +24,7 @@ function openYouTubeWebView(){
  youtubeSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
  youtubeWindow=new BrowserWindow({
    width:1160,height:760,minWidth:620,minHeight:450,
-   title:'YouTube WebView · ItamarOS',
+   title:'YouTube WebView · ItamarOS',icon:path.join(__dirname,'assets','itamaros-mark-512.png'),
    backgroundColor:'#0c1020',autoHideMenuBar:true,
    webPreferences:{
      partition:'persist:itamaros-youtube',
@@ -62,7 +62,7 @@ async function main(){
  });
  await new Promise((resolve,reject)=>{local.once('error',reject);local.listen(0,'127.0.0.1',resolve)});
  const url='http://127.0.0.1:'+local.address().port+'/';
- const win=new BrowserWindow({width:1270,height:820,minWidth:850,minHeight:590,autoHideMenuBar:true,title:'ItamarOS Demo 1.1',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,preload:path.join(__dirname,'preload.cjs')}});
+ const win=new BrowserWindow({width:1270,height:820,minWidth:850,minHeight:590,autoHideMenuBar:true,title:'ItamarOS Demo 1.1',icon:path.join(__dirname,'assets','itamaros-mark-512.png'),webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,preload:path.join(__dirname,'preload.cjs')}});
  const origin=new URL(url).origin;
  localOrigin=origin;
  mainWindow=win;
