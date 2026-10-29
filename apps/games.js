@@ -31,7 +31,7 @@ function switchTo(game){
  stopTimers();current=game;
  for(const b of root?.querySelectorAll('[data-game]')||[])b.classList.toggle('ios-active',b.dataset.game===game);
  const area=$('itamar-game-area');if(!area)return;area.replaceChildren();
- if(game==='2048')render2048();else if(game==='snake')renderSnake();else if(game==='memory')renderMemory();else renderTicTacToe();
+ if(game==='2048')render2048();else if(game==='snake'){saveData.snake.running=false;save();renderSnake()}else if(game==='memory'){showing=[];renderMemory()}else renderTicTacToe();
 }
 function reset2048(){const game=saveData.game2048={board:empty2048(),score:0,over:false};spawn(game.board);spawn(game.board);save();render2048()}
 function spawn(board){const spots=[];for(let i=0;i<16;i++)if(board[i]===0)spots.push(i);if(!spots.length)return false;const pos=spots[Math.floor(Math.random()*spots.length)];board[pos]=Math.random()<.9?2:4;return true}
@@ -95,7 +95,7 @@ function drawSnake(){
 }
 function renderSnake(){
  const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
- const g=saveData.snake;g.running=false;save();
+ const g=saveData.snake;
  a.append(make('h3','Snake'));
  const score=make('p','', 'ios-caption');score.id='snake-score';a.append(score);
  const c=make('canvas',undefined,'ios-snake');c.id='snake-board';c.width=400;c.height=400;c.setAttribute('aria-label','Snake play board');a.append(c);drawSnake();updateSnakeText();
@@ -147,7 +147,7 @@ function renderTicTacToe(){
  a.append(button('Next round',()=>{g.board=Array(9).fill('');g.turn='X';g.winner='';save();renderTicTacToe()}));
 }
 document.addEventListener('keydown',event=>{
- if(!root||!document.contains(root)||$('window')?.classList.contains('hidden'))return;
+ if(!root||!$('itamar-games')||!document.contains(root)||$('window')?.classList.contains('hidden'))return;
  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
  const dirs={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
  if(!dirs[event.code])return;
