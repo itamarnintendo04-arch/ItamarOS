@@ -1,0 +1,83 @@
+/* Static build checks and isolated UI smoke tests; no third-party dependencies. */
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const load=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
+const manifest=JSON.parse(load('updates/stable.json'));
+const pwa=JSON.parse(load('manifest.webmanifest'));
+const html=load('index.html');
+assert.equal(manifest.schemaVersion,1);
+assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
+assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
+assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
+assert.equal(pwa.display,'standalone');
+for(const file of ['apps/player.js','apps/games.js','apps/updates.js','sw.js']){
+ new vm.Script(load(file),{filename:file});
+}
+const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
+while((m=inline.exec(html))!==null){if(m[1].trim()){new vm.Script(m[1],{filename:'index-inline-'+(++count)})}}
+assert.ok(count>=2,'Expected inline application initialization scripts');
+for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
+ const file=m[1].split('?')[0].replace(/^\//,'');assert.ok(fs.existsSync(path.join(__dirname,'..',file)),'Missing script '+file);
+}
+assert.ok(html.includes("launch('player')"));
+assert.ok(html.includes("launch('games')"));
+assert.ok(html.includes("Software Updates"));
+assert.ok(load('apps/updates.js').includes("const BUILD='"+manifest.version+"'"));
+assert.ok(load('apps/updates.js').includes("/main/updates/stable.json"));
+
+class Element{
+ constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.events={};this.dataset={};this.style={};this.attrs={};this.textContent='';this.value='';this.id='';this.volume=1;this.paused=true;this.currentTime=0;this.duration=0;this.classList={add(){},remove(){},toggle(){},contains:()=>false}}
+ append(...nodes){this.children.push(...nodes);return this}
+ replaceChildren(...nodes){this.children=[...nodes]}
+ addEventListener(type,fn){this.events[type]=fn}
+ setAttribute(n,v){this.attrs[n]=v}
+ removeAttribute(n){delete this[n]}
+ pause(){this.paused=true}
+ play(){this.paused=false;return Promise.resolve()}
+ load(){}
+ getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+ querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if(selector==='[data-game]'&&e.dataset.game)found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
+}
+function setup(){
+ const content=new Element();content.id='content';
+ const win=new Element();win.id='window';
+ const scan=(id,node)=>{if(node.id===id)return node;for(const c of node.children)if(c instanceof Element){const result=scan(id,c);if(result)return result}return null};
+ const document={createElement:tag=>new Element(tag),getElementById:id=>scan(id,content)||(id==='window'?win:null),contains:()=>true,addEventListener(){},activeElement:{tagName:'BODY'}};
+ const data=new Map();
+ const storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
+ const timers=new Map();let t=0;
+ const setInterval=fn=>{timers.set(++t,fn);return t};
+ const clearInterval=id=>timers.delete(id);
+ const context={window:{},document,localStorage:storage,setInterval,clearInterval,setTimeout:setInterval,clearTimeout:clearInterval,confirm:()=>true,console};
+ return {content,document,data,timers,context};
+}
+function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
+const game=setup();vm.runInNewContext(load('apps/games.js'),game.context);
+assert.equal(typeof game.context.window.ItamarGames.mount,'function');
+game.context.window.ItamarGames.mount();
+let saved=JSON.parse(game.data.get('itamaros-games-v1'));
+assert.equal(saved.game2048.board.filter(Boolean).length,2);
+const tabs=all(game.content,e=>Boolean(e.dataset.game));tabs.find(e=>e.dataset.game==='snake').events.click();
+assert.ok(game.document.getElementById('snake-board'));
+const start=all(game.content,e=>e.textContent==='Start / Pause')[0];assert.ok(start);
+start.events.click();
+saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.snake.running,true);
+const before=saved.snake.body[0].x;const tick=[...game.timers.values()][0];assert.equal(typeof tick,'function');tick();
+saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.snake.body[0].x,before+1);
+tabs.find(e=>e.dataset.game==='memory').events.click();
+saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.memory.cards.length,16);
+tabs.find(e=>e.dataset.game==='tictactoe').events.click();
+saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.tictactoe.board.length,9);
+
+const player=setup();
+player.context.URL={createObjectURL:()=> 'blob:mock',revokeObjectURL(){}};
+player.context.Blob=class BlobMock{};
+vm.runInNewContext(load('apps/player.js'),player.context);
+player.context.window.ItamarPlayer.mount();
+assert.equal(all(player.content,e=>e.tagName==='VIDEO').length,1);
+assert.ok(all(player.content,e=>e.tagName==='BUTTON').length>=10);
+
+console.log('ItamarOS v'+manifest.version+': syntax, manifest, games, player smoke tests passed.');
