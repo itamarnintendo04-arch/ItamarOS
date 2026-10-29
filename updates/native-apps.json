@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "channel": "development",
+  "version": "1.1.0",
+  "publishedAt": "2026-10-29",
+  "status": "source-only",
+  "signedBinariesPublished": false,
+  "source": "https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native-apps",
+  "components": [
+    {
+      "id": "itamaros-ios",
+      "name": "ItamarOS for iPhone/iPad",
+      "platform": "ios-ipados",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-tvos",
+      "name": "ItamarOS for Apple TV",
+      "platform": "tvos",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-macos-native",
+      "name": "ItamarOS Native for Mac",
+      "platform": "macos",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-watchos",
+      "name": "ItamarOS for Apple Watch",
+      "platform": "watchos",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-visionos",
+      "name": "ItamarOS for Apple Vision Pro",
+      "platform": "visionos",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-android",
+      "name": "ItamarOS for Android phones and tablets",
+      "platform": "android",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    },
+    {
+      "id": "itamaros-android-tv",
+      "name": "ItamarOS for Android TV",
+      "platform": "android-tv",
+      "version": "1.1.0",
+      "releaseStatus": "source-only",
+      "package": null
+    }
+  ]
+}
