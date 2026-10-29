@@ -1,27 +1,45 @@
-name: Build ItamarOS Linux ISO (unverified test artifact)
+name: Build ItamarOS 1.1 ISO (experimental)
 on:
+  push:
+    branches: [updates]
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-iso.yml'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: itamaros-iso-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   iso-source-build:
-    # Manual build only. Does not install or publish boot media.
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    container:
+      image: debian:trixie
+      options: --privileged
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Debian live-build tools
+      - name: Install ISO build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-common isolinux
-      - name: Build ISO source recipe
-        run: sudo bash native/build.sh
-      - name: List generated files and checksums
-        run: ls -lh dist/ && cat dist/*.sha256
-      - name: Upload ISO for isolated VM boot testing only
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git live-build debootstrap squashfs-tools xorriso \
+            grub-pc-bin grub-efi-amd64-bin syslinux-common isolinux
+      - uses: actions/checkout@v4
+      - name: Validate build script syntax
+        run: bash -n native/build.sh
+      - name: Build ItamarOS ISO
+        run: bash native/build.sh
+      - name: Show generated image and SHA256 checksums
+        run: |
+          ls -lh dist/
+          cat dist/*.sha256
+      - name: Upload ISO as experimental VM-test artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ItamarOS-1.1-amd64-UNTESTED-VM-ONLY
-          path: dist/*
+          name: ItamarOS-1.1-amd64-ISO-VM-TEST-ONLY
+          path: |
+            dist/*.iso
+            dist/*.sha256
           if-no-files-found: error
           retention-days: 7

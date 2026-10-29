@@ -40,3 +40,16 @@ wget
 libnotify-bin
 xdg-utils
 plasma-firewall
+bluez
+bluetooth
+libinput-tools
+xserver-xorg-input-libinput
+pipewire-audio
+wireplumber
+plasma-pa
+print-manager
+cups
+system-config-printer
+plasma-systemmonitor
+xdg-desktop-portal-kde
+chromium

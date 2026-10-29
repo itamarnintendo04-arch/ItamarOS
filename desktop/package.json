@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node prepare.cjs && electron .",
     "build:win": "node prepare.cjs && electron-builder --win portable",
-    "build:linux": "node prepare.cjs && electron-builder --linux AppImage"
+    "build:linux": "node prepare.cjs && electron-builder --linux AppImage",
+    "build:mac": "node prepare.cjs && electron-builder --mac dmg --x64 --arm64 --publish never"
   },
   "devDependencies": {
     "electron": "^34.5.0",
@@ -39,6 +40,13 @@
       ],
       "category": "Utility",
       "artifactName": "ItamarOS-Demo-${version}-Linux-${arch}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ],
+      "artifactName": "ItamarOS-Demo-${version}-Mac-${arch}.${ext}"
     }
   }
 }

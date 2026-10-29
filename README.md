@@ -1,23 +1,71 @@
-# ItamarOS
+# ◈ ItamarOS — Version 1.1
 
-Experimental operating-system project and limited browser emulator.
+**ItamarOS** is a personal operating-system project featuring a PC desktop edition, an installable desktop demonstration, and a responsive browser emulator.
 
-## Web emulator
-[Open ItamarOS](https://itamaros-web-emulator.onrender.com/) · [View GitHub source](https://github.com/itamarnintendo04-arch/ItamarOS) · [Official downloads](https://itamaros-web-emulator.onrender.com/downloads.html)
+[**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
-The `index.html` page runs locally or on Render as a static site. Files and notes persist in browser localStorage, not on a cloud server. It is a simulation, **not** a bootable OS.
+## Editions
 
-The emulator includes built-in **ItamarOS Player**, **ItamarOS Games** (16 mini-games), **Itamio** (YouTube video launcher) and **Settings → Software Updates**. Sixteen browser games save scores and progress locally; the player includes browser-supported media controls and a [feature-by-feature VLC comparison](PLAYER_FEATURES.md).
+| Edition | Package | Status | Purpose |
+| --- | --- | --- | --- |
+| **ItamarOS PC 1.1** | Bootable `.iso` for x64 PCs | Experimental build pipeline; compatibility and installation testing required | Complete desktop environment with device settings and installer |
+| **ItamarOS Demo — Windows** | Portable `.exe` | Published unsigned demo prerelease | Try the interface without replacing your existing system |
+| **ItamarOS Demo — Mac** | `.dmg` for Intel and Apple Silicon | CI build tested; unsigned preview artifacts | Try the interface in a separate Mac application |
+| **ItamarOS Demo — browser** | Web application / PWA | Live on Render | Explore the adaptive interface on compatible devices |
 
-ItamarOS publishes browser updates using the [updates branch workflow](updates/README.md): develop on `updates`, merge to `main`, and let Render deploy the new version. A GitHub version manifest drives update checks and safe automatic reloads. Native OS/app installers are not yet implemented.
+**Important:** The ISO build recipe and native components are under development. A successful CI build does not mean the image has been tested for booting or installation. **Do not overwrite a primary computer or disk with an unverified image.** The Windows/Mac downloads run a demonstration and do not replace the device's operating system.
 
-The emulator includes a built-in **GitHub** app for browsing project source files and any real release assets. The downloads page queries GitHub Releases and only shows attached assets actually published. **No native installer releases are currently published.**
+## ItamarOS PC — features
 
-## Installation
-[Read installation status and safety guidance](INSTALLATION.md). The `setup.html` page is a demonstration only and makes no disk changes.
+- **Desktop and system settings:** KDE Plasma interface, display, resolution and scaling, touchpad and mouse, keyboard, Bluetooth, Wi-Fi and Ethernet, audio and microphone, printers, power and battery, storage and connected devices, accounts, privacy, appearance and accessibility.
+- **Automatic hardware identification:** read-only CPU, logical cores, available memory, manufacturer, PC model, graphics, drives, battery, firmware boot mode and network adapters. Manufacturer-specific labels appear where detected.
+- **Safe installation review:** the ItamarOS Preinstall app shows the detected computer hardware and requires deliberate confirmation before opening the full installer. It does not select, repartition or erase disks itself.
+- **Software Updates:** update notifications based on a version manifest stored in the official GitHub repository, with manual checks and deferred installation. Regular application/security updates are handled by signed system package repositories and KDE Discover.
+- **ItamarOS Player:** opens the installed VLC media engine for local playback and supported media formats.
+- **YouTube WebView:** opens the official YouTube website in its own browser application window. Requires internet; not affiliated with YouTube/Google.
+- **Itamio:** a separate organizer/search launcher for officially hosted YouTube videos.
+- **ItamarOS Games:** built-in no-download mini-games with browser-local saved scores and progress.
+- **GitHub:** project source and available release assets.
 
-## Full desktop OS
-A separate [native Debian/KDE live ISO source recipe](native/README.md) is in development for ItamarOS Linux v1.1. A tested downloadable ISO is not published yet. The browser demo does not install Windows applications, create a 20GB virtual disk, or replace Windows. Mobile and TV OS installers are not yet available. A [portable Windows desktop emulator](desktop-app/README.md) and an [offline-capable Windows/Linux emulator source](desktop/README.md) have separate CI builds and may appear in GitHub Releases as an unsigned demo. Do not use an untested installer on a physical disk.
+See [the PC edition build notes](native/README.md) and [the safe installation instructions](INSTALLATION.md) for technical setup and known limitations.
 
-## Render
-Static site: publish path `.`; build command `echo ready`.
+## Emulator features
+
+The web emulator features a touch-friendly desktop, phone, tablet and TV layout selected automatically using information made available by the browser. Browser identification is approximate; exact vendor, CPU model and storage specifications are only available through the installed PC system.
+
+The emulator provides settings, local files, a media player, saved games, Itamio, YouTube WebView launcher, streaming shortcuts, a GitHub app and Software Updates. The demo stores data in the browser or app profile; it is **not** a full installation environment.
+
+- Browser: [https://itamaros-web-emulator.onrender.com/](https://itamaros-web-emulator.onrender.com/)
+- Portable Windows desktop demo: [GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.1-demo)
+- Mac installer: [Official Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases) when the reviewed DMG assets are published; [CI builds](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml) may have test artifacts.
+- Experimental ISO build: [CI workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-iso.yml) produces VM-testing artifacts only.
+
+## Versions and updates
+
+The version sequence starts with `.0` and continues with `.1`, `.5`, and `.9`:
+
+`1.0 → 1.1 → 1.5 → 1.9 → 2.0 → 2.1 → 2.5 → 2.9 → 3.0`
+
+1. Develop features in the [`updates` branch](https://github.com/itamarnintendo04-arch/ItamarOS/tree/updates).
+2. Run automated tests and review changes in a pull request.
+3. Merge to the stable [`main` branch](https://github.com/itamarnintendo04-arch/ItamarOS/tree/main).
+4. Render automatically deploys the website. Supported installed applications check for available updates from the official manifests.
+
+See [versioning](native/VERSIONING.md) and [update architecture](updates/README.md).
+
+## Development
+
+The repository separates the native PC edition (`native/`), desktop demo packages (`desktop/`, `desktop-app/`), and web emulator (`index.html`, `apps/`). The web demo can run without a server API for its included games.
+
+Validation commands:
+
+```bash
+node tests/smoke.cjs
+python3 -m unittest discover -s tests -p "native-smoke.py"
+```
+
+System image builds must run in a dedicated test environment with sufficient resources. Refer to `native/README.md` for package and build dependencies. Do not run unreviewed disk-installation procedures on devices with valuable data.
+
+## Project and licensing
+
+This is an independent community development project. Itamio and the YouTube WebView are **not affiliated with Google or YouTube**. Third-party components retain their own licenses, trademarks and attribution requirements. A file in a GitHub Release is not a security certification; verify checksums, supported hardware and provenance before installation.

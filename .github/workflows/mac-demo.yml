@@ -1,0 +1,60 @@
+name: Package ItamarOS for Mac
+on:
+  push:
+    branches: [updates, main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/mac-demo.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: itamaros-mac-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  dmg:
+    runs-on: macos-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Prepare bundled emulator
+        run: node prepare.cjs
+      - name: Check Electron code
+        run: |
+          node --check main.cjs
+          node --check preload.cjs
+      - name: Build Mac installers (Intel + Apple Silicon)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: 'false'
+        run: npx electron-builder --mac dmg --x64 --arm64 --publish never
+      - name: Generate checksums
+        run: |
+          shasum -a 256 build/*.dmg > build/SHA256SUMS-mac.txt
+          ls -lh build/*.dmg
+      - name: Upload DMG test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Mac-DMG-unsigned
+          path: |
+            desktop/build/*.dmg
+            desktop/build/SHA256SUMS-mac.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish to existing demo prerelease after main merge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for installer in build/*.dmg; do
+            gh release upload v1.1-demo "$installer" --clobber
+          done
+          gh release upload v1.1-demo build/SHA256SUMS-mac.txt --clobber

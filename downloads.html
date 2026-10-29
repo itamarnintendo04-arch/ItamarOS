@@ -19,11 +19,12 @@ details{margin-top:16px}summary{cursor:pointer}footer{padding:24px 0;color:#99b7
 <h1>Download ItamarOS 1.1</h1>
 <p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
 <section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
-<section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS Linux 1.1 (PC)</h2><p>A native Debian/KDE-based Linux edition is in development. Its installation checks CPU, manufacturer, RAM, boot mode and storage on your own PC. <strong>There is no tested native installer ISO yet.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
+<section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS 1.1 · PC system</h2><p>The bootable edition is being prepared. Its installer reads the processor, manufacturer, model, RAM, boot mode and drives from the computer itself. <strong>A verified installation ISO is not yet published.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
 <section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo for Windows</h2><p>This is a browser emulator packaged in a desktop window. It does <strong>not</strong> install or replace Windows, and it needs internet for the initial load. The current demo build is unsigned.</p><div id="demoasset"><p>Checking GitHub for the Windows demo…</p></div><a class="btn alt" href="/" target="_self">Try the demo in a browser</a></section>
-<section class="card" aria-live="polite"><span class="badge">Linux desktop application · demo</span><h2>ItamarOS Demo for Linux</h2><p>A separately packaged Linux AppImage demo runs as an ordinary desktop app. It is <strong>not</strong> an OS installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View Linux demo source</a></section>
+<section class="card" aria-live="polite"><span class="badge">Mac application · demo</span><h2>ItamarOS Demo for Mac</h2><p>Install the desktop emulator using a DMG image for Intel or Apple Silicon. It does not replace macOS. Pre-release builds are unsigned and may be blocked by macOS security policies.</p><div id="macasset"><p>Checking GitHub for a Mac installation package…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml" target="_blank" rel="noopener noreferrer">See Mac build status</a></section>
+<section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
 <section class="card" aria-live="polite"><h2>Other published releases</h2><p id="status">Checking GitHub Releases…</p><div id="releases"></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub</a></section>
-<section class="card"><h2>How do I install ItamarOS Linux?</h2><p>Only after a verified, tested ISO is released: back up files; check hardware compatibility; verify the ISO checksum; first test the Live ISO in a virtual machine; then use the graphical Calamares installation wizard on a supported PC. Manually review all partition choices: replacing or resizing partitions can erase data.</p><p>Phone, tablet and TV devices require separately built firmware/boot support. The current Linux source targets amd64 computers only.</p><a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/INSTALLATION.md" target="_blank" rel="noopener noreferrer" style="color:#c6dcff">Read safe installation guidance</a></section>
+<section class="card"><h2>How do I install the real ItamarOS?</h2><p>Only after a verified, tested ISO is released: back up files; check hardware compatibility; verify the ISO checksum; first test the Live ISO in a virtual machine; then use the graphical Calamares installation wizard on a supported PC. Manually review all partition choices: replacing or resizing partitions can erase data.</p><p>Phone, tablet and TV devices require separately built firmware/boot support. The current native system source targets amd64 desktop computers only.</p><a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/INSTALLATION.md" target="_blank" rel="noopener noreferrer" style="color:#c6dcff">Read safe installation guidance</a></section>
 <footer>ItamarOS is a development project. Do not overwrite an existing operating system without a verified compatible release and backup.</footer>
 </main><script>
 const repo='itamarnintendo04-arch/ItamarOS';
@@ -35,24 +36,28 @@ function link(parent,label,url){
 }
 function label(element,text){element.replaceChildren();const p=document.createElement('p');p.textContent=text;element.append(p)}
 (async()=>{
- const status=document.getElementById('status'),root=document.getElementById('releases'),native=document.getElementById('nativeasset'),demo=document.getElementById('demoasset'),linuxdemo=document.getElementById('linuxdemoasset');
+ const status=document.getElementById('status'),root=document.getElementById('releases'),native=document.getElementById('nativeasset'),demo=document.getElementById('demoasset'),mac=document.getElementById('macasset'),linuxdemo=document.getElementById('linuxdemoasset');
  try{
   const res=await fetch(api,{headers:{Accept:'application/vnd.github+json'}});
   if(!res.ok)throw Error('GitHub returned HTTP '+res.status);
   const releases=await res.json();
   if(!Array.isArray(releases))throw Error('Invalid release list');
   const all=releases.filter(r=>!r.draft);
-  let hasISO=false,hasDemo=false,hasLinuxDemo=false;
+  let hasISO=false,hasDemo=false,hasMac=false,hasLinuxDemo=false;
   for(const release of all){
    for(const asset of Array.isArray(release.assets)?release.assets:[]){
     const name=String(asset.name||''),url=asset.browser_download_url;
     if(!release.prerelease&&/^ItamarOS[-_.].*amd64\.iso$/i.test(name)&&typeof url==='string'&&url.startsWith(official)){
      if(!hasISO)native.replaceChildren();
-     const p=document.createElement('p');link(p,'Download ItamarOS Linux ISO · '+name,url);native.append(p);hasISO=true;
+     const p=document.createElement('p');link(p,'Download ItamarOS ISO · '+name,url);native.append(p);hasISO=true;
     }
     if(/\.AppImage$/i.test(name)&&/^ItamarOS-Demo-/i.test(name)&&typeof url==='string'&&url.startsWith(official)){
      if(!hasLinuxDemo)linuxdemo.replaceChildren();
-     const p=document.createElement('p');link(p,'Download Linux emulator · '+name,url);linuxdemo.append(p);hasLinuxDemo=true;
+     const p=document.createElement('p');link(p,'Download desktop emulator · '+name,url);linuxdemo.append(p);hasLinuxDemo=true;
+    }
+    if(/\.dmg$/i.test(name)&&/^ItamarOS-Demo-/i.test(name)&&typeof url==='string'&&url.startsWith(official)){
+     if(!hasMac)mac.replaceChildren();
+     const p=document.createElement('p');link(p,'Download Mac installer · '+name,url);mac.append(p);hasMac=true;
     }
     if(/\.exe$/i.test(name)&&/^ItamarOS-Demo-/i.test(name)&&typeof url==='string'&&url.startsWith(official)){
      if(!hasDemo)demo.replaceChildren();
@@ -60,9 +65,10 @@ function label(element,text){element.replaceChildren();const p=document.createEl
     }
    }
   }
-  if(!hasISO)label(native,'Not available — no tested official native Linux ISO release has been published.');
-  if(!hasDemo)label(demo,'Not available yet — the Windows demo build has not been published as a downloadable EXE.');
-  if(!hasLinuxDemo)label(linuxdemo,'Not available yet — no downloadable Linux AppImage demo has been published.');
+  if(!hasISO)label(native,'Not available — no verified ItamarOS installation ISO has been published. Experimental VM-test images may appear in GitHub Actions.');
+  if(!hasDemo)label(demo,'Not available yet — the Windows demo is not currently offered as a downloadable EXE.');
+  if(!hasMac)label(mac,'Not available yet — no Mac DMG has been attached to the official prerelease.');
+  if(!hasLinuxDemo)label(linuxdemo,'Not available yet — no downloadable AppImage demo has been published.');
   if(!all.length){status.textContent='No releases have been published yet.';return}
   status.textContent='Showing '+all.length+' release(s).';
   for(const release of all){
@@ -76,6 +82,7 @@ function label(element,text){element.replaceChildren();const p=document.createEl
   }
  }catch(e){
   label(native,'Native installer status could not be verified. Open official GitHub Releases.');
+  label(mac,'Mac installer status could not be verified. Open official GitHub Releases.');
   label(demo,'Demo download status could not be verified. Open official GitHub Releases.');
   label(linuxdemo,'Linux emulator status could not be verified. Open official GitHub Releases.');
   status.textContent='GitHub release check failed: '+e.message;

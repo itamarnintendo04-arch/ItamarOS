@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=YouTube WebView
+GenericName=YouTube application window
+Comment=Open YouTube in a separate browser application window (requires internet)
+Exec=/usr/bin/python3 /usr/local/share/itamaros/youtube_webview.py
+Icon=applications-internet
+Terminal=false
+Categories=Network;AudioVideo;Video;
+StartupNotify=true

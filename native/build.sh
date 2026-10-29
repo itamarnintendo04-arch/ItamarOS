@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build ItamarOS Live preview ISO (amd64) using Debian live-build.
+# Build ItamarOS 1.1 bootable Live ISO for amd64 computers.
 # Use on Debian 13 in an isolated VM/runner. Does not touch user disks.
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,7 +20,7 @@ lb config \
   --bootloaders "grub-efi syslinux" \
   --archive-areas "main contrib non-free-firmware" \
   --debian-installer none \
-  --iso-application "ItamarOS Linux Live $VERSION" \
+  --iso-application "ItamarOS Live Desktop $VERSION" \
   --iso-publisher "ItamarOS community project" \
   --iso-volume "ItamarOS-$VERSION" \
   --image-name "ItamarOS-$VERSION-amd64" \
@@ -34,6 +34,7 @@ cp "$REPO_DIR/apps/more-games.js" config/includes.chroot/usr/local/share/itamaro
 cp "$REPO_DIR/apps/addons.css" config/includes.chroot/usr/local/share/itamaros/games.css
 echo "Starting live-build. This downloads many Debian packages and may take significant disk space."
 lb build
+# Some live-build versions use the default live-image-amd64.hybrid.iso name.
 shopt -s nullglob
 images=(ItamarOS-*.iso live-image-*.iso)
 if (("${#images[@]}"==0));then echo 'Build completed but no ISO was found.' >&2; exit 1;fi

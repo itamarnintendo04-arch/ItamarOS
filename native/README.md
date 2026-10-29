@@ -1,4 +1,4 @@
-# ItamarOS native Linux edition — v1.1 build prototype
+# ItamarOS 1.1 — PC system build prototype
 
 This folder is a **source recipe**, not a built/tested operating-system installer. It targets **amd64 PC only**, using Debian 13 (Trixie) KDE Plasma and the Debian Calamares live installer. More architectures (ARM phones/TVs) need separate kernels, bootloaders, drivers, permissions and hardware support. **Do not flash this recipe onto a phone or TV.**
 
@@ -10,13 +10,13 @@ This folder is a **source recipe**, not a built/tested operating-system installe
 - `itamaros-preinstall`: safe read-only inspection *before* opening Calamares; actual installation always uses Calamares's own wizard, explicit partition selection and final confirmation.
 - `itamaros-updater`: check GitHub stable manifest, show a notification on newer version, and open KDE Discover to update through the signed Debian repository. **No unsigned arbitrary executable is downloaded or run.**
 - `itamaros-update-check.timer`: persistent per-user timer checks at login and every 15 minutes while the machine and user session are active. A powered-off computer cannot check.
-- ItamarOS Player: **VLC engine** launched from the desktop, giving actual VLC codec support on native Linux (subject to installed codecs/licensing). The separately written browser Player is a limited demo.
+- ItamarOS Player: **VLC engine** launched from the desktop, giving actual VLC codec support on native PC system (subject to installed codecs/licensing). The separately written browser Player is a limited demo.
 - **Itamio**: a YouTube viewer/launcher for officially embedded videos, separate from YouTube and not an alternative hosting service.
 - ItamarOS Games: launch a local browser hub with 16 offline HTML mini-games and browser-stored scores.
 
 ## Build prerequisites (Debian 13 amd64 dedicated machine/VM)
 
-Typical packages: `live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-common isolinux`. Build needs root privileges, substantial internet access and disk space.
+Typical packages: `live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syssystem-common isolinux`. Build needs root privileges, substantial internet access and disk space.
 
 ```bash
 sudo apt update

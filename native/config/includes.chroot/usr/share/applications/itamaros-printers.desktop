@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Printers & Scanners
+Comment=Manage printing and scanning devices
+Exec=systemsettings
+Icon=printer
+Terminal=false
+Categories=Settings;HardwareSettings;
