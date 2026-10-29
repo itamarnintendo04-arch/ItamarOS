@@ -30,6 +30,7 @@ cp -a "$SCRIPT_DIR/config/." config/
 find config/hooks -type f -name "*.hook.chroot" -exec chmod 0755 {} +
 # Bundle the already-reviewed web games assets for the native offline games hub.
 cp "$REPO_DIR/apps/games.js" config/includes.chroot/usr/local/share/itamaros/games.js
+cp "$REPO_DIR/apps/more-games.js" config/includes.chroot/usr/local/share/itamaros/more-games.js
 cp "$REPO_DIR/apps/addons.css" config/includes.chroot/usr/local/share/itamaros/games.css
 echo "Starting live-build. This downloads many Debian packages and may take significant disk space."
 lb build
