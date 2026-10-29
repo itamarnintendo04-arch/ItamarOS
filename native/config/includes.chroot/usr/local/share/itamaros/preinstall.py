@@ -11,10 +11,22 @@ def main() -> None:
     hw = detect()
     root = tk.Tk()
     root.title("ItamarOS 1.1 — Preinstallation hardware review")
-    root.geometry("750x760")
-    root.minsize(500, 520)
-    frame = ttk.Frame(root, padding=20)
-    frame.pack(fill="both", expand=True)
+    root.geometry("750x690")
+    root.minsize(480, 390)
+    # Read-only hardware details and dual-boot guidance must remain accessible on small screens.
+    canvas = tk.Canvas(root, highlightthickness=0)
+    scrollbar = ttk.Scrollbar(root, orient="vertical", command=canvas.yview)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+    frame = ttk.Frame(canvas, padding=20)
+    window_id = canvas.create_window((0, 0), window=frame, anchor="nw")
+    frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window_id, width=e.width))
+    def on_wheel(event):
+        if event.delta:
+            canvas.yview_scroll(-int(event.delta / 120), "units")
+    canvas.bind("<MouseWheel>", on_wheel)
     ttk.Label(frame, text=f"ItamarOS 1.1 — {hw['manufacturer']} {hw['model']}",
               font=("Sans", 17, "bold"), wraplength=640).pack(anchor="w", pady=(0, 10))
     ttk.Label(frame, text="Hardware type and manufacturer are detected automatically and cannot be changed in this installer.",
