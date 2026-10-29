@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": "1.1",
+  "sequence": [
+    "1.1",
+    "1.5",
+    "1.9",
+    "2.1"
+  ],
+  "releaseStatus": "source-preview",
+  "publishedAt": "2026-10-29",
+  "components": [
+    {
+      "id": "itamaros-native",
+      "name": "ItamarOS Linux",
+      "platform": "linux-amd64",
+      "version": "1.1",
+      "status": "prototype",
+      "installerAsset": null,
+      "sha256": null
+    }
+  ],
+  "installers": [],
+  "downloadPage": "https://itamaros-web-emulator.onrender.com/downloads.html",
+  "notes": [
+    "Native source/build recipe only; no tested ISO published",
+    "KDE settings and read-only hardware information",
+    "Update availability checks while the user session is active"
+  ]
+}
