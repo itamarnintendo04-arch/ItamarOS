@@ -28,8 +28,8 @@ class NativeSmoke(unittest.TestCase):
         self.assertEqual(human_size(2147483648), "2.0 GiB")
 
     def test_versions(self):
-        self.assertEqual([next_version(v) for v in ("1.1", "1.5", "1.9", "2.1")],
-                         ["1.5", "1.9", "2.1", "2.5"])
+        self.assertEqual([next_version(v) for v in ("1.0", "1.1", "1.5", "1.9", "2.0", "2.1")],
+                         ["1.1", "1.5", "1.9", "2.0", "2.1", "2.5"])
         self.assertGreater(update_check.version_tuple("1.5"), update_check.version_tuple("1.1"))
         with self.assertRaises(ValueError):
             next_version("1.2")
@@ -49,7 +49,7 @@ class NativeSmoke(unittest.TestCase):
         self.assertEqual(native["version"], "1.1")
         self.assertEqual(native["installers"], [])
         self.assertEqual(native["releaseStatus"], "source-preview")
-        self.assertEqual(native["sequence"][:4], ["1.1", "1.5", "1.9", "2.1"])
+        self.assertEqual(native["sequence"][:4], ["1.0", "1.1", "1.5", "1.9"])
         self.assertTrue((ROOT / "native/config/includes.chroot/usr/share/applications/itamaros-control-center.desktop").exists())
 
 if __name__ == "__main__":
