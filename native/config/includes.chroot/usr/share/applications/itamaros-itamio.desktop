@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Itamio
+Comment=YouTube video discovery using official YouTube links
+Exec=xdg-open file:///usr/local/share/itamaros/itamio.html
+Icon=applications-multimedia
+Terminal=false
+Categories=Network;Video;AudioVideo;
