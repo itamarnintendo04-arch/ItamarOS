@@ -22,3 +22,4 @@ jobs:
           node tests/tv-streaming.cjs
           node tests/native-apps.cjs
           node tests/taskbar.cjs
+          node itamarcode/scripts/check-features.cjs
