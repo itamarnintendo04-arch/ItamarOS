@@ -38,3 +38,6 @@ mokutil
 bash
 git
 wget
+libnotify-bin
+xdg-utils
+plasma-firewall
