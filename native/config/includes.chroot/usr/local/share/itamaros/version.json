@@ -4,5 +4,11 @@
   "upstream": "Debian 13 Trixie",
   "target": "amd64",
   "buildType": "linux-live-preview",
-  "readyForInstall": false
+  "readyForInstall": false,
+  "components": {
+    "itamaros-native": "1.1",
+    "itamio": "1.1",
+    "itamaros-games": "1.1",
+    "itamaros-player": "1.1"
+  }
 }
