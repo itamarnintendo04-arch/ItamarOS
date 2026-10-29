@@ -12,7 +12,7 @@ from pathlib import Path
 HOST = "127.0.0.1"
 PORT = 17893
 ROOT = Path("/usr/local/share/itamaros")
-FILES = {"games-extra.html", "games.js", "games.css"}
+FILES = {"games-extra.html", "games.js", "more-games.js", "games.css"}
 MARKER = "ItamarOS Games localhost 1.1"
 URL = f"http://{HOST}:{PORT}/games-extra.html"
 
