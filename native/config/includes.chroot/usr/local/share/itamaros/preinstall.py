@@ -15,8 +15,10 @@ def main() -> None:
     root.minsize(500, 520)
     frame = ttk.Frame(root, padding=20)
     frame.pack(fill="both", expand=True)
-    ttk.Label(frame, text="ItamarOS 1.1 — Installer readiness",
-              font=("Sans", 17, "bold")).pack(anchor="w", pady=(0, 16))
+    ttk.Label(frame, text=f"ItamarOS 1.1 — {hw['manufacturer']} {hw['model']}",
+              font=("Sans", 17, "bold"), wraplength=640).pack(anchor="w", pady=(0, 10))
+    ttk.Label(frame, text="Hardware type and manufacturer are detected automatically and cannot be changed in this installer.",
+              wraplength=640, foreground="#415f85").pack(anchor="w", pady=(0, 12))
     details = [
         ("Manufacturer", hw["manufacturer"]),
         ("Model", hw["model"]),
@@ -24,6 +26,8 @@ def main() -> None:
         ("Processor", hw["cpu"]),
         ("Architecture", hw["architecture"]),
         ("RAM", hw["ram"]),
+        ("Graphics", ", ".join(hw.get("graphics", [])[:2]) or "Unknown"),
+        ("Battery", ", ".join(str(b.get("charge_percent")) + "% " + b.get("status", "") for b in hw.get("batteries", [])) or "Not detected"),
         ("Boot mode", "UEFI" if hw["uefi_boot"] else "Legacy/unknown"),
     ]
     for key, value in details:
