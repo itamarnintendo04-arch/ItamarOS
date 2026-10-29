@@ -48,13 +48,28 @@ def get_remote() -> dict:
         raise ValueError("Invalid component list")
     return manifest
 
+def is_official_installer(candidate: object) -> bool:
+    """Metadata gate only: no package is downloaded or trusted without signature verification."""
+    if not isinstance(candidate, dict):
+        return False
+    uri = candidate.get("url")
+    digest = candidate.get("sha256")
+    platform_name = candidate.get("platform")
+    if platform_name != "linux-amd64" or not isinstance(uri, str):
+        return False
+    if not uri.startswith("https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/"):
+        return False
+    return isinstance(digest, str) and re.fullmatch(r"[0-9a-fA-F]{64}", digest) is not None
+
 def check() -> dict:
     local = installed_version()
     try:
         manifest = get_remote()
         newest = manifest["version"]
         new = version_tuple(newest) > version_tuple(local)
-        downloadable = manifest.get("releaseStatus") == "released" and bool(manifest.get("installers"))
+        downloadable = manifest.get("releaseStatus") == "released" and any(
+            is_official_installer(i) for i in manifest.get("installers", [])
+        )
         return {
             "ok": True, "installed": local, "latest": newest,
             "update_available": bool(new and downloadable),
