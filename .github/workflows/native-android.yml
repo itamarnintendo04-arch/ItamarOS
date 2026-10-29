@@ -15,7 +15,7 @@ permissions:
   contents: read
 jobs:
   android-debug-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -23,9 +23,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - name: Install Android platform 37
-        run: sdkmanager --install 'platforms;android-37' 'build-tools;36.0.0'
+      - name: Install Android platform with existing hosted SDK
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager)"
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install 'platforms;android-37' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
