@@ -20,7 +20,12 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
 <section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
 <section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS 1.1 · PC system</h2><p>The bootable edition is being prepared. Its installer reads the processor, manufacturer, model, RAM, boot mode and drives from the computer itself. <strong>A verified installation ISO is not yet published.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
-<section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo for Windows</h2><p>This is a browser emulator packaged in a desktop window. It does <strong>not</strong> install or replace Windows, and it needs internet for the initial load. The current demo build is unsigned.</p><div id="demoasset"><p>Checking GitHub for the Windows demo…</p></div><a class="btn alt" href="/" target="_self">Try the demo in a browser</a></section>
+<section class="card" role="alert" style="border:2px solid #d99b64;background:#47311c;color:#fff">
+<h2>Windows demo security alert — download paused</h2>
+<p>A user reported that Avast marked an ItamarOS demo EXE as malicious. This detection has <strong>not been verified as safe or as a false positive</strong>. Do not run, restore, whitelist or exclude that file, and do not disable antivirus protections. We are investigating the exact file and detection before any further public EXE promotion.</p>
+<p>The <a href="/" style="color:#ffffff;text-decoration:underline">browser demo</a> does not require installing the EXE. Read the <a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">security investigation and reporting guidance</a>.</p>
+</section>
+<section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo for Windows</h2><p>This is a browser emulator packaged in a desktop window. It does <strong>not</strong> install or replace Windows, and it needs internet for the initial load. The unsigned EXE is on hold because a user reported an Avast detection. It has not been independently cleared.</p><div id="demoasset"><p>Windows EXE downloads temporarily paused. Use the browser demo instead.</p></div><a class="btn alt" href="/" target="_self">Try the demo in a browser</a></section>
 <section class="card" aria-live="polite"><span class="badge">Mac application · demo</span><h2>ItamarOS Demo for Mac</h2><p>Install the desktop emulator using a DMG image for Intel or Apple Silicon. It does not replace macOS. Pre-release builds are unsigned and may be blocked by macOS security policies.</p><div id="macasset"><p>Checking GitHub for a Mac installation package…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml" target="_blank" rel="noopener noreferrer">See Mac build status</a></section>
 <section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
 <section class="card" aria-live="polite"><h2>Other published releases</h2><p id="status">Checking GitHub Releases…</p><div id="releases"></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub</a></section>
@@ -59,14 +64,14 @@ function label(element,text){element.replaceChildren();const p=document.createEl
      if(!hasMac)mac.replaceChildren();
      const p=document.createElement('p');link(p,'Download Mac installer · '+name,url);mac.append(p);hasMac=true;
     }
-    if(/\.exe$/i.test(name)&&/^ItamarOS-Demo-/i.test(name)&&typeof url==='string'&&url.startsWith(official)){
-     if(!hasDemo)demo.replaceChildren();
-     const p=document.createElement('p');link(p,'Download Windows demo · '+name,url);demo.append(p);hasDemo=true;
+    if(/\.exe$/i.test(name)&&/^ItamarOS-Demo-/i.test(name)){
+      if(!hasDemo)demo.replaceChildren();
+      const p=document.createElement('p');p.textContent='EXE release '+name+' is on hold because antivirus reported a detection. Do not run or bypass Avast. See security guidance.';demo.append(p);hasDemo=true;
     }
    }
   }
   if(!hasISO)label(native,'Not available — no verified ItamarOS installation ISO has been published. Experimental VM-test images may appear in GitHub Actions.');
-  if(!hasDemo)label(demo,'Not available yet — the Windows demo is not currently offered as a downloadable EXE.');
+  if(!hasDemo)label(demo,'Windows EXE downloads are paused while an antivirus alert is investigated. Please use the browser demo.');
   if(!hasMac)label(mac,'Not available yet — no Mac DMG has been attached to the official prerelease.');
   if(!hasLinuxDemo)label(linuxdemo,'Not available yet — no downloadable AppImage demo has been published.');
   if(!all.length){status.textContent='No releases have been published yet.';return}
@@ -77,13 +82,13 @@ function label(element,text){element.replaceChildren();const p=document.createEl
     const note=document.createElement('p');note.textContent=release.prerelease?'Prerelease / demo build':'Published release';section.append(note);
     const items=Array.isArray(release.assets)?release.assets:[];
     if(!items.length){const p=document.createElement('p');p.textContent='No files attached.';section.append(p)}
-    for(const asset of items){const p=document.createElement('p');link(p,asset.name||'Release asset',asset.browser_download_url);section.append(p)}
+    for(const asset of items){const p=document.createElement('p');if(/\.exe$/i.test(String(asset.name||''))){p.textContent='EXE download on hold pending security review: '+(asset.name||'Windows demo');}else{link(p,asset.name||'Release asset',asset.browser_download_url)}section.append(p)}
     const more=document.createElement('p');link(more,'Release details',release.html_url);section.append(more);root.append(section);
   }
  }catch(e){
   label(native,'Native installer status could not be verified. Open official GitHub Releases.');
   label(mac,'Mac installer status could not be verified. Open official GitHub Releases.');
-  label(demo,'Demo download status could not be verified. Open official GitHub Releases.');
+  label(demo,'Windows demo downloads are paused pending antivirus investigation. Please use the browser demo.');
   label(linuxdemo,'Linux emulator status could not be verified. Open official GitHub Releases.');
   status.textContent='GitHub release check failed: '+e.message;
  }

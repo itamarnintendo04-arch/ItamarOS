@@ -86,3 +86,7 @@ Existing desktop downloads are not retroactively updated: rebuild and publish th
 Native app launching is only supported from a compatible **installed** Tizen or webOS TV web app with platform APIs, or an Android TV native wrapper exposing the `ItamarOSTVNative.launchApp` bridge. The current browser demo is **not** an installed TV app, so it cannot guarantee launching installed streaming apps. Unknown/unverified provider IDs have no direct launch; users must open those apps from the TV home screen. No website redirect is substituted for native app launch.
 
 See [TV app integration notes](tv/README.md).
+
+## Security notice — unsigned Windows EXE temporarily paused
+
+A user reported an Avast antivirus detection for the Windows desktop demo. We have **not** verified this file is safe or that the detection is mistaken. Do **not** bypass or disable antivirus. The official downloads page will not directly link to the affected EXE until investigated; automatic GitHub Release uploads for Windows were suspended. See [SECURITY.md](SECURITY.md) for the evidence needed (exact file, SHA-256, detection name and alert ID), independent verification and responsible review. The browser demo remains usable without executable downloads.
