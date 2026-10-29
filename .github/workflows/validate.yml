@@ -17,4 +17,6 @@ jobs:
         run: |
           for file in apps/*.js sw.js; do node --check "$file"; done
       - name: Run smoke tests
-        run: node tests/smoke.cjs
+        run: |
+          node tests/smoke.cjs
+          node tests/tv-streaming.cjs
