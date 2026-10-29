@@ -10,6 +10,7 @@ SOURCE = ROOT / "native/config/includes.chroot/usr/local/share/itamaros"
 sys.path.insert(0, str(SOURCE))
 sys.path.insert(0, str(ROOT / "native"))
 from hardware import detect, human_size, vendor_label, device_category
+import shared_storage
 import update_check
 from version import next_version
 
@@ -26,6 +27,27 @@ class NativeSmoke(unittest.TestCase):
         self.assertEqual(vendor_label("LENOVO"), "Lenovo")
         self.assertEqual(vendor_label("Hewlett-Packard"), "HP")
         self.assertEqual(human_size(2147483648), "2.0 GiB")
+
+    def test_shared_storage_never_formats_or_mounts(self):
+        from types import SimpleNamespace
+        sample = {"blockdevices": [{"type": "disk", "children": [
+            {"type": "part", "fstype": "ntfs", "path": "/dev/sda3",
+             "label": "Shared", "size": 1048576000, "mountpoints": ["/mnt/shared"], "ro": 0},
+            {"type": "part", "fstype": "ext4", "path": "/dev/sda4",
+             "label": "Linux", "size": 1048576000, "mountpoints": ["/"], "ro": 0}
+        ]}]}
+        with mock.patch.object(shared_storage.shutil, "which", return_value="/usr/bin/lsblk"), \\
+             mock.patch.object(shared_storage.subprocess, "run", return_value=SimpleNamespace(
+                 returncode=0, stdout=json.dumps(sample))) as ran:
+            items = shared_storage.discover()
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]["filesystem"], "ntfs")
+            self.assertEqual(items[0]["mountpoint"], "/mnt/shared")
+            self.assertEqual(ran.call_args.args[0][0], "lsblk")
+        with mock.patch.object(shared_storage.os.path, "ismount", return_value=False):
+            self.assertFalse(shared_storage.open_existing_volume(items[0]))
+        builtins = json.loads((SOURCE / "builtins.json").read_text())
+        self.assertFalse(builtins["uninstallAvailableInStore"])
 
     def test_versions(self):
         self.assertEqual([next_version(v) for v in ("1.0", "1.1", "1.5", "1.9", "2.0", "2.1")],
