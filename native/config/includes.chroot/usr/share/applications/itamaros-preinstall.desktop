@@ -3,6 +3,6 @@ Type=Application
 Name=ItamarOS Preinstall
 Comment=Read-only hardware and install readiness check
 Exec=/usr/bin/python3 /usr/local/share/itamaros/preinstall.py
-Icon=system-software-install
+Icon=itamaros-preinstall
 Terminal=false
 Categories=System;

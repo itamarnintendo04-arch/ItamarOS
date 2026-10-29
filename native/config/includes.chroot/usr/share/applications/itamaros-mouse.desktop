@@ -3,6 +3,6 @@ Type=Application
 Name=Mouse & Touchpad
 Comment=Configure mouse, touchpad, pointer and gestures
 Exec=systemsettings
-Icon=input-mouse
+Icon=itamaros-mouse
 Terminal=false
 Categories=Settings;HardwareSettings;
