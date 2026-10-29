@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Shared Storage
+Comment=Open already-mounted Windows-compatible data volumes safely
+Exec=/usr/bin/python3 /usr/local/share/itamaros/shared_storage.py --gui
+Icon=itamaros-shared-storage
+Terminal=false
+Categories=Utility;System;FileManager;
