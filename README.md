@@ -32,7 +32,7 @@ See [the PC edition build notes](native/README.md) and [the safe installation in
 
 The web emulator features a touch-friendly desktop, phone, tablet and TV layout selected automatically using information made available by the browser. Browser identification is approximate; exact vendor, CPU model and storage specifications are only available through the installed PC system.
 
-The emulator provides settings, local files, a media player, saved games, YouTube WebView launcher, streaming shortcuts, a GitHub app and Software Updates. The demo stores data in the browser or app profile; it is **not** a full installation environment.
+The emulator provides settings, local files, a media player, saved games, YouTube WebView launcher, a TV-only region-aware streaming app launcher, a GitHub app and Software Updates. The demo stores data in the browser or app profile; it is **not** a full installation environment.
 
 - Browser: [https://itamaros-web-emulator.onrender.com/](https://itamaros-web-emulator.onrender.com/)
 - Portable Windows desktop demo: [GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.1-demo)
@@ -78,3 +78,11 @@ All 37 built-in web emulator apps now have individual original SVG icons and no 
 The [original blue/cyan ItamarOS master logo](assets/branding/itamaros-logo.png) is the shared brand across the web emulator, Android/iOS home-screen web app, Windows/Linux/Mac desktop demo build sources, and native Linux UI sources. The favicon, 192/512 mobile icons, maskable PWA image, Windows ICO, and native system icon are derived from the same original artwork. The native **About ItamarOS** window, Control Center and preinstall screen use the same emblem. See [branding files](assets/branding/) and [native build notes](native/README.md).
 
 Existing desktop downloads are not retroactively updated: rebuild and publish the corresponding desktop release to embed the new application icon. Installing the browser demo as a home-screen shortcut uses the new manifest icon once supported browsers refresh their metadata.
+
+## Streaming on TVs only
+
+**TV Streaming** appears only when the browser detects a TV interface. Country is estimated automatically from the browser's **time zone**, with language/region fallback. This is not GPS, does not reveal precise location, and may be inaccurate on VPNs or custom time-zone settings. The service list offers global services and selected country-specific services (Israel: כאן BOX, yes+, HOT; USA: Hulu, Peacock). A manual country correction is available.
+
+Native app launching is only supported from a compatible **installed** Tizen or webOS TV web app with platform APIs, or an Android TV native wrapper exposing the `ItamarOSTVNative.launchApp` bridge. The current browser demo is **not** an installed TV app, so it cannot guarantee launching installed streaming apps. Unknown/unverified provider IDs have no direct launch; users must open those apps from the TV home screen. No website redirect is substituted for native app launch.
+
+See [TV app integration notes](tv/README.md).
