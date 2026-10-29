@@ -1,0 +1,29 @@
+{
+  "id": "itamarcode",
+  "name": "ItamarCODE",
+  "version": "0.1.0",
+  "channel": "development",
+  "builtIn": false,
+  "optional": true,
+  "uninstallable": true,
+  "releaseStatus": "source-only",
+  "sourcePath": "itamarcode/",
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "features": [
+    "Monaco editor",
+    "Workspace Explorer",
+    "Integrated Terminal",
+    "Git",
+    "Debug",
+    "Tasks",
+    "Search",
+    "Notebook",
+    "Extensions via Open VSX"
+  ],
+  "engine": "Eclipse Theia",
+  "isExactVSCodeReplacement": false
+}

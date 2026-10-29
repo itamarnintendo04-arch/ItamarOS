@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const app=require('../package.json');
+assert.equal(app.productName,'ItamarCODE');
+assert.equal(app.theia.target,'electron');
+assert.equal(app.private,true);
+const required=['@theia/monaco','@theia/terminal','@theia/git','@theia/debug','@theia/task','@theia/plugin-ext-vscode','@theia/vsx-registry','@theia/search-in-workspace','@theia/notebook','@theia/preferences','@theia/filesystem','@theia/navigator','@theia/scm'];
+for(const p of required)assert.ok(app.dependencies[p],'Missing IDE feature '+p);
+assert(!('vscode' in app.dependencies));
+console.log('ItamarCODE standalone Electron/Theia IDE scaffold and feature package declarations verified. This does not prove a packaged IDE works.');

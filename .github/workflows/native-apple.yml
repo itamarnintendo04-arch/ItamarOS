@@ -39,3 +39,31 @@ jobs:
         working-directory: native-apps/apple
         run: |
           xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOStvOS -configuration Debug -sdk appletvsimulator -destination 'generic/platform=tvOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Build unsigned physical-device iOS app for developer signing
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOSiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$PWD/DeviceBuild" CODE_SIGNING_ALLOWED=NO build
+      - name: Package iPhone/iPad IPA for developer signing tools
+        working-directory: native-apps/apple
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="DeviceBuild/Build/Products/Release-iphoneos/ItamarOSiOS.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          mkdir -p unsigned/Payload
+          ditto "$APP" unsigned/Payload/ItamarOSiOS.app
+          (cd unsigned && /usr/bin/zip -qry "../ItamarOS-1.1.0-iOS-UNSIGNED.ipa" Payload)
+          unzip -t "ItamarOS-1.1.0-iOS-UNSIGNED.ipa" >/dev/null
+          shasum -a 256 "ItamarOS-1.1.0-iOS-UNSIGNED.ipa" > "SHA256SUMS-iOS.txt"
+          echo "This unsigned development IPA requires legitimate developer signing/provisioning before iPhone installation." > UNSIGNED-READ-ME.txt
+      - name: Upload development IPA as downloadable GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-1.1.0-iPhone-iPad-UNSIGNED-IPA
+          path: |
+            native-apps/apple/ItamarOS-1.1.0-iOS-UNSIGNED.ipa
+            native-apps/apple/SHA256SUMS-iOS.txt
+            native-apps/apple/UNSIGNED-READ-ME.txt
+          if-no-files-found: error
+          retention-days: 14

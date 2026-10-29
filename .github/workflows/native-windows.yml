@@ -25,6 +25,30 @@ jobs:
       - name: Compile native WPF source
         shell: pwsh
         run: dotnet build native-apps/windows/ItamarOS.Native.Windows.csproj -c Debug
-      - name: Security notice
+      - name: Build a Windows-native portable test package (not an installer)
         shell: pwsh
-        run: Write-Host "Compile test only. No EXE is published because the earlier unsigned EXE Avast detection remains under investigation."
+        run: |
+          dotnet publish native-apps/windows/ItamarOS.Native.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o native-apps/windows/dist
+          $bin = Get-ChildItem -Path native-apps/windows/dist -Filter *.exe | Select-Object -First 1
+          if ($null -eq $bin) { throw "No native Windows application executable generated" }
+          (Get-FileHash $bin.FullName -Algorithm SHA256).Hash.ToLower() + "  " + $bin.Name | Set-Content native-apps/windows/SHA256SUMS.txt -Encoding ascii
+      - name: Create test ZIP with a clear security notice
+        shell: pwsh
+        run: |
+          @"
+          ItamarOS Native Windows WPF 1.1 — UNVERIFIED TEST BUILD
+          This is a portable standalone app, not a Windows replacement operating system or installer.
+          Built from original WPF source. It is unsigned. A previous unrelated Electron demo EXE
+          was reported by Avast, and that report remains under investigation.
+          Do not bypass antivirus or Windows security warnings for this test.
+          "@ | Set-Content native-apps/windows/dist/READ-ME-FIRST.txt -Encoding utf8
+          Compress-Archive -Path native-apps/windows/dist/* -DestinationPath native-apps/windows/ItamarOS-Native-Windows-1.1-UNVERIFIED.zip -Force
+      - name: Upload development test package and checksum (not public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Native-Windows-WPF-UNVERIFIED
+          path: |
+            native-apps/windows/ItamarOS-Native-Windows-1.1-UNVERIFIED.zip
+            native-apps/windows/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7

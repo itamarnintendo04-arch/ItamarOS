@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feedback · ItamarOS 1.1</title>
+<meta name="theme-color" content="#143d89">
+<link rel="icon" type="image/png" href="/assets/branding/itamaros-favicon-32.png">
+<style>
+:root{font:16px system-ui,sans-serif;color:#eaf4ff;background:#08162d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 75% 8%,#2c568b,#0a1931 66%)}
+main{max-width:760px;margin:auto;padding:32px 20px 80px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header a{color:#cfe8ff;font-size:14px}header strong{display:flex;gap:10px;align-items:center;font-size:22px}
+header img{width:47px;height:47px;object-fit:contain}
+section{background:#112c52d9;border:1px solid #4a73a4;border-radius:18px;padding:28px;margin-top:35px;box-shadow:0 15px 40px #0210204d}
+h1{font-size:clamp(26px,5vw,42px);margin:0 0 12px}
+p{color:#c8dcf5;line-height:1.55}
+form{display:grid;gap:18px;margin-top:26px}
+label{display:grid;gap:8px;font-weight:700}
+input,select,textarea{font:inherit;color:#193453;background:#f2f7ff;border:2px solid #9dbddd;border-radius:10px;padding:13px;width:100%}
+textarea{resize:vertical;min-height:150px}
+:focus-visible{outline:3px solid #ffcc72;outline-offset:2px}
+button{cursor:pointer;color:#09203e;background:#8cbcff;border:0;border-radius:11px;padding:14px 22px;font-size:16px;font-weight:750}
+button:hover{background:#b4d3ff}
+small{font-size:13px;color:#bcd3eb}
+.notice{background:#1a416b;border-radius:10px;padding:14px}
+a{color:#b9dfff}
+</style>
+</head>
+<body><main>
+<header><strong><img src="/assets/branding/itamaros-mark-512.png" alt=""> ItamarOS</strong>
+<div><a href="/">← Desktop</a> · <a href="/downloads.html">Downloads</a> · <a href="https://github.com/itamarnintendo04-arch/ItamarOS" rel="noopener noreferrer" target="_blank">GitHub</a></div></header>
+<section>
+<h1>Send feedback</h1>
+<p>Found a bug? Have an idea for ItamarOS, ItamarCODE or the native mobile and TV apps? Your feedback helps improve the project.</p>
+<form id="feedback">
+<label for="category">Topic
+<select id="category" required>
+<option value="Bug report">Bug report</option>
+<option value="Feature request">Feature request</option>
+<option value="ItamarCODE">ItamarCODE</option>
+<option value="Native mobile and TV apps">iPhone, Android or TV app</option>
+<option value="Compatibility">Compatibility / device support</option>
+<option value="Other feedback">Other feedback</option>
+</select></label>
+<label for="subject">Short title
+<input id="subject" maxlength="100" required placeholder="Describe your feedback in one sentence"></label>
+<label for="details">What happened, or what would you like?
+<textarea id="details" minlength="10" maxlength="5000" required placeholder="Describe the issue or feature, and how to reproduce it if relevant"></textarea></label>
+<div class="notice"><small>Feedback is submitted through <strong>GitHub Issues</strong>, which requires a GitHub login. Your issue will be <strong>public</strong>. Do not include passwords, email addresses, phone numbers, screenshots with personal information, or secrets. ItamarOS does not collect your location or automatically upload system details.</small></div>
+<button type="submit">Continue to GitHub to submit feedback</button>
+<small>This opens a prefilled GitHub issue. Review it and choose “Submit new issue” there. Nothing is sent before you confirm on GitHub.</small>
+</form>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+const form=document.getElementById('feedback');
+form.addEventListener('submit',function(event){
+ event.preventDefault();
+ if(!form.reportValidity())return;
+ const kind=document.getElementById('category').value.trim();
+ const title=document.getElementById('subject').value.trim().slice(0,100);
+ const details=document.getElementById('details').value.trim().slice(0,5000);
+ if(!title||details.length<10)return;
+ const params=new URLSearchParams({
+   title:'['+kind+'] '+title,
+   body:'## Category\n'+kind+'\n\n## Feedback\n'+details+'\n\n---\nSubmitted through the ItamarOS feedback page.\n'
+ });
+ const url='https://github.com/itamarnintendo04-arch/ItamarOS/issues/new?'+params;
+ window.location.assign(url);
+});
+})();
+</script>
+</body></html>

@@ -47,12 +47,20 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
 assert.ok(html.includes('data-tv-only="true"'), 'TV Streaming must be TV-only in the desktop grid');
-assert.ok(html.includes("document.body.dataset.device==='tv'||n!=='TV Streaming'"), 'TV Streaming must be hidden from search on all other devices');
+assert.ok(html.includes("if(!tv&&n==='TV Streaming')return false"), 'TV Streaming must be hidden outside TV mode');
+assert.ok(html.includes("if(!btn?.dataset.tvCompatible)return false"), 'TV search should exclude apps without TV support');
+assert.ok(html.includes('data-tv-compatible="true"'), 'TV supported app flags must be present');
+assert.ok(html.includes('href="/feedback.html"'), 'Feedback nav link must be visible');
+assert.ok(html.includes("storeTab(\\'optional\\')"), 'Optional app store tab must be available');
 assert.ok(html.includes("if(id==='streaming'&&document.body.dataset.device!=='tv')"), 'Direct launching must be blocked outside TV mode');
 assert.ok(load('desktop/prepare.cjs').includes('apps/tv-streaming.js'), 'Offline desktop package should include TV streaming script');
 assert.ok(load('sw.js').includes('/apps/tv-streaming.js?v=1.1.0'), 'PWA offline cache should include TV script');
 const downloads=load('downloads.html');
-assert.ok(downloads.includes('Windows demo security alert — download paused'));
+assert.ok(!downloads.includes('role="alert"'), 'Avoid a site-wide Avast warning banner while keeping the file-specific safety notice');
+assert.ok(downloads.includes('A reported antivirus detection'), 'The specific Windows EXE must retain its security warning');
+assert.ok(downloads.includes('/feedback.html'), 'Downloads must link to the feedback form');
+assert.ok(downloads.includes('iPhone/iPad IPA build artifacts'), 'Expose iOS developer package artifact page');
+assert.ok(downloads.includes('Android / Android TV APK build artifacts'), 'Expose Android developer package artifact page');
 assert.ok(downloads.includes('EXE download on hold pending security review'));
 assert.ok(!downloads.includes("link(p,'Download Windows demo"), 'Do not offer a direct EXE download while antivirus alert is unresolved');
 const publishingWorkflow=load('.github/workflows/desktop-demo.yml');
@@ -140,3 +148,10 @@ const builtins=JSON.parse(load('native/config/includes.chroot/usr/local/share/it
 assert.equal(builtins.uninstallAvailableInStore,false);
 assert.ok(builtins.apps.includes('ItamarOS Shared Storage'));
 console.log('ItamarOS v'+manifest.version+': syntax, 16 games, native/desktop launcher, Player, SVG icons and manifest checks passed.');
+
+assert.ok(load('feedback.html').includes('https://github.com/itamarnintendo04-arch/ItamarOS/issues/new?'));
+assert.ok(load('feedback.html').includes('Your issue will be <strong>public</strong>'));
+const codeApp=JSON.parse(load('itamarcode/app-manifest.json'));
+assert.equal(codeApp.builtIn,false);
+assert.equal(codeApp.optional,true);
+assert.equal(codeApp.releaseStatus,'source-only');
