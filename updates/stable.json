@@ -5,9 +5,9 @@
   "publishedAt": "2026-10-29",
   "source": "https://github.com/itamarnintendo04-arch/ItamarOS",
   "notes": [
+    "Original built-in app icons and protected system app catalog",
     "New native ItamarOS Linux build sources and hardware inspector (no native ISO released)",
     "Automatic device layout detection in browser demo",
-    "Itamio official YouTube viewer",
     "16 saved mini-games and expanded media player",
     "Separate Windows desktop demo build workflow",
     "Automatic and manual update checks"
