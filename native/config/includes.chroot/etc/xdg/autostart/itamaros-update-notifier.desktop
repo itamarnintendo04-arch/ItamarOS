@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Update Notifications
+Comment=Enable scheduled update checks for this user
+Exec=/usr/bin/systemctl --user start itamaros-update-check.timer
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=1
+NoDisplay=true

@@ -3,7 +3,7 @@
 (()=>{
 'use strict';
 const REPO='itamarnintendo04-arch/ItamarOS';
-const BUILD='0.4.0';
+const BUILD='1.1.0';
 const MANIFEST='https://raw.githubusercontent.com/'+REPO+'/main/updates/stable.json';
 const MAX_NOTES=8;
 let latest=null,lastCheck=0,lastError='',installedPrompt=null,checking=null;

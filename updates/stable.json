@@ -1,20 +1,23 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "0.4.0",
+  "version": "1.1.0",
   "publishedAt": "2026-10-29",
   "source": "https://github.com/itamarnintendo04-arch/ItamarOS",
   "notes": [
-    "Browser-based Software Updates with automatic and manual checks",
-    "ItamarOS Player with browser-compatible media tools",
-    "ItamarOS Games with local game progress"
+    "New native ItamarOS Linux build sources and hardware inspector (no native ISO released)",
+    "Automatic device layout detection in browser demo",
+    "Itamio official YouTube viewer",
+    "10 saved mini-games and expanded media player",
+    "Separate Windows desktop demo build workflow",
+    "Automatic and manual update checks"
   ],
   "components": [
     {
       "id": "itamaros-web",
       "name": "ItamarOS Web Emulator",
       "platform": "web",
-      "version": "0.4.0",
+      "version": "1.1.0",
       "delivery": "reload",
       "url": "https://itamaros-web-emulator.onrender.com/"
     },
@@ -22,14 +25,14 @@
       "id": "itamaros-player",
       "name": "ItamarOS Player",
       "platform": "web",
-      "version": "0.4.0",
+      "version": "1.1.0",
       "delivery": "bundled"
     },
     {
       "id": "itamaros-games",
       "name": "ItamarOS Games",
       "platform": "web",
-      "version": "0.4.0",
+      "version": "1.1.0",
       "delivery": "bundled"
     }
   ],

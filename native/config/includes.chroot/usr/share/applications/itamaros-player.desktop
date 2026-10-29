@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Player (VLC)
+Comment=Play music and videos with the open-source VLC media engine
+Exec=vlc %U
+Icon=vlc
+Terminal=false
+MimeType=audio/mpeg;audio/x-wav;video/mp4;video/x-matroska;video/webm;
+Categories=AudioVideo;Video;Player;

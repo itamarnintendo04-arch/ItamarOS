@@ -1,0 +1,12 @@
+[Unit]
+Description=ItamarOS update check (notification only)
+Documentation=https://github.com/itamarnintendo04-arch/ItamarOS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/share/itamaros/update_check.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+TimeoutStartSec=35

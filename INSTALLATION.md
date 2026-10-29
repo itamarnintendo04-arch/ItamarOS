@@ -1,15 +1,36 @@
-# Installing ItamarOS — current status
+# ItamarOS 1.1 – installation and downloads
 
-> **There is no native ItamarOS operating system image available yet.**
+## What's available today?
 
-## Available now
-- [ItamarOS web emulator](https://itamaros-web-emulator.onrender.com/): runs in a browser, simulates an OS interface. It does **not** replace the operating system.
-- [Setup demonstration](https://itamaros-web-emulator.onrender.com/setup.html): UI-only simulation; no disk changes.
-- [Download page](https://itamaros-web-emulator.onrender.com/downloads.html): dynamically displays actual assets from [GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases). Currently no releases have been published.
+| Package | Availability | What it does |
+|---|---|---|
+| Browser demo | [Open online](https://itamaros-web-emulator.onrender.com/) | Runs inside your current OS/browser. No installation or disk modifications. |
+| Windows demo app | [Check GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases) | Portable Electron shell showing the web demo. **Not a Linux installer.** |
+| Native ItamarOS Linux amd64 ISO | **Not yet built, boot-tested or released** | Source recipe at [native/](native/README.md). Do not treat it as ready for installation. |
+| Android/iOS/iPadOS/TV native OS installer | **Not available** | Devices require separately supported kernels, bootloaders, drivers and software signing. |
 
-## Future platform-specific packages
-A tested desktop ISO, mobile build, or TV build will require hardware/device support, OS boot integration and a safe installation process. Android, iOS and smart TVs have different restrictions. A browser cannot replace the native operating system or silently install applications.
+The current website **does not detect exact motherboard/CPU/RAM/storage/vendor** because web browsers restrict hardware access. The native ItamarOS installer obtains those details directly from Linux and displays them before Calamares opens.
 
-When a native installer is ready, publish it as an **asset on a GitHub Release** with a version, supported hardware list, checksums, documentation, and a verified test process. Do not publish a web demo or placeholder renamed as .iso/.apk/.exe.
+## How to install the real OS – once a verified ISO has been published
 
-**Safety:** Back up important data and test in a virtual machine or spare device first.
+1. **Back up your data**, including recovery keys if encrypted storage is enabled. Confirm that the backup opens on another device.
+2. Confirm the computer is in the published hardware compatibility list. The prototype targets **64-bit AMD/Intel PCs (amd64)** with enough memory/storage. Exact requirements must be verified through ISO boot tests.
+3. Download the ISO **only from an official GitHub Release** on the project's downloads page. Never run an unrelated executable marketed as the OS.
+4. Check the SHA-256 against the release's published checksum. Future signed checks should be checked as well.
+5. **Test in an isolated virtual machine**, with a virtual disk containing no important data. Verify networking, screen, sound, keyboard, storage, reboot and update checks.
+6. Only after successful testing on supported hardware, create bootable installation media following the computer vendor's official documentation. Back up anything stored on the USB drive because writing an image may erase it.
+7. Boot the live OS. Open **ItamarOS Preinstall** and review detected CPU, RAM, manufacturer/model, drives and firmware. The checker does not write to drives.
+8. Only if compatible and your data is safely backed up, explicitly choose to open the **Calamares installer**. Review the target disk, partitions and final confirmation. **Replacing or resizing partitions can erase data permanently.** Never assume the installer will preserve Windows automatically.
+9. Finish installation and reboot. **Settings** opens KDE Plasma's system settings and **Software Updates** uses Debian's signed APT updates through KDE Discover.
+
+**Do not attempt this on your primary PC while the ItamarOS native installer remains untested.**
+
+## How does update checking work?
+
+The native Linux edition has a user-session systemd timer that checks the official stable manifest after login and every 15 minutes. It can announce newer verified releases; it never silently downloads and executes installers. KDE Discover handles security and application updates from signed Debian repositories. If the device is shut down or offline, update checks cannot run until it is online.
+
+The **web demo** uses a separate stable manifest and refreshes its website to update. The Windows desktop demo wraps the web experience; it is **not** a self-updating native operating system.
+
+## Version numbering
+
+ItamarOS marketing versions: `1.1 → 1.5 → 1.9 → 2.1 → 2.5 → 2.9`. See [native/VERSIONING.md](native/VERSIONING.md). `1.1` is the current **source/prototype version**, not a statement that a stable installable ISO exists.

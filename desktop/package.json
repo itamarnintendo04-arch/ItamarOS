@@ -1,0 +1,44 @@
+{
+  "name": "itamaros-desktop-demo",
+  "productName": "ItamarOS Demo",
+  "version": "1.1.0",
+  "private": true,
+  "description": "ItamarOS desktop emulator (not an operating system)",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "node prepare.cjs && electron .",
+    "build:win": "node prepare.cjs && electron-builder --win portable",
+    "build:linux": "node prepare.cjs && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^34.5.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.itamaros.desktopdemo",
+    "productName": "ItamarOS Demo",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "package.json",
+      "web/**/*"
+    ],
+    "directories": {
+      "output": "build"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "artifactName": "ItamarOS-Demo-${version}-Linux-${arch}.${ext}"
+    }
+  }
+}

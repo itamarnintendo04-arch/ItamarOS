@@ -1,0 +1,8 @@
+{
+  "repo": "itamarnintendo04-arch/ItamarOS",
+  "updateManifest": "https://raw.githubusercontent.com/itamarnintendo04-arch/ItamarOS/main/updates/native-stable.json",
+  "checkIntervalMinutes": 15,
+  "settingsProvider": "KDE Plasma System Settings",
+  "autoPartition": false,
+  "allowUnsignedInstallers": false
+}

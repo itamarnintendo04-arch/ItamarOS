@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Games
+Comment=Play built-in browser games with persistent local saves
+Exec=/usr/bin/python3 /usr/local/share/itamaros/games_launcher.py
+Icon=applications-games
+Terminal=false
+Categories=Game;

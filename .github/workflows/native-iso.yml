@@ -1,0 +1,27 @@
+name: Build ItamarOS Linux ISO (unverified test artifact)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  iso-source-build:
+    # Manual build only. Does not install or publish boot media.
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Debian live-build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syslinux-common isolinux
+      - name: Build ISO source recipe
+        run: sudo bash native/build.sh
+      - name: List generated files and checksums
+        run: ls -lh dist/ && cat dist/*.sha256
+      - name: Upload ISO for isolated VM boot testing only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-1.1-amd64-UNTESTED-VM-ONLY
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7

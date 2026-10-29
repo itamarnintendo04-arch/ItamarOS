@@ -1,0 +1,7 @@
+NAME="ItamarOS"
+VERSION="1.1"
+VERSION_ID="1.1"
+ID=itamaros
+ID_LIKE=debian
+HOME_URL="https://github.com/itamarnintendo04-arch/ItamarOS"
+PRETTY_NAME="ItamarOS Linux 1.1 (Debian-based prototype)"
