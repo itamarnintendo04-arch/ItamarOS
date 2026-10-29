@@ -2,6 +2,12 @@
 
 Electron/Chromium wrapper around the **browser emulator**, bundled with local assets. This is an ordinary desktop application — it does not flash drives, install an OS, or require admin privileges.
 
+## Mac package
+
+The Mac emulator installer is a **DMG** for both Intel and Apple Silicon. It is built by [GitHub Actions](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml) from the same offline emulator source as Windows. On Mac, open the DMG and drag the app into Applications if allowed by macOS security settings. Test/pre-release builds are **unsigned and not notarized**; do not bypass Gatekeeper or device security protections.
+
+The YouTube WebView button in the desktop edition opens an isolated browser window to the official YouTube website (where supported). Google account login may be restricted in embedded browsers. No media downloading or restriction bypassing is provided.
+
 ## Build locally
 
 Requires Node.js 22+.
