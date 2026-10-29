@@ -35,3 +35,7 @@ jobs:
         working-directory: native-apps/apple
         run: |
           xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOSmacOS -configuration Debug -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+      - name: Compile native Apple TV app (unsigned simulator)
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOStvOS -configuration Debug -sdk appletvsimulator -destination 'generic/platform=tvOS Simulator' CODE_SIGNING_ALLOWED=NO build
