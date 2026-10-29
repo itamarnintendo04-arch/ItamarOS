@@ -21,6 +21,7 @@ SECTIONS = [
     ("Keyboard", "keyboard", "Layout, shortcuts and accessibility"),
     ("Printers & Scanners", "print", "Printers and scanning devices"),
     ("Storage & Disks", "storage", "Mounted devices, free capacity and disk information"),
+    ("Shared Storage", "shared", "Discover existing NTFS/exFAT data volumes shared with Windows"),
     ("Files & Backups", "files", "Browse files and configure backup destinations"),
     ("Accounts & Passwords", "users", "Users, account changes and passwords"),
     ("Language & Region", "locale", "Languages, fonts and regional formats"),
@@ -88,6 +89,8 @@ def make() -> None:
             cmd = ["python3", "/usr/local/share/itamaros/update_check.py", "--gui"]
         elif category == "apps":
             cmd = ["plasma-discover"]
+        elif category == "shared":
+            cmd = ["python3", "/usr/local/share/itamaros/shared_storage.py", "--gui"]
         else:
             cmd = ["systemsettings"]
         ttk.Button(block, text="Open", command=lambda c=cmd: launch(c)).pack(anchor="e")
