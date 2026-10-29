@@ -1,0 +1,54 @@
+name: Build ItamarOS Windows Demo
+on:
+  pull_request:
+    branches: [main]
+    paths: ['desktop-app/**', '.github/workflows/desktop-demo.yml']
+  push:
+    branches: [main]
+    paths: ['desktop-app/**', '.github/workflows/desktop-demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows-demo:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned Electron dependencies
+        shell: pwsh
+        run: npm install --no-audit --no-fund
+      - name: Validate app script
+        shell: pwsh
+        run: node --check main.js
+      - name: Build portable Windows emulator
+        shell: pwsh
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Demo-Windows-x64
+          path: desktop-app/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish unsigned demo pre-release (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $asset = Get-ChildItem -Path ./dist -Filter *.exe | Select-Object -First 1
+          if (-not $asset) { throw "No demo EXE found" }
+          gh release view v1.1-demo *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v1.1-demo $asset.FullName --title "ItamarOS Demo 1.1 (Windows emulator only)" --notes "UNSIGNED browser-emulator desktop wrapper. This is not a native OS installer. Requires internet access for first launch." --prerelease
+          } else {
+            gh release upload v1.1-demo $asset.FullName --clobber
+          }
