@@ -1,7 +1,6 @@
 # KDE desktop + Calamares installer, hardware tools and built-in app support
 task-kde-desktop
 plasma-discover
-discover-backend-packagekit
 packagekit
 calamares-settings-debian
 python3
