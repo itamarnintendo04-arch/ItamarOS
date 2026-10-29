@@ -78,3 +78,50 @@ body:not([data-device="tv"]) .app[data-tv-only="true"]{display:none!important}
 .tv-provider-mark{font-size:28px;display:grid;place-items:center;min-width:60px;min-height:56px;background:#ffffff1c;border-radius:12px;padding:4px}
 .tv-stream-status{background:#eaf2fb;border-left:4px solid #2576c0;border-radius:8px;padding:12px;min-height:54px}
 body[data-device="tv"] .tv-stream .tv-stream-list{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+
+/* Windows-like running apps, pins and configurable accessibility. */
+.it-taskbar-apps{display:flex;align-items:center;gap:5px;flex:1;min-width:0;max-width:50vw;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;padding:4px 1px}
+.taskbar button.it-taskbar-app{display:flex;align-items:center;justify-content:center;position:relative;min-width:42px;min-height:39px;padding:5px 8px;border-radius:10px;gap:7px;border:1px solid transparent;background:transparent;color:inherit;cursor:pointer}
+.taskbar button.it-taskbar-app:hover{background:#d5e9ff1c;border-color:#ffffff38}
+.taskbar button.it-taskbar-app img{width:28px;height:28px;object-fit:contain}
+.taskbar button.it-taskbar-app span{display:none;white-space:nowrap;font-size:12px}
+.taskbar button.it-taskbar-app.running::after{content:"";position:absolute;bottom:2px;left:30%;width:40%;height:3px;background:var(--it-accent,#4b97e7);border-radius:3px}
+.taskbar button.it-taskbar-app.selected{background:#3d76be65;border-color:#74a8e269}
+.it-taskbar-menu{z-index:9999;position:fixed;display:grid;gap:4px;background:#f4f8ff;color:#122b50;padding:7px;border:1px solid #a4bdda;box-shadow:0 12px 25px #0005;border-radius:10px;min-width:190px}
+.it-taskbar-menu button{background:#e0ecfa;color:#173457;border:0;border-radius:7px;text-align:left;padding:10px;cursor:pointer}
+.it-taskbar-menu button:hover{background:#c6ddf9}
+.it-settings{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,1fr);gap:12px;width:100%;min-height:100%;font-family:system-ui;color:#193756}
+.it-settings-sidebar{background:#dae8fa;border-radius:13px;padding:13px 8px;max-height:65vh;overflow:auto}
+.it-settings-sidebar h2{font-size:19px;margin:2px 8px 12px;color:#173961}
+.it-settings-tabs{display:grid;gap:3px}
+.it-settings-tabs button{padding:10px 8px;text-align:left;background:transparent;border:0;border-radius:8px;color:#234a75;min-height:40px;cursor:pointer;font:inherit;font-size:13px}
+.it-settings-tabs button.active{background:#a2c5ec;color:#0f305c;font-weight:700}
+.it-settings-tabs button:focus-visible,.it-settings-actions button:focus-visible{outline:3px solid var(--it-accent,#4b97e7)}
+.it-settings-main{min-width:0;padding:5px 5px 24px}
+.it-settings-main h2{font-size:24px;margin:4px 0 17px;color:#123c65}
+.it-settings-panel{border-radius:14px;background:#f0f5fc;border:1px solid #d4e3f6;padding:17px;margin-bottom:14px}
+.it-settings-panel h3{font-size:18px;margin:0 0 12px}
+.it-settings-hint{line-height:1.5;font-size:13px;color:#4c6883}
+.it-settings-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d3e2f4;padding:11px 0;font-size:13px}
+.it-settings-row span{text-align:right;overflow-wrap:anywhere}
+.it-settings-toggle,.it-settings-slider,.it-settings-select{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px;flex-wrap:wrap}
+.it-settings-slider input{width:min(280px,60%);accent-color:var(--it-accent,#4b97e7)}
+.it-settings-select select{font:inherit;min-height:35px;border:1px solid #abc6e5;border-radius:8px;color:#173756;background:white}
+.it-settings-actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.it-settings-actions button{border:1px solid #9db7d9;background:#dceafb;color:#143c68;border-radius:9px;padding:9px 12px;min-height:38px;cursor:pointer}
+.it-settings-apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.it-settings-app{display:flex;align-items:center;gap:7px;font-size:12px}
+.it-settings-app img{object-fit:contain}
+.it-settings-logo{width:75px;height:75px;object-fit:contain;display:block;margin:4px auto 10px}
+body.it-reduced-motion *,body.it-reduced-motion *::before,body.it-reduced-motion *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+body[data-wallpaper="purple"]{background:radial-gradient(circle at 65% 20%,#7351aa,#201c49 70%,#110f24)}
+body[data-wallpaper="green"]{background:radial-gradient(circle at 65% 20%,#138c88,#16344d 70%,#081f29)}
+body[data-wallpaper="midnight"]{background:radial-gradient(circle at 65% 20%,#1c2a41,#081224 75%)}
+body[data-theme="light"]{background:radial-gradient(circle at 75% 15%,#b2d9ff,#7c9ec5 65%,#4b6a97);color:#142f54}
+body[data-theme="light"] header,body[data-theme="light"] .taskbar{background:#dcecffed;color:#173457}
+body[data-contrast="high"]{filter:contrast(1.25)}
+#content{font-size:calc(1rem * var(--it-text-scale,1))}
+.it-settings{font-size:calc(1rem * var(--it-text-scale,1))}
+.window{zoom:var(--it-scale,1)}
+@media(max-width:650px){.it-taskbar-apps{max-width:none;flex:1}.taskbar{gap:3px}.taskbar button.it-taskbar-app{min-width:37px;padding:4px}.it-settings{grid-template-columns:1fr;gap:5px}.it-settings-sidebar{max-height:142px;overflow:auto}.it-settings-tabs{display:flex;overflow-x:auto;gap:5px;padding-bottom:3px}.it-settings-tabs button{white-space:nowrap;flex:none}.it-settings-main h2{font-size:19px}}
+@media(min-width:1100px){.taskbar button.it-taskbar-app span{display:inline}}
