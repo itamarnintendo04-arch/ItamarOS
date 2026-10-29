@@ -25,6 +25,10 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
 assert.ok(html.includes("launch('itamio')"));
+assert.ok(html.includes('auto-device-label'));
+assert.ok(!html.includes('<select id="device-select"'));
+assert.equal(manifest.version,'1.1.0');
+assert.ok(html.includes("launch('itamio')"));
 assert.ok(!html.includes('id="device-select"'), 'Device layout must remain auto-detected');
 assert.ok(html.includes("Software Updates"));
 assert.ok(load('apps/updates.js').includes("const BUILD='"+manifest.version+"'"));
@@ -60,8 +64,10 @@ function setup(){
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
 const game=setup();vm.runInNewContext(load('apps/games.js'),game.context);
+vm.runInNewContext(load('apps/more-games.js'),game.context);
 assert.equal(typeof game.context.window.ItamarGames.mount,'function');
 game.context.window.ItamarGames.mount();
+assert.equal(all(game.content,e=>Boolean(e.dataset.mini)).length,6,'Expected six extra game tabs');
 let saved=JSON.parse(game.data.get('itamaros-games-v1'));
 assert.equal(saved.game2048.board.filter(Boolean).length,2);
 const tabs=all(game.content,e=>Boolean(e.dataset.game));tabs.find(e=>e.dataset.game==='snake').events.click();
