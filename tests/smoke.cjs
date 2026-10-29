@@ -8,6 +8,28 @@ const load=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
 const manifest=JSON.parse(load('updates/stable.json'));
 const pwa=JSON.parse(load('manifest.webmanifest'));
 const html=load('index.html');
+const branding=['assets/branding/itamaros-logo.png',
+ 'assets/branding/itamaros-mark-512.png',
+ 'assets/branding/itamaros-icon-192.png',
+ 'assets/branding/itamaros-maskable-512.png',
+ 'assets/branding/itamaros-apple-touch-180.png',
+ 'assets/branding/itamaros-favicon-32.png',
+ 'assets/branding/itamaros-icon.ico',
+ 'desktop/assets/itamaros-icon.ico',
+ 'desktop-app/assets/itamaros-icon.ico',
+ 'native/config/includes.chroot/usr/share/pixmaps/itamaros.png',
+ 'native/config/includes.chroot/usr/share/icons/hicolor/512x512/apps/itamaros.png'];
+for(const file of branding)assert.ok(fs.existsSync(path.join(__dirname,'..',file)),'Missing official brand asset: '+file);
+assert.ok(html.includes('assets/branding/itamaros-mark-512.png'));
+assert.ok(html.includes('rel="apple-touch-icon"'));
+assert.ok(html.includes('assets/branding/itamaros-favicon-32.png'));
+for(const icon of pwa.icons){assert.ok(fs.existsSync(path.join(__dirname,'..',icon.src.replace(/^\//,''))), 'Missing PWA icon '+icon.src)}
+assert.ok(pwa.icons.some(icon=>icon.purpose==='maskable'));
+const pack=JSON.parse(load('desktop/package.json')),remotePack=JSON.parse(load('desktop-app/package.json'));
+assert.equal(pack.build.win.icon,'assets/itamaros-icon.ico');
+assert.equal(remotePack.build.win.icon,'assets/itamaros-icon.ico');
+assert.ok(load('desktop/prepare.cjs').includes('assets/branding/itamaros-mark-512.png'));
+
 assert.equal(manifest.schemaVersion,1);
 assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);

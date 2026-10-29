@@ -72,3 +72,9 @@ This is an independent community development project. The YouTube WebView are **
 ## Protected system apps and shared files
 
 All 37 built-in web emulator apps now have individual original SVG icons and no uninstall action in ItamarOS Store. Native Linux launchers and their icons live in system-owned locations; only a privileged Linux administrator can override their files. Unlike the demo, the Linux distribution includes a [Shared Storage](DUAL_BOOT_STORAGE.md) inspector for accessing **already mounted** NTFS/exFAT data volumes. Linux and Windows still require separate system partitions: shared files occupy disk space once, and personal app/profile settings are not automatically synchronized.
+
+## Official ItamarOS visual identity
+
+The [original blue/cyan ItamarOS master logo](assets/branding/itamaros-logo.png) is the shared brand across the web emulator, Android/iOS home-screen web app, Windows/Linux/Mac desktop demo build sources, and native Linux UI sources. The favicon, 192/512 mobile icons, maskable PWA image, Windows ICO, and native system icon are derived from the same original artwork. The native **About ItamarOS** window, Control Center and preinstall screen use the same emblem. See [branding files](assets/branding/) and [native build notes](native/README.md).
+
+Existing desktop downloads are not retroactively updated: rebuild and publish the corresponding desktop release to embed the new application icon. Installing the browser demo as a home-screen shortcut uses the new manifest icon once supported browsers refresh their metadata.

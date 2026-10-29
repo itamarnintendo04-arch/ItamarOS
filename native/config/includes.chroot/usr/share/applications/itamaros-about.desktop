@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=About ItamarOS
+Comment=Official ItamarOS logo and system information
+Exec=/usr/bin/python3 /usr/local/share/itamaros/about.py
+Icon=itamaros
+Terminal=false
+Categories=System;Settings;
+StartupNotify=true

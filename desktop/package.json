@@ -23,7 +23,8 @@
       "main.cjs",
       "preload.cjs",
       "package.json",
-      "web/**/*"
+      "web/**/*",
+      "assets/**/*"
     ],
     "directories": {
       "output": "build"
@@ -32,21 +33,24 @@
       "target": [
         "portable"
       ],
-      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}"
+      "artifactName": "ItamarOS-Demo-${version}-Windows-${arch}.${ext}",
+      "icon": "assets/itamaros-icon.ico"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Utility",
-      "artifactName": "ItamarOS-Demo-${version}-Linux-${arch}.${ext}"
+      "artifactName": "ItamarOS-Demo-${version}-Linux-${arch}.${ext}",
+      "icon": "assets/itamaros-mark-512.png"
     },
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
         "dmg"
       ],
-      "artifactName": "ItamarOS-Demo-${version}-Mac-${arch}.${ext}"
+      "artifactName": "ItamarOS-Demo-${version}-Mac-${arch}.${ext}",
+      "icon": "assets/itamaros-mark-512.png"
     }
   }
 }

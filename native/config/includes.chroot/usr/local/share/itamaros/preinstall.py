@@ -27,6 +27,15 @@ def main() -> None:
         if event.delta:
             canvas.yview_scroll(-int(event.delta / 120), "units")
     canvas.bind("<MouseWheel>", on_wheel)
+    try:
+        brand = tk.PhotoImage(file="/usr/share/pixmaps/itamaros.png")
+        root.brand_icon = brand
+        root.iconphoto(True, brand)
+        preview = brand.subsample(max(1, brand.width() // 92))
+        root.brand_preview = preview
+        ttk.Label(frame, image=preview).pack(anchor="w", pady=(0, 8))
+    except (tk.TclError, OSError):
+        pass
     ttk.Label(frame, text=f"ItamarOS 1.1 — {hw['manufacturer']} {hw['model']}",
               font=("Sans", 17, "bold"), wraplength=640).pack(anchor="w", pady=(0, 10))
     ttk.Label(frame, text="Hardware type and manufacturer are detected automatically and cannot be changed in this installer.",

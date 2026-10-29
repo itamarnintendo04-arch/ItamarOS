@@ -4,6 +4,7 @@
   "note": "Bundled ItamarOS shortcuts/apps are protected in ItamarOS Store, but Linux root administrators can still change packages.",
   "uninstallAvailableInStore": false,
   "apps": [
+    "About ItamarOS",
     "ItamarOS Control Center",
     "ItamarOS Preinstall",
     "ItamarOS Shared Storage",
