@@ -173,15 +173,17 @@ function renderReaction(){
  message(a,'Fastest time: '+(saveData.scores.reaction?saveData.scores.reaction+' ms':'—'));
  const result=message(a,'Ready?');
  const b=button('Start',()=>{
-  clearTimeout(flipTimeout);b.textContent='Wait…';b.disabled=false;result.textContent='Wait for green!';
-  reactionReadyAt=0;reactionStart=0;
-  flipTimeout=setTimeout(()=>{reactionReadyAt=Date.now();reactionStart=reactionReadyAt;b.textContent='GO!';b.style.background='#83da9f';result.textContent='Click now!'},rand(900,2700));
- });
- b.addEventListener('click',()=>{
-  if(b.textContent==='Start')return;
-  if(!reactionReadyAt){clearTimeout(flipTimeout);b.textContent='Start';result.textContent='Too early! Try again.';return}
-  const delta=Date.now()-reactionStart;if(delta>0&&(!saveData.scores.reaction||delta<saveData.scores.reaction)){saveData.scores.reaction=delta;save()}
-  b.textContent='Start';b.style.background='';reactionReadyAt=0;result.textContent='Your reaction time: '+delta+' ms';save();
+  if(b.textContent==='Start'){
+    clearTimeout(flipTimeout);b.textContent='Wait…';result.textContent='Wait for green!';
+    reactionReadyAt=0;reactionStart=0;
+    flipTimeout=setTimeout(()=>{reactionReadyAt=Date.now();reactionStart=reactionReadyAt;b.textContent='GO!';b.style.background='#83da9f';result.textContent='Click now!'},rand(900,2700));
+  }else if(!reactionReadyAt){
+    clearTimeout(flipTimeout);b.textContent='Start';result.textContent='Too early! Try again.';
+  }else{
+    const delta=Date.now()-reactionStart;
+    if(delta>0&&(!saveData.scores.reaction||delta<saveData.scores.reaction)){saveData.scores.reaction=delta;save()}
+    b.textContent='Start';b.style.background='';reactionReadyAt=0;result.textContent='Your reaction time: '+delta+' ms';save();
+  }
  });
  a.append(b);
 }
@@ -252,7 +254,7 @@ function renderPattern(){
  });a.append(start);
  const row=make('div',undefined,'ios-row');
  for(let n=1;n<=4;n++)row.append(button(String(n),()=>{
-  if(patternShow||!g.sequence.length||start.textContent==='Start')return;
+  if(patternShow||!g.sequence.length||display.textContent!=='Now repeat the pattern below')return;
   if(g.sequence[patternIndex]!==n){display.textContent='Try again! Tap Show pattern.';patternIndex=0;return}
   patternIndex++;
   if(patternIndex===g.sequence.length){g.wins++;g.level++;saveData.scores.pattern=Math.max(saveData.scores.pattern,g.level);g.sequence.push(rand(1,4));save();patternIndex=0;display.textContent='Correct! Next level ready.';start.textContent='Show pattern'}
