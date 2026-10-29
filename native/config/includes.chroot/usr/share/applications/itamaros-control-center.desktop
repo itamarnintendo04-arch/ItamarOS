@@ -3,6 +3,6 @@ Type=Application
 Name=ItamarOS Control Center
 Comment=Hardware summary and full system settings
 Exec=/usr/bin/python3 /usr/local/share/itamaros/control_center.py
-Icon=computer
+Icon=itamaros-control-center
 Terminal=false
 Categories=Settings;System;

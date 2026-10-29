@@ -26,4 +26,5 @@ jobs:
           test -f native/config/includes.chroot/usr/share/applications/itamaros-control-center.desktop
           test -f native/config/includes.chroot/usr/share/applications/itamaros-preinstall.desktop
           test -f native/config/includes.chroot/usr/share/applications/itamaros-games.desktop
-          test -f native/config/includes.chroot/usr/share/applications/itamaros-itamio.desktop
+          test -f native/config/includes.chroot/usr/share/applications/itamaros-shared-storage.desktop
+          test ! -e native/config/includes.chroot/usr/share/applications/itamaros-itamio.desktop

@@ -11,7 +11,9 @@ This folder is a **source recipe**, not a built/tested operating-system installe
 - `itamaros-updater`: check GitHub stable manifest, show a notification on newer version, and open KDE Discover to update through the signed Debian repository. **No unsigned arbitrary executable is downloaded or run.**
 - `itamaros-update-check.timer`: persistent per-user timer checks at login and every 15 minutes while the machine and user session are active. A powered-off computer cannot check.
 - ItamarOS Player: **VLC engine** launched from the desktop, giving actual VLC codec support on native PC system (subject to installed codecs/licensing). The separately written browser Player is a limited demo.
-- **Itamio**: a YouTube viewer/launcher for officially embedded videos, separate from YouTube and not an alternative hosting service.
+- **YouTube WebView**: an independent application window for the official YouTube website.
+- **Shared Storage**: read-only NTFS/exFAT volume discovery and access to already-mounted Windows-compatible files. See [dual-boot guide](../DUAL_BOOT_STORAGE.md).
+- Original per-app SVG icons and protected system-owned application shortcuts. The Store does not support removing built-ins; a root administrator still controls Linux packages.
 - ItamarOS Games: launch a local browser hub with 16 offline HTML mini-games and browser-stored scores.
 
 ## Build prerequisites (Debian 13 amd64 dedicated machine/VM)

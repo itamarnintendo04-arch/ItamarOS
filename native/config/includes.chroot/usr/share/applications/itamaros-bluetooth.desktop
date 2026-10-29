@@ -3,6 +3,6 @@ Type=Application
 Name=Bluetooth & Devices
 Comment=Pair and manage Bluetooth devices in System Settings
 Exec=systemsettings
-Icon=preferences-system-bluetooth
+Icon=itamaros-bluetooth
 Terminal=false
 Categories=Settings;HardwareSettings;

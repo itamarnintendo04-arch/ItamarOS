@@ -3,6 +3,6 @@ Type=Application
 Name=Printers & Scanners
 Comment=Manage printing and scanning devices
 Exec=systemsettings
-Icon=printer
+Icon=itamaros-printers
 Terminal=false
 Categories=Settings;HardwareSettings;

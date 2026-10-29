@@ -13,7 +13,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/itamio.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
+for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -24,11 +24,11 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 }
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
-assert.ok(html.includes("launch('itamio')"));
+assert.ok(!html.includes("launch('itamio')"));
 assert.ok(html.includes('auto-device-label'));
 assert.ok(!html.includes('<select id="device-select"'));
 assert.equal(manifest.version,'1.1.0');
-assert.ok(html.includes("launch('itamio')"));
+assert.ok(!html.includes("launch('itamio')"));
 assert.ok(!html.includes('id="device-select"'), 'Device layout must remain auto-detected');
 assert.ok(html.includes("Software Updates"));
 assert.ok(load('apps/updates.js').includes("const BUILD='"+manifest.version+"'"));
@@ -96,11 +96,12 @@ player.context.window.ItamarPlayer.mount();
 assert.equal(all(player.content,e=>e.tagName==='VIDEO').length,1);
 assert.ok(all(player.content,e=>e.tagName==='BUTTON').length>=10);
 
-const itamio=setup();itamio.context.window.open=()=>{};
-vm.runInNewContext(load('apps/itamio.js'),itamio.context);
-assert.equal(itamio.context.window.Itamio.videoId('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),'dQw4w9WgXcQ');
-assert.equal(itamio.context.window.Itamio.videoId('https://evil.example/watch?v=dQw4w9WgXcQ'),null);
-itamio.context.window.Itamio.mount();
-assert.ok(itamio.document.getElementById('itamio-app'));
-
-console.log('ItamarOS v'+manifest.version+': syntax, 16 games, native/desktop launcher, Player, Itamio and manifest checks passed.');
+const iconPaths=[...html.matchAll(/<img class="app-icon" src="(\/assets\/icons\/[a-z-]+\.svg)"/g)].map(m=>m[1]);
+assert.equal(iconPaths.length,37,'Every web built-in app needs an icon');
+for(const file of iconPaths)assert.ok(fs.existsSync(path.join(__dirname,'..',file)),'Missing app icon '+file);
+assert.ok(!fs.existsSync(path.join(__dirname,'..','apps','itamio.js')));
+assert.match(html,/Built-in apps/);
+const builtins=JSON.parse(load('native/config/includes.chroot/usr/local/share/itamaros/builtins.json'));
+assert.equal(builtins.uninstallAvailableInStore,false);
+assert.ok(builtins.apps.includes('ItamarOS Shared Storage'));
+console.log('ItamarOS v'+manifest.version+': syntax, 16 games, native/desktop launcher, Player, SVG icons and manifest checks passed.');

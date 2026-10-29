@@ -34,3 +34,7 @@ The **web demo** uses a separate stable manifest and refreshes its website to up
 ## Version numbering
 
 ItamarOS marketing versions: `1.1 → 1.5 → 1.9 → 2.1 → 2.5 → 2.9`. See [native/VERSIONING.md](native/VERSIONING.md). `1.1` is the current **source/prototype version**, not a statement that a stable installable ISO exists.
+
+## Dual boot with shared user files
+
+ItamarOS and Windows can reside on one SSD/HDD; however, their operating-system partitions **must be separate**. With suitable NTFS/exFAT storage, both systems may access the same documents without duplicating storage space. The installation checker can display this option as **guidance only**; no filesystem changes, partitioning, formatting, or migration are automatic. Follow the [shared storage guide](DUAL_BOOT_STORAGE.md), back up data, and never attempt an untested OS installation on an important computer.

@@ -11,7 +11,7 @@ def main() -> None:
     hw = detect()
     root = tk.Tk()
     root.title("ItamarOS 1.1 — Preinstallation hardware review")
-    root.geometry("690x620")
+    root.geometry("750x760")
     root.minsize(500, 520)
     frame = ttk.Frame(root, padding=20)
     frame.pack(fill="both", expand=True)
@@ -38,6 +38,14 @@ def main() -> None:
         ttk.Label(frame, text=f"• {disk['device']} — {disk['model']} — {disk['size']}",
                   wraplength=620).pack(anchor="w")
     can_run = hw["compatible_live_build"] and hw["ram_bytes"] >= 2 * (1024 ** 3) and bool(disks)
+    ttk.Label(frame, text="Keep Windows with ItamarOS (optional shared data)", font=("Sans", 11, "bold")).pack(anchor="w", pady=(12, 4))
+    ttk.Label(frame, text="Both systems may use one physical drive, but need separate system partitions. "
+              "A shared NTFS/exFAT data volume keeps common files without duplicating space. "
+              "This checker does not modify partitions.",
+              wraplength=680, foreground="#345578").pack(anchor="w")
+    shared_data = tk.BooleanVar(value=False)
+    ttk.Checkbutton(frame, text="I want to keep Windows and use shared data storage (guidance only)",
+                    variable=shared_data).pack(anchor="w", pady=(4, 7))
     if not can_run:
         ttk.Label(frame, text="Hardware review did not pass. Installation is disabled here.",
                   foreground="#b32525").pack(anchor="w", pady=14)
@@ -54,6 +62,11 @@ def main() -> None:
         if not can_run or entry.get() != "INSTALL":
             messagebox.showwarning("Not ready", "Verify compatibility and type INSTALL exactly.")
             return
+        if shared_data.get():
+            messagebox.showinfo("Shared data — manual setup",
+                                "Windows and ItamarOS require different system partitions. "
+                                "NTFS/exFAT can be used for shared documents, but will not be created automatically. "
+                                "Back up files, fully shut down Windows, and review every Calamares disk choice.")
         if not messagebox.askyesno("Confirm installer launch",
                                    "Open Calamares? Its disk partition choices may destroy data. "
                                    "Nothing has been selected or formatted yet."):

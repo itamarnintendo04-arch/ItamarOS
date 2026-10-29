@@ -32,6 +32,12 @@ find config/hooks -type f -name "*.hook.chroot" -exec chmod 0755 {} +
 cp "$REPO_DIR/apps/games.js" config/includes.chroot/usr/local/share/itamaros/games.js
 cp "$REPO_DIR/apps/more-games.js" config/includes.chroot/usr/local/share/itamaros/more-games.js
 cp "$REPO_DIR/apps/addons.css" config/includes.chroot/usr/local/share/itamaros/games.css
+# Copy the original SVG app logos into the native system icon theme.
+mkdir -p config/includes.chroot/usr/share/icons/hicolor/scalable/apps
+for icon in "$REPO_DIR"/assets/icons/*.svg; do
+  test -f "$icon" || continue
+  cp -- "$icon" "config/includes.chroot/usr/share/icons/hicolor/scalable/apps/itamaros-$(basename "$icon")"
+done
 echo "Starting live-build. This downloads many Debian packages and may take significant disk space."
 lb build
 # Some live-build versions use the default live-image-amd64.hybrid.iso name.

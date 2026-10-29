@@ -23,7 +23,6 @@
 - **Software Updates:** update notifications based on a version manifest stored in the official GitHub repository, with manual checks and deferred installation. Regular application/security updates are handled by signed system package repositories and KDE Discover.
 - **ItamarOS Player:** opens the installed VLC media engine for local playback and supported media formats.
 - **YouTube WebView:** opens the official YouTube website in its own browser application window. Requires internet; not affiliated with YouTube/Google.
-- **Itamio:** a separate organizer/search launcher for officially hosted YouTube videos.
 - **ItamarOS Games:** built-in no-download mini-games with browser-local saved scores and progress.
 - **GitHub:** project source and available release assets.
 
@@ -33,7 +32,7 @@ See [the PC edition build notes](native/README.md) and [the safe installation in
 
 The web emulator features a touch-friendly desktop, phone, tablet and TV layout selected automatically using information made available by the browser. Browser identification is approximate; exact vendor, CPU model and storage specifications are only available through the installed PC system.
 
-The emulator provides settings, local files, a media player, saved games, Itamio, YouTube WebView launcher, streaming shortcuts, a GitHub app and Software Updates. The demo stores data in the browser or app profile; it is **not** a full installation environment.
+The emulator provides settings, local files, a media player, saved games, YouTube WebView launcher, streaming shortcuts, a GitHub app and Software Updates. The demo stores data in the browser or app profile; it is **not** a full installation environment.
 
 - Browser: [https://itamaros-web-emulator.onrender.com/](https://itamaros-web-emulator.onrender.com/)
 - Portable Windows desktop demo: [GitHub Releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.1-demo)
@@ -68,4 +67,8 @@ System image builds must run in a dedicated test environment with sufficient res
 
 ## Project and licensing
 
-This is an independent community development project. Itamio and the YouTube WebView are **not affiliated with Google or YouTube**. Third-party components retain their own licenses, trademarks and attribution requirements. A file in a GitHub Release is not a security certification; verify checksums, supported hardware and provenance before installation.
+This is an independent community development project. The YouTube WebView are **not affiliated with Google or YouTube**. Third-party components retain their own licenses, trademarks and attribution requirements. A file in a GitHub Release is not a security certification; verify checksums, supported hardware and provenance before installation.
+
+## Protected system apps and shared files
+
+All 37 built-in web emulator apps now have individual original SVG icons and no uninstall action in ItamarOS Store. Native Linux launchers and their icons live in system-owned locations; only a privileged Linux administrator can override their files. Unlike the demo, the Linux distribution includes a [Shared Storage](DUAL_BOOT_STORAGE.md) inspector for accessing **already mounted** NTFS/exFAT data volumes. Linux and Windows still require separate system partitions: shared files occupy disk space once, and personal app/profile settings are not automatically synchronized.

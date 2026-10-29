@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "owner": "root",
+  "note": "Bundled ItamarOS shortcuts/apps are protected in ItamarOS Store, but Linux root administrators can still change packages.",
+  "uninstallAvailableInStore": false,
+  "apps": [
+    "ItamarOS Control Center",
+    "ItamarOS Preinstall",
+    "ItamarOS Shared Storage",
+    "ItamarOS Player",
+    "ItamarOS Games",
+    "YouTube WebView",
+    "Bluetooth & Devices",
+    "Mouse & Touchpad",
+    "Printers & Scanners",
+    "Software Updates"
+  ]
+}
