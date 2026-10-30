@@ -60,6 +60,18 @@ assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files pi
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
 assert.doesNotMatch(ipaImport,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b|Process\(/,'Do not collect Apple passwords, upload files or run a signing executable');
 assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
+const embeddedSigner=read(appleRoot+'/Shared/EmbeddedIPASignerView.swift');
+assert.match(embeddedSigner,/#if os\(iOS\)/,'The IPA signer must be restricted to iOS');
+assert.match(ipaImport,/EmbeddedIPASignerView\(\)/,'User should be able to open the signer in IPA tab');
+assert.match(embeddedSigner,/WKWebViewConfiguration/,'Signer uses a dedicated WebKit workspace');
+assert.match(embeddedSigner,/\.nonPersistent\(\)/,'Signer must not persist browser sessions');
+assert.match(embeddedSigner,/https:\/\/itamaros-web-emulator\.onrender\.com\/signer\//,'Signer must load a known HTTPS first-party page');
+assert.match(embeddedSigner,/WKDownloadDelegate/,'Signed IPA downloads must be handled natively');
+assert.match(embeddedSigner,/ShareLink\(/,'Downloaded IPA is exported with explicit user action');
+assert.match(embeddedSigner,/\.hasSuffix\("\.ipa"\)/,'Only IPA output downloads are accepted');
+assert.match(embeddedSigner,/Signing ≠ installation/,'Must clarify signing is not app installation');
+assert.doesNotMatch(embeddedSigner,/SecureField\(|URLSession\.shared|identityToken|authorizationCode/,'Do not collect Apple credentials or post key files in native app');
+
 
 
 
