@@ -3,6 +3,8 @@ package org.itamaros.nativeapp
 import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
+import android.provider.OpenableColumns
+import androidx.activity.result.PickVisualMediaRequest
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
@@ -27,6 +29,8 @@ class MainActivity : ComponentActivity() {
     private var status by mutableStateOf("Native app ready")
     private var selectedTree by mutableStateOf<Uri?>(null)
     private var selectedMedia by mutableStateOf<Uri?>(null)
+    private var selectedApk by mutableStateOf<Uri?>(null)
+    private var selectedApkName by mutableStateOf<String?>(null)
     private var bestScore by mutableIntStateOf(0)
     private var updateStatus by mutableStateOf("Not checked yet")
     private var isTv = false
@@ -64,6 +68,53 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val chooseGallery = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            selectedMedia = uri
+            status = "Selected media from your gallery."
+        }
+    }
+
+    private val chooseApk = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val fileName = try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: Exception) { null }
+        if (fileName == null || !fileName.endsWith(".apk", ignoreCase = true)) {
+            selectedApk = null
+            selectedApkName = null
+            status = "Choose an actual .apk file, not a web page or ZIP."
+            return@registerForActivityResult
+        }
+        selectedApk = uri
+        selectedApkName = fileName
+        status = "Selected $fileName. Android will ask you to review any installation."
+    }
+
+    private fun installChosenApk() {
+        val uri = selectedApk
+        if (uri == null) {
+            status = "Select an APK first."
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                data = uri
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+            status = "Android installer opened. No app is installed unless you approve it."
+        } catch (e: Exception) {
+            status = "Android installer unavailable: ${e.localizedMessage}. Device security restrictions must be respected."
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val uiMode = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
@@ -80,6 +131,7 @@ class MainActivity : ComponentActivity() {
                     updateStatus = updateStatus,
                     bestScore = bestScore,
                     selectedMedia = selectedMedia,
+                    selectedApkName = selectedApkName,
                     onCheckUpdates = ::checkUpdates,
                     onLaunchService = ::launchTVService,
                     onOpenStoreListing = ::openPlayStoreListing,
@@ -87,7 +139,10 @@ class MainActivity : ComponentActivity() {
                     onChooseUSB = { chooseUSB.launch(null) },
                     onExport = ::exportToSelectedFolder,
                     onStorageSettings = ::openAppStorageSettings,
-                    onChooseMedia = { chooseMedia.launch(arrayOf("audio/*", "video/*")) },
+                    onChooseMedia = { chooseMedia.launch(arrayOf("image/*", "audio/*", "video/*")) },
+                    onChoosePhotos = { chooseGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    onChooseApk = { chooseApk.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream")) },
+                    onInstallApk = ::installChosenApk,
                     onSaveScore = { value ->
                         bestScore = value
                         prefs.edit().putInt("bestGuess", value).apply()
