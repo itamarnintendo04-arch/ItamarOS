@@ -7,7 +7,7 @@ const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 const exists=p=>fs.existsSync(path.join(ROOT,p));
 const platformManifest=JSON.parse(read('updates/native-apps.json'));
-assert.equal(platformManifest.version,'1.3.0');
+assert.equal(platformManifest.version,'1.4.0');
 assert.equal(platformManifest.signedBinariesPublished,false);
 assert.equal(platformManifest.components.length,8);
 for(const component of platformManifest.components) {
@@ -53,6 +53,11 @@ assert.doesNotMatch(appleSignIn,/SecureField\(|URLSession|URLRequest|\.identityT
 assert.match(read(appleRoot+'/project.yml'),/CODE_SIGN_ENTITLEMENTS/,'Apple sign-in entitlement should be declared');
 assert.ok(exists(appleRoot+'/iOS/ItamarOS.entitlements'),'Sign in with Apple capability file should be present');
 const ipaImport=read(appleRoot+'/Shared/IPAImportView.swift');
+assert.match(ipaImport,/itamaros\.ipa\.accountEmails/,'Apple email labels should persist locally');
+assert.match(ipaImport,/itamaros\.ipa\.activeEmail/,'Only one active email label');
+assert.match(ipaImport,/list\.count < 5/,'At most five locally saved Apple email labels');
+assert.doesNotMatch(ipaImport,/SecureField\(|applePassword|passwordInput|URLSession/,'Do not collect Apple credentials in app');
+assert.match(ipaImport,/SHA256\(/,'Show actual local file checksum');
 assert.match(ipaImport,/#if os\(iOS\)/,'IPA file workflow should be iOS only');
 assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files picker');
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
