@@ -66,19 +66,19 @@ private final class LocalAppleAccountStore: ObservableObject {
             kSecAttrService as String: service,
             kSecAttrAccount as String: record
         ]
-        let removeStatus = SecItemDelete(lookup as CFDictionary)
-        guard removeStatus == errSecSuccess || removeStatus == errSecItemNotFound else {
-            message = "Unable to update protected local storage (status \(removeStatus))."
-            return
+        let replacement: [String: Any] = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(lookup as CFDictionary, replacement as CFDictionary)
+        var status = updateStatus
+        if updateStatus == errSecItemNotFound {
+            let saveRequest: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: record,
+                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+                kSecValueData as String: data
+            ]
+            status = SecItemAdd(saveRequest as CFDictionary, nil)
         }
-        let saveRequest: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: record,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            kSecValueData as String: data
-        ]
-        let status = SecItemAdd(saveRequest as CFDictionary, nil)
         guard status == errSecSuccess else {
             message = "Unable to save profiles on this device (status \(status))."
             return
