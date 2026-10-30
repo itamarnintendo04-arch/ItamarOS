@@ -46,6 +46,8 @@ fun NativeAppScreen(
     device: String,
     status: String,
     updateStatus: String,
+    updateDownloadAvailable: Boolean,
+    onDownloadUpdate: () -> Unit,
     bestScore: Int,
     selectedMedia: Uri?,
     selectedApkName: String?,
@@ -139,8 +141,8 @@ fun NativeAppScreen(
                         TVServiceScreen(onLaunchService)
                     }
                     "Settings" -> item {
-                        NativeSettings(isTv, device, status, updateStatus,
-                            onCheckUpdates, onChooseUSB, onExport, onStorageSettings)
+                        NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
+                            onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings)
                     }
                 }
             }
@@ -204,7 +206,9 @@ private fun NativeSettings(
     device: String,
     status: String,
     updates: String,
+    updateDownloadAvailable: Boolean,
     check: () -> Unit,
+    downloadUpdate: () -> Unit,
     chooseUSB: () -> Unit,
     export: () -> Unit,
     storageSettings: () -> Unit
@@ -217,6 +221,10 @@ private fun NativeSettings(
         Text("Android version: ${Build.VERSION.RELEASE}")
         Text("Release information: $updates")
         Button(onClick = check) { Text("Check for app updates") }
+        if (updateDownloadAvailable) {
+            Button(onClick = downloadUpdate) { Text("Download published APK update") }
+            Text("Install only through Android approval. Existing installation may require an identical signing certificate.")
+        }
         HorizontalDivider()
         Text("Accessibility", fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {
