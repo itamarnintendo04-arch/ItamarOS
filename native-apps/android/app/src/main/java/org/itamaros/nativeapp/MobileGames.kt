@@ -20,31 +20,63 @@ import kotlin.random.Random
 private val gameTitles = listOf("2048", "Snake", "Memory Match", "Tic-Tac-Toe", "Number Guess",
     "Reaction Test", "Rock Paper Scissors", "Math Sprint", "Word Mix", "Pattern Memory", "Connect Four")
 
+private val gameLogos = mapOf(
+    "2048" to "🔢",
+    "Snake" to "🐍",
+    "Memory Match" to "🧠",
+    "Tic-Tac-Toe" to "❎",
+    "Number Guess" to "❔",
+    "Reaction Test" to "⚡",
+    "Rock Paper Scissors" to "✊",
+    "Math Sprint" to "➕",
+    "Word Mix" to "🔤",
+    "Pattern Memory" to "🟡",
+    "Connect Four" to "🔴"
+)
+
 @Composable
 fun MobileGamesHub() {
-    var selected by rememberSaveable { mutableStateOf("2048") }
+    var selected by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("ItamarOS Games", style = MaterialTheme.typography.headlineMedium)
-        Text("11 real offline mini-games, designed for touch. Best scores are kept on this device.")
-        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            gameTitles.forEach { title ->
-                FilterChip(selected = selected == title, onClick = { selected = title },
-                    label = { Text(title) })
+        if (selected == null) {
+            Text("Choose one of 11 real offline games to play.")
+            gameTitles.chunked(2).forEach { row ->
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { title ->
+                        FilledTonalButton(
+                            onClick = { selected = title },
+                            modifier = Modifier.weight(1f).heightIn(min = 105.dp),
+                            contentPadding = PaddingValues(8.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(gameLogos[title] ?: "🎮",
+                                    style = MaterialTheme.typography.headlineLarge)
+                                Text(title, style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                            }
+                        }
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
-        }
-        when (selected) {
-            "2048" -> Game2048()
-            "Snake" -> SnakeGame()
-            "Memory Match" -> MemoryGame()
-            "Tic-Tac-Toe" -> TicTacToeGame()
-            "Number Guess" -> GuessGame()
-            "Reaction Test" -> ReactionGame()
-            "Rock Paper Scissors" -> RockPaperScissorsGame()
-            "Math Sprint" -> MathGame()
-            "Word Mix" -> WordGame()
-            "Pattern Memory" -> PatternGame()
-            "Connect Four" -> ConnectFourGame()
+        } else {
+            Button(onClick = { selected = null }) { Text("← All games") }
+            Text("${gameLogos[selected] ?: "🎮"}  $selected",
+                style = MaterialTheme.typography.titleLarge)
+            when (selected) {
+                "2048" -> Game2048()
+                "Snake" -> SnakeGame()
+                "Memory Match" -> MemoryGame()
+                "Tic-Tac-Toe" -> TicTacToeGame()
+                "Number Guess" -> GuessGame()
+                "Reaction Test" -> ReactionGame()
+                "Rock Paper Scissors" -> RockPaperScissorsGame()
+                "Math Sprint" -> MathGame()
+                "Word Mix" -> WordGame()
+                "Pattern Memory" -> PatternGame()
+                "Connect Four" -> ConnectFourGame()
+            }
         }
     }
 }
