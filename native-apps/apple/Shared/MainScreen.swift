@@ -5,12 +5,14 @@ struct MainScreen: View {
         TabView {
             DashboardView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
-            NativeGameView()
-                .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
             #if os(tvOS)
+            TVStoreView()
+                .tabItem { Label("Store", systemImage: "bag.fill") }
             TVStreamingView()
                 .tabItem { Label("Streaming", systemImage: "play.tv.fill") }
             #else
+            NativeGameView()
+                .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
             LocalMediaView()
                 .tabItem { Label("Player", systemImage: "play.rectangle.fill") }
             #endif
