@@ -1,4 +1,4 @@
-# ItamarOS 1.1 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.2 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
@@ -21,9 +21,16 @@ The original ItamarOS blue/cyan emblem is used in the `BrandMark` asset, 1024px 
 
 - Home, native Number Guess and Tic-Tac-Toe games, settings with persistent preferences, version checks using the official GitHub manifest.
 - iPhone/iPad: native AVKit player for local files selected in the system file importer.
+- iPhone/iPad: IPA Files tab allows local import of a user-selected .ipa file and explicit sharing via the iOS share sheet. Importing/sharing does not sign, install or update apps. iOS does not provide a general third-party API for automatic arbitrary IPA installation.
 - Apple TV: native remote-friendly streaming service catalog, with approximate country detection and manual correction. tvOS **does not provide an unrestricted API to launch other providers' installed apps**, so tapping a service displays the correct limitation, rather than opening arbitrary apps.
 - Does **not** install ItamarOS as a replacement for iOS/tvOS, mount USB drives as an app install destination or modify system Settings. No universal USB OS installer exists for Apple TV.
 
 Privacy: no location permission, no account requirement, and no private device data sent to ItamarOS services.
 
 Additional targets include a standalone native **macOS** app (not Electron), **Apple Watch** with a compact native game, and **visionOS**. HomePod does not accept general-purpose third-party apps. These new targets are **source code only**, not validated signed apps or App Store listings.
+
+## IPA file workflow
+
+The native iOS/iPadOS `IPAImportView.swift` accepts one locally selected `.ipa` file from the system Files picker. The file is copied into the app's temporary cache (rather than being sent to ItamarOS servers), then the user may explicitly share that file with another installed tool via iOS Share Sheet. The file's extension and non-zero size are checked; this **does not verify signatures or prove the archive is trustworthy**. Other file types are refused.
+
+There is intentionally **no remote signing-service API, automatic install button, credential upload, or promise of free arbitrary IPA signing**. iOS requires Apple-approved code signing/provisioning and a supported installation/distribution route. Apple allows free personal on-device testing through Xcode on a Mac using a Personal Team, with short-lived provisioning, but regular public app distribution requires an eligible account and route. Do not collect Apple passwords or private signing certificates in this feature.
