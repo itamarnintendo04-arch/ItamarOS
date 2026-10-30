@@ -7,7 +7,7 @@ import Security
 // Native Sign in with Apple authenticates the iCloud account currently on the
 // device. This is LOCAL profile management, not five concurrent Apple sessions,
 // and it grants no authority to sign or install IPA applications.
-private struct SavedAppleProfile: Codable, Identifiable {
+struct SavedAppleProfile: Codable, Identifiable {
     let id: String                  // Apple app-scoped user identifier, not a password
     var label: String               // Optional user-facing label
     let addedAt: Date
