@@ -53,6 +53,10 @@ struct DashboardView: View {
                     Text("Games and preferences are stored in this app, not in the website. This app does not replace iOS, iPadOS or tvOS.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
+                    #if os(iOS)
+                    AppleAccountSignInView()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    #endif
                     Button("Check for app updates") {
                         Task { await releases.check() }
                     }
