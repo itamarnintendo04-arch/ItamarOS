@@ -7,11 +7,18 @@ const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 const exists=p=>fs.existsSync(path.join(ROOT,p));
 const platformManifest=JSON.parse(read('updates/native-apps.json'));
-assert.equal(platformManifest.version,'1.1.0');
-assert.equal(platformManifest.status,'source-only');
+assert.equal(platformManifest.version,'1.2.0');
+assert.equal(platformManifest.status,'source-and-debug-preview');
 assert.equal(platformManifest.signedBinariesPublished,false);
 assert.equal(platformManifest.components.length,8);
-assert.ok(platformManifest.components.every(c=>c.package===null),'Do not invent native downloadable binaries');
+for(const component of platformManifest.components) {
+ if(['itamaros-android','itamaros-android-tv'].includes(component.id)) {
+  assert.match(component.package,/^https:\/\/github\.com\/itamarnintendo04-arch\/ItamarOS\/releases\/download\/v1\.2-android-preview\/ItamarOS-Android-1\.2\.0-debug\.apk$/);
+  assert.equal(component.releaseStatus,'unverified-debug-preview');
+ } else {
+  assert.equal(component.package,null,'Unpublished native platforms must not invent binary downloads: '+component.id);
+ }
+}
 
 const appleRoot='native-apps/apple';
 const androidRoot='native-apps/android';
@@ -19,10 +26,16 @@ const project=read(appleRoot+'/project.yml');
 for(const name of ['ItamarOSiOS','ItamarOStvOS','ItamarOSmacOS','ItamarOSvisionOS','ItamarOSwatchOS']) {
  assert.ok(project.includes(name+':'),name+' project target missing');
 }
-for(const x of ['Shared/ItamarOSApp.swift','Shared/NativeGameView.swift','Shared/MainScreen.swift','Shared/NativeSettingsView.swift','Shared/TVStreamingView.swift','Shared/LocalMediaView.swift','Watch/WatchApp.swift']){
+for(const x of ['Shared/ItamarOSApp.swift','Shared/NativeGameView.swift','Shared/MainScreen.swift','Shared/NativeSettingsView.swift','Shared/TVStreamingView.swift','Shared/LocalMediaView.swift','Shared/IPAImportView.swift','Watch/WatchApp.swift']){
  assert.ok(exists(appleRoot+'/'+x),x);
  assert.doesNotMatch(read(appleRoot+'/'+x),/\bWKWebView\b|\bUIWebView\b|\bSFSafariViewController\b/,'Native Apple app must not be a website wrapper');
 }
+const ipaImport=read(appleRoot+'/Shared/IPAImportView.swift');
+assert.match(ipaImport,/#if os\(iOS\)/,'IPA file workflow should be iOS only');
+assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files picker');
+assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
+assert.doesNotMatch(ipaImport,/URLSession|http\.post|privateKey|password|\.install\(/i,'Do not secretly upload, sign or install user IPAs');
+assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
 for(const p of ['iOS','tvOS','macOS','visionOS','watchOS']) {
  const assets=appleRoot+'/'+p+'/Assets.xcassets';
  assert.ok(exists(assets+'/AppIcon.appiconset/Contents.json'),p+' appicon metadata');
