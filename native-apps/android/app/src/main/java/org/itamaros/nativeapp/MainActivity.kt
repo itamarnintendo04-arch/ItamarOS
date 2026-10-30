@@ -82,6 +82,8 @@ class MainActivity : ComponentActivity() {
                     selectedMedia = selectedMedia,
                     onCheckUpdates = ::checkUpdates,
                     onLaunchService = ::launchTVService,
+                    onOpenStoreListing = ::openPlayStoreListing,
+                    onBrowseStore = ::openTVPlayStore,
                     onChooseUSB = { chooseUSB.launch(null) },
                     onExport = ::exportToSelectedFolder,
                     onStorageSettings = ::openAppStorageSettings,
@@ -122,20 +124,56 @@ class MainActivity : ComponentActivity() {
             status = "TV streaming is available on TVs only."
             return
         }
-        if (pkg == null) {
-            status = "Open $name from TV Home. The installed app package is not yet verified for your model."
-            return
-        }
         try {
-            val intent = packageManager.getLeanbackLaunchIntentForPackage(pkg)
+            // For services with no reliable fixed Android TV package ID, discover installed
+            // Leanback launchers by their visible labels instead of guessing package names.
+            val discovered = if (pkg == null) {
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                packageManager.queryIntentActivities(intent, 0).firstOrNull { info ->
+                    val label = info.loadLabel(packageManager).toString()
+                    label.equals(name, ignoreCase = true) ||
+                        label.replace(" ", "").equals(name.replace(" ", ""), ignoreCase = true)
+                }?.activityInfo?.packageName
+            } else pkg
+            val intent = discovered?.let { packageManager.getLeanbackLaunchIntentForPackage(it) }
             if (intent == null) {
-                status = "$name is not installed or cannot be opened on this TV."
+                status = "$name cannot be opened as an installed TV app. Find it using the TV's official app store."
+            } else {
+                startActivity(intent)
+                status = "Opened the installed $name app."
+            }
+        } catch (e: Exception) {
+            status = "Unable to open $name: ${e.localizedMessage}"
+        }
+    }
+
+    private fun openPlayStoreListing(packageId: String) {
+        if (!isTv) return
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageId")).apply {
+                setPackage("com.android.vending")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            status = "Google Play will check compatibility and handle installation."
+        } catch (e: Exception) {
+            status = "Google Play is unavailable on this TV. No application was installed."
+        }
+    }
+
+    private fun openTVPlayStore() {
+        if (!isTv) return
+        try {
+            val intent = packageManager.getLeanbackLaunchIntentForPackage("com.android.vending")
+                ?: packageManager.getLaunchIntentForPackage("com.android.vending")
+            if (intent == null) {
+                status = "Google Play is not available on this TV."
                 return
             }
             startActivity(intent)
-            status = "Requested the installed $name application."
+            status = "Opened Google Play on your TV."
         } catch (e: Exception) {
-            status = "Unable to open $name: ${e.localizedMessage}"
+            status = "Cannot open Google Play: ${e.localizedMessage}"
         }
     }
 
