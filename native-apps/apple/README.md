@@ -1,4 +1,4 @@
-# ItamarOS 1.3 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.5 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
@@ -42,3 +42,13 @@ The iPhone/iPad Home screen includes native **Sign in with Apple** and a **local
 **Platform limitation:** Apple's native Sign in with Apple authentication works with the iCloud Apple Account currently signed in to the iPhone. The five saved entries are not five concurrently active Apple sessions; only one local profile is active. Switching profiles requires a valid Apple authorization, and logging out locally does not log the user out of system iCloud or revoke Apple's app authorization. Users may revoke authorization through the Apple Account settings.
 
 **Important:** Sign in with Apple is an identity authentication feature and does not sign IPA files. The profile count is an ItamarOS interface limit, **not** a way to raise Apple's free Personal Team limits (three installed developer apps per device, seven-day provisioning). Signed installation still requires a separate valid Apple-issued signing/provisioning mechanism. The Sign in with Apple entitlement must be enabled for the actual developer team's App ID before the feature can work on a signed device build; an unsigned development IPA cannot use it.
+
+## In-app IPA signing workspace (iOS 1.5 development preview)
+
+The **IPA → Open IPA Signer** control presents `EmbeddedIPASignerView.swift`, a dedicated native SwiftUI panel with a `WKWebView`. It loads the **first-party** `https://itamaros-web-emulator.onrender.com/signer/` WebAssembly zsign signer over HTTPS. This is a web-based signing engine shown inside the otherwise native app; it is **not** native iOS code signing or an offline signing library.
+
+The user explicitly chooses their own IPA, matching Apple-issued `.p12` development certificate, optional **certificate** password (never their Apple Account password), and matching `.mobileprovision` using the embedded browser file pickers. The webpage's JavaScript and WASM must be trusted: code served by a compromised site could access file inputs, so never claim that mere WebKit embedding absolutely guarantees confidentiality. For privacy the view uses a nonpersistent `WKWebsiteDataStore` and the site's normal local-only signing workflow, without adding an ItamarOS backend or collecting account credentials.
+
+When the web signer offers a signed IPA for download, a native WebKit `WKDownloadDelegate` saves it to app cache and shows a native **Save or share** control. Downloads are **not** application installation. Valid device provisioning is required, and the Apple Sign in identity button does not grant a signing certificate.
+
+This view requires a working HTTPS connection and browser WebAssembly/Worker support. It may not work for every file on every device due to memory and WebKit constraints. It has not been manually tested on a provisioned physical iPhone; the CI workflow compiles source only. Existing `IPAImportView` remains a separate local IPA inspector/share workflow.

@@ -82,7 +82,7 @@ assert.ok(downloads.includes('id="ios-signing-service"'),'External signing tool 
 assert.ok(downloads.includes('https://sideloadly.io/'),'Signing tool link must use its official verified domain');
 assert.ok(downloads.includes('id="ios-ipa-picker"'),'User can select a local IPA without uploading to this site');
 assert.ok(downloads.includes('id="ios-share-file"'),'Share IPA only using a real device share action');
-assert.ok(downloads.includes('v1.4-ios-unsigned'),'Browser must verify a real unsigned iOS release');
+assert.ok(downloads.includes('v1.5-ios-unsigned'),'Browser must verify a real unsigned iOS release');
 assert.ok(downloads.includes('altstore-classic://source?url='),'Handoff must use the configured external signer source');
 assert.ok(downloads.includes('a.size>0'),'Browser must verify a nonempty IPA asset before linking');
 assert.ok(downloads.includes('only one may be selected'),'App profile selection must disclose one active slot');
