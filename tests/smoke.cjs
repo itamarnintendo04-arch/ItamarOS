@@ -56,6 +56,20 @@ assert.ok(html.includes("if(id==='streaming'&&document.body.dataset.device!=='tv
 assert.ok(load('desktop/prepare.cjs').includes('apps/tv-streaming.js'), 'Offline desktop package should include TV streaming script');
 assert.ok(load('sw.js').includes('/apps/tv-streaming.js?v=1.1.0'), 'PWA offline cache should include TV script');
 const downloads=load('downloads.html');
+assert.ok(downloads.includes('id="ios-browser-signer"'),'Downloads must have a first-party on-site signing button');
+assert.ok(downloads.includes('href="/signer/"'),'Browser signer link must use first-party static directory');
+const signerTemplate=load('signer-ui/index.html');
+const signerClient=load('signer-ui/itamaros-main.ts');
+const signerCI=load('.github/workflows/browser-ipa-signer.yml');
+assert.ok(signerTemplate.includes('id="sign-form"') && signerTemplate.includes('id="ipa"') && signerTemplate.includes('id="identity"') && signerTemplate.includes('id="profile"'),'Signer UI must require IPA, personal certificate and provisioning');
+assert.ok(signerTemplate.includes('id="password"'),'Only P12 certificate password can be entered, not Apple ID password');
+assert.ok(signerClient.includes('await signIpa(') && signerClient.includes('response.exitCode !== 0'),'Sign button must run a real WASM signer and check its exit code');
+assert.ok(signerClient.includes('URL.createObjectURL(') && signerClient.includes('download.href = signedFileUrl'),'Signed IPA must be downloadable locally');
+assert.ok(!/fetch\\(|XMLHttpRequest|navigator\\.sendBeacon|localStorage|indexedDB/i.test(signerClient),'Signing client must not transfer or persist sensitive file materials');
+assert.ok(signerCI.includes('f7127d6857a6aaa919b7430ef73baa262fe28070'),'Build must pin its external signing engine');
+assert.ok(signerCI.includes('npm exec -- vite build'),'CI must compile real WASM signing source');
+assert.ok(signerCI.includes('test -s "$GITHUB_WORKSPACE/site/signer/wasm/zsign.wasm"'),'CI must verify WASM asset exists');
+
 assert.ok(!downloads.includes('role="alert"'), 'Avoid a site-wide Avast warning banner while keeping the file-specific safety notice');
 assert.ok(downloads.includes('A reported antivirus detection'), 'The specific Windows EXE must retain its security warning');
 assert.ok(downloads.includes('/feedback.html'), 'Downloads must link to the feedback form');
