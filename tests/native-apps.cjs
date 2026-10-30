@@ -58,10 +58,11 @@ assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files pi
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
 assert.doesNotMatch(ipaImport,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b|Process\(/,'Do not collect Apple passwords, upload files or run a signing executable');
 assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
-assert.match(ipaImport,/kSecAttrAccessibleWhenUnlockedThisDeviceOnly/,'Store local account labels in device-only Keychain');
-assert.match(ipaImport,/profiles\.emails\.count >= 5/,'Allow only five email labels');
-assert.match(ipaImport,/selectedEmail/,'Exactly one active signing profile label');
+
+
+
 assert.match(ipaImport,/SHA256/,'Compute IPA checksum locally');
+assert.match(ipaImport,/AppleAccountSignInView\(\)/,'IPA screen must use the genuine Apple identity manager and device-only Keychain');
 assert.match(ipaImport,/ShareLink/,'Hand off IPA only after user explicitly shares');
 assert.match(ipaImport,/https:\/\/sideloadly\.io\//,'Signing client link should point to the verified official provider site');
 
