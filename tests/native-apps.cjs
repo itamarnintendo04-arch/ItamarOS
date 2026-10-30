@@ -7,7 +7,7 @@ const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 const exists=p=>fs.existsSync(path.join(ROOT,p));
 const platformManifest=JSON.parse(read('updates/native-apps.json'));
-assert.equal(platformManifest.version,'1.3.0');
+assert.equal(platformManifest.version,'1.4.0');
 assert.equal(platformManifest.signedBinariesPublished,false);
 assert.equal(platformManifest.components.length,8);
 for(const component of platformManifest.components) {
@@ -53,11 +53,21 @@ assert.doesNotMatch(appleSignIn,/SecureField\(|URLSession|URLRequest|\.identityT
 assert.match(read(appleRoot+'/project.yml'),/CODE_SIGN_ENTITLEMENTS/,'Apple sign-in entitlement should be declared');
 assert.ok(exists(appleRoot+'/iOS/ItamarOS.entitlements'),'Sign in with Apple capability file should be present');
 const ipaImport=read(appleRoot+'/Shared/IPAImportView.swift');
+assert.doesNotMatch(ipaImport,/SecureField\(|applePassword|passwordInput|URLSession/,'Do not collect Apple credentials in app');
+assert.match(ipaImport,/SHA256\(/,'Show actual local file checksum');
 assert.match(ipaImport,/#if os\(iOS\)/,'IPA file workflow should be iOS only');
 assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files picker');
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
-assert.doesNotMatch(ipaImport,/URLSession|http\.post|privateKey|password|\.install\(/i,'Do not secretly upload, sign or install user IPAs');
+assert.doesNotMatch(ipaImport,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b|Process\(/,'Do not collect Apple passwords, upload files or run a signing executable');
 assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
+
+
+
+assert.match(ipaImport,/SHA256/,'Compute IPA checksum locally');
+assert.match(ipaImport,/AppleAccountSignInView\(\)/,'IPA screen must use the genuine Apple identity manager and device-only Keychain');
+assert.match(ipaImport,/ShareLink/,'Hand off IPA only after user explicitly shares');
+assert.match(ipaImport,/https:\/\/sideloadly\.io\//,'Signing client link should point to the verified official provider site');
+
 for(const p of ['iOS','tvOS','macOS','visionOS','watchOS']) {
  const assets=appleRoot+'/'+p+'/Assets.xcassets';
  assert.ok(exists(assets+'/AppIcon.appiconset/Contents.json'),p+' appicon metadata');
