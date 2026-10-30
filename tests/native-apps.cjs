@@ -40,6 +40,15 @@ assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit'
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
 assert.match(appleSignIn,/SignInWithAppleButton/,'Apple sign-in uses AuthenticationServices');
 assert.match(appleSignIn,/ASAuthorizationAppleIDCredential/,'Apple sign-in requires genuine system authorization');
+assert.match(appleSignIn,/static let limit = 5/,'At most five local Apple profile slots');
+assert.match(appleSignIn,/kSecAttrAccessibleWhenUnlockedThisDeviceOnly/,'Account identifiers must remain in this device Keychain');
+assert.match(appleSignIn,/SecItemCopyMatching|SecItemUpdate/,'Profiles need persistent local Keychain storage');
+assert.match(appleSignIn,/func logOut\(\)/,'Users can sign out locally');
+assert.match(appleSignIn,/func remove\(_ identifier: String\)/,'Users can remove saved profiles');
+assert.match(appleSignIn,/func activate\(_ identifier: String\)/,'Users can select authorized profiles');
+assert.match(appleSignIn,/getCredentialState/,'Selected Apple identities must be checked with Apple');
+assert.doesNotMatch(appleSignIn,/SecItemSynchronizable|\.identityToken\b|\.authorizationCode\b|URLSession|URLRequest|SecureField\(/,'No password collection, server requests, or cloud-synced profiles');
+
 assert.doesNotMatch(appleSignIn,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b/,'Sign-in must not capture passwords or transmit Apple authorization tokens');
 assert.match(read(appleRoot+'/project.yml'),/CODE_SIGN_ENTITLEMENTS/,'Apple sign-in entitlement should be declared');
 assert.ok(exists(appleRoot+'/iOS/ItamarOS.entitlements'),'Sign in with Apple capability file should be present');

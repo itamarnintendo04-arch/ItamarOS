@@ -79,6 +79,10 @@ struct IPAImportView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
+                    AppleAccountSignInView()
+                        .padding()
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Signing & installation", systemImage: "lock.shield")
                             .font(.headline)
