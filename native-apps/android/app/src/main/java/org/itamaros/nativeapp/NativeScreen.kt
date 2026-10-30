@@ -91,7 +91,7 @@ fun NativeAppScreen(
                                 contentDescription = "ItamarOS logo",
                                 modifier = Modifier.size(126.dp)
                             )
-                            Text("ItamarOS 1.2", style = MaterialTheme.typography.headlineLarge)
+                            Text("ItamarOS 1.3", style = MaterialTheme.typography.headlineLarge)
                             Text("Native Android application • Not a WebView", color = MaterialTheme.colorScheme.secondary)
                             Text("Device: $device", modifier = Modifier.padding(top = 14.dp))
                             Text(if (isTv) "Android TV / Google TV" else "Android phone or tablet")
