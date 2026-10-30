@@ -12,7 +12,7 @@ on:
       - '.github/workflows/native-apple.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   apple-project-check:
     runs-on: macos-15
@@ -67,3 +67,17 @@ jobs:
             native-apps/apple/UNSIGNED-READ-ME.txt
           if-no-files-found: error
           retention-days: 14
+      - name: Publish explicitly unsigned iOS developer IPA
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: native-apps/apple
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='v1.3-ios-unsigned-preview'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Unsigned iOS preview already published; no replacement.'
+            exit 0
+          fi
+          gh release create "$tag"             ItamarOS-1.3.0-iOS-UNSIGNED.ipa             SHA256SUMS-iOS.txt             UNSIGNED-READ-ME.txt             --target "$GITHUB_SHA"             --prerelease             --title 'ItamarOS iOS 1.3 — UNSIGNED developer preview'             --notes 'UNSIGNED iPhone/iPad IPA for personal developer signing with a compatible tool. This IPA will NOT install directly from Safari, is NOT signed by Apple, and is NOT a TestFlight/App Store build. Do not share Apple passwords or signing certificates with ItamarOS.'
