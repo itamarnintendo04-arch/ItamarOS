@@ -110,8 +110,8 @@ class MainActivity : ComponentActivity() {
                 val manifest = JSONObject(data)
                 val version = manifest.optString("version")
                 if (manifest.optInt("schemaVersion") != 1) "Invalid release metadata."
-                else if (version != "1.1.0") "Source version: $version; install an actual signed update only through your platform's authorized app store."
-                else "App source version 1.1.0. No signed production app release is published."
+                else if (version != "1.2.0") "App preview 1.2.0; source manifest version: $version. No signed production update is available."
+                else "App preview source 1.2.0. No signed production app release is published."
             } catch (e: Exception) {
                 "Unable to check updates: ${e.localizedMessage}"
             }
@@ -192,7 +192,7 @@ class MainActivity : ComponentActivity() {
             ) ?: throw IllegalStateException("The selected destination is not writable.")
             val json = JSONObject()
                 .put("format", "ItamarOS Native Android backup")
-                .put("version", "1.1.0")
+                .put("version", "1.2.0")
                 .put("bestGuess", prefs.getInt("bestGuess", 0))
                 .toString(2)
             contentResolver.openOutputStream(result, "w")?.use {
