@@ -21,6 +21,16 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
 <section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS 1.1 · PC system</h2><p>The bootable edition is being prepared. Its installer reads the processor, manufacturer, model, RAM, boot mode and drives from the computer itself. <strong>A verified installation ISO is not yet published.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
 
+<section class="card" id="android-download" aria-labelledby="android-heading" style="border-color:#62ac87">
+<span class="badge">Android phones · Tablets · Android TV / Google TV</span>
+<h2 id="android-heading">📱📺 ItamarOS Android 1.1 — APK</h2>
+<p>Native Android application in Kotlin / Jetpack Compose — <strong>not a WebView</strong>. The app detects whether it is running on a TV, phone or tablet and shows the appropriate interface.</p>
+<a class="btn" id="android-direct" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.1-android-preview/ItamarOS-Android-1.1.0-debug.apk" target="_self" download="ItamarOS-Android-1.1.0-debug.apk" rel="noopener" style="font-size:18px;padding:17px 22px">⬇ Download Android APK</a>
+<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.1-android-preview" target="_blank" rel="noopener noreferrer">View APK version & SHA-256</a>
+<p><strong>For Downloader on Android TV:</strong> open this page, select <em>Download Android APK</em>, and use the TV's permitted installation process. No ZIP extraction or GitHub sign-in should be required for the public GitHub Release asset.</p>
+<p style="background:#49371b;border:1px solid #d3a568;border-radius:10px;padding:13px"><strong>Unverified developer preview:</strong> Debug-signed test APK, not an official store release. Build and file checks do not establish malware safety. Use only on a spare test device; do not bypass Play Protect, antivirus warnings or TV security restrictions. This installs an app, <strong>not an operating system</strong>.</p>
+<p id="android-release-status" role="status">Checking whether the public APK has been published…</p>
+</section>
 <section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo for Windows</h2><p>This is a browser emulator packaged in a desktop window. It does <strong>not</strong> install or replace Windows, and it needs internet for the initial load. A reported antivirus detection for the existing Windows EXE is still under review, so this particular download is not recommended. See the <a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/SECURITY.md" style="color:#c7e5ff" target="_blank" rel="noopener noreferrer">security details</a>. Other platform downloads remain available.</p><div id="demoasset"><p>Windows EXE downloads temporarily paused. Use the browser demo instead.</p></div><a class="btn alt" href="/" target="_self">Try the demo in a browser</a></section>
 <section class="card" aria-live="polite"><span class="badge">Mac application · demo</span><h2>ItamarOS Demo for Mac</h2><p>Install the desktop emulator using a DMG image for Intel or Apple Silicon. It does not replace macOS. Pre-release builds are unsigned and may be blocked by macOS security policies.</p><div id="macasset"><p>Checking GitHub for a Mac installation package…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml" target="_blank" rel="noopener noreferrer">See Mac build status</a></section>
 <section class="card" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
@@ -31,7 +41,7 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <a class="btn" href="https://github.com/itamarnintendo04-arch/ItamarOS/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">Download source ZIP</a>
 <a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-apple.yml" target="_blank" rel="noopener noreferrer">iPhone/iPad IPA build artifacts</a>
 <a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml" target="_blank" rel="noopener noreferrer">Android / Android TV APK build artifacts</a>
-<p>To get a GitHub Actions artifact, open a successful workflow run and find <strong>Artifacts</strong>. GitHub may require sign-in. Downloading a developer test APK/IPA does not certify it as a signed production release. Never disable platform security to install it.</p>
+<p>For Android TV and Android phones, use the <a href="#android-download" style="color:#c7e5ff">direct APK download above</a> once its public preview release is published. GitHub Actions artifacts are temporary and may require sign-in; the public release APK link is intended for TV Downloader. Unsigned iPhone development IPA builds still use Apple signing tools. Never disable platform security to install an app.</p>
 </section>
 <section class="card" aria-live="polite"><h2>Other published releases</h2><p id="status">Checking GitHub Releases…</p><div id="releases"></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub</a></section>
 <section class="card">
@@ -106,6 +116,20 @@ function label(element,text){element.replaceChildren();const p=document.createEl
   label(demo,'Windows demo downloads are paused pending antivirus investigation. Please use the browser demo.');
   label(linuxdemo,'Linux emulator status could not be verified. Open official GitHub Releases.');
   status.textContent='GitHub release check failed: '+e.message;
+ }
+})();
+(async()=>{
+ const state=document.getElementById('android-release-status');
+ const btn=document.getElementById('android-direct');
+ try{
+  const response=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/v1.1-android-preview',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+  if(!response.ok)throw Error('Release not yet published');
+  const data=await response.json();
+  const asset=Array.isArray(data.assets)?data.assets.find(a=>a.name==='ItamarOS-Android-1.1.0-debug.apk'&&a.browser_download_url===btn.href):null;
+  if(!asset)throw Error('APK asset not yet published');
+  state.textContent='Public APK is available · '+(asset.size/1048576).toFixed(1)+' MiB · Version 1.1.0 debug preview.';
+ }catch{
+  state.textContent='The public APK release is not available yet. This link will work only after the verified build workflow publishes it.';
  }
 })();
 </script></body></html>
