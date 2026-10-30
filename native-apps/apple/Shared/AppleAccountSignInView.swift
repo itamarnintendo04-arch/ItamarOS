@@ -39,12 +39,12 @@ final class LocalAppleAccountStore: ObservableObject {
         ]
         var returned: CFTypeRef?
         let status = SecItemCopyMatching(keychainQuery as CFDictionary, &returned)
-        if status == errSecItemSuccess, let data = returned as? Data,
+        if status == errSecSuccess, let data = returned as? Data,
            let saved = try? JSONDecoder().decode(SavedAppleProfiles.self, from: data) {
             profiles = Array(saved.profiles.prefix(Self.limit))
             activeID = profiles.contains(where: { $0.id == saved.activeID })
                 ? saved.activeID : nil
-        } else if status != errSecItemItemNotFound {
+        } else if status != errSecItemNotFound {
             message = "Local profile storage could not be read (status \(status))."
         }
     }
