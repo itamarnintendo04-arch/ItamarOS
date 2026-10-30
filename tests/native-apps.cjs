@@ -74,7 +74,7 @@ assert.ok(androidActivity.includes('ActivityResultContracts.PickVisualMedia'),'P
 assert.ok(androidActivity.includes('Intent.ACTION_INSTALL_PACKAGE'),'APK installer should use Android system confirmation');
 assert.ok(androidActivity.includes('Intent.FLAG_GRANT_READ_URI_PERMISSION'),'Installer must be granted narrow APK URI access');
 
-assert.ok(androidScreen.includes('AndroidView(')&&androidScreen.includes('VideoView('),'Real native media player, not embedded website');
+assert.ok(androidMedia.includes('AndroidView(')&&androidMedia.includes('VideoView('),'Real native media player, not embedded website');
 for(const s of [androidActivity,androidScreen])assert.doesNotMatch(s,/\bWebView\b(?=\s*\()/,'Do not initialize an Android WebView');
 assert.match(read('native-apps/TV_COMPATIBILITY.md'),/No universal replacement image|no single file/i);
 
