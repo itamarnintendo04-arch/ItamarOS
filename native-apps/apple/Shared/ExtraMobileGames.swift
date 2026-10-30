@@ -123,8 +123,10 @@ private struct SnakeView: View {
                 }
             }
             HStack {
-                ForEach([("↑",-10),("←",-1),("↓",10),("→",1)], id: \.0) { pair in
-                    Button(pair.0) { if pair.1 != -direction { direction = pair.1 } }
+                ForEach(0..<4, id: \.self) { i in
+                    let symbols = ["↑", "←", "↓", "→"]
+                    let deltas = [-10, -1, 10, 1]
+                    Button(symbols[i]) { if deltas[i] != -direction { direction = deltas[i] } }
                         .buttonStyle(.bordered)
                 }
             }
