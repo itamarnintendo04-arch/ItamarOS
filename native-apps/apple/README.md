@@ -1,4 +1,4 @@
-# ItamarOS 1.3 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.5 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
