@@ -37,7 +37,7 @@ assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit'
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
 assert.match(appleSignIn,/SignInWithAppleButton/,'Apple sign-in uses AuthenticationServices');
 assert.match(appleSignIn,/ASAuthorizationAppleIDCredential/,'Apple sign-in requires genuine system authorization');
-assert.doesNotMatch(appleSignIn,/apple.?password|client.?secret|login\.apple\.com/i,'No password or secret capture');
+assert.doesNotMatch(appleSignIn,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b/,'Sign-in must not capture passwords or transmit Apple authorization tokens');
 assert.match(read(appleRoot+'/project.yml'),/CODE_SIGN_ENTITLEMENTS/,'Apple sign-in entitlement should be declared');
 assert.ok(exists(appleRoot+'/iOS/ItamarOS.entitlements'),'Sign in with Apple capability file should be present');
 const ipaImport=read(appleRoot+'/Shared/IPAImportView.swift');
