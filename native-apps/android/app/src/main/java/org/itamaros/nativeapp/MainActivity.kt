@@ -3,6 +3,8 @@ package org.itamaros.nativeapp
 import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
+import android.provider.OpenableColumns
+import androidx.activity.result.PickVisualMediaRequest
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
@@ -27,6 +29,8 @@ class MainActivity : ComponentActivity() {
     private var status by mutableStateOf("Native app ready")
     private var selectedTree by mutableStateOf<Uri?>(null)
     private var selectedMedia by mutableStateOf<Uri?>(null)
+    private var selectedApk by mutableStateOf<Uri?>(null)
+    private var selectedApkName by mutableStateOf<String?>(null)
     private var bestScore by mutableIntStateOf(0)
     private var updateStatus by mutableStateOf("Not checked yet")
     private var isTv = false
@@ -64,6 +68,53 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val chooseGallery = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            selectedMedia = uri
+            status = "Selected media from your gallery."
+        }
+    }
+
+    private val chooseApk = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        val fileName = try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } catch (_: Exception) { null }
+        if (fileName == null || !fileName.endsWith(".apk", ignoreCase = true)) {
+            selectedApk = null
+            selectedApkName = null
+            status = "Choose an actual .apk file, not a web page or ZIP."
+            return@registerForActivityResult
+        }
+        selectedApk = uri
+        selectedApkName = fileName
+        status = "Selected $fileName. Android will ask you to review any installation."
+    }
+
+    private fun installChosenApk() {
+        val uri = selectedApk
+        if (uri == null) {
+            status = "Select an APK first."
+            return
+        }
+        try {
+            val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                data = uri
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(intent)
+            status = "Android installer opened. No app is installed unless you approve it."
+        } catch (e: Exception) {
+            status = "Android installer unavailable: ${e.localizedMessage}. Device security restrictions must be respected."
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val uiMode = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
@@ -78,8 +129,11 @@ class MainActivity : ComponentActivity() {
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
+                    updateDownloadAvailable = updateApkUrl != null,
+                    onDownloadUpdate = ::openUpdateDownload,
                     bestScore = bestScore,
                     selectedMedia = selectedMedia,
+                    selectedApkName = selectedApkName,
                     onCheckUpdates = ::checkUpdates,
                     onLaunchService = ::launchTVService,
                     onOpenStoreListing = ::openPlayStoreListing,
@@ -87,7 +141,10 @@ class MainActivity : ComponentActivity() {
                     onChooseUSB = { chooseUSB.launch(null) },
                     onExport = ::exportToSelectedFolder,
                     onStorageSettings = ::openAppStorageSettings,
-                    onChooseMedia = { chooseMedia.launch(arrayOf("audio/*", "video/*")) },
+                    onChooseMedia = { chooseMedia.launch(arrayOf("image/*", "audio/*", "video/*")) },
+                    onChoosePhotos = { chooseGallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                    onChooseApk = { chooseApk.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream")) },
+                    onInstallApk = ::installChosenApk,
                     onSaveScore = { value ->
                         bestScore = value
                         prefs.edit().putInt("bestGuess", value).apply()
@@ -97,8 +154,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var updateApkUrl by mutableStateOf<String?>(null)
+
     private fun checkUpdates() {
-        updateStatus = "Checking GitHub for native app release information…"
+        updateStatus = "Checking public release metadata…"
+        updateApkUrl = null
         Thread {
             val result = try {
                 val connection = URL(
@@ -108,15 +168,50 @@ class MainActivity : ComponentActivity() {
                 connection.readTimeout = 10000
                 val data = connection.getInputStream().bufferedReader().use { it.readText() }
                 val manifest = JSONObject(data)
-                val version = manifest.optString("version")
-                if (manifest.optInt("schemaVersion") != 1) "Invalid release metadata."
-                else if (version != "1.2.0") "App preview 1.2.0; source manifest version: $version. No signed production update is available."
-                else "App preview source 1.2.0. No signed production app release is published."
+                val id = if (isTv) "itamaros-android-tv" else "itamaros-android"
+                val components = manifest.getJSONArray("components")
+                val component = (0 until components.length())
+                    .map { components.getJSONObject(it) }
+                    .firstOrNull { it.optString("id") == id }
+                val installed = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.0.0"
+                val remote = component?.optString("version").orEmpty()
+                val asset = component?.optString("package").orEmpty()
+                val trustedLink = asset.startsWith(
+                    "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/"
+                ) && asset.endsWith(".apk")
+                val newer = remote.split('.').map { it.toIntOrNull() ?: 0 }
+                    .let { r -> installed.split('.').map { it.toIntOrNull() ?: 0 }.let { local ->
+                        (0 until maxOf(r.size, local.size)).firstNotNullOfOrNull { index ->
+                            val diff = r.getOrElse(index) { 0 } - local.getOrElse(index) { 0 }
+                            if (diff == 0) null else diff > 0
+                        } ?: false
+                    } }
+
+                if (manifest.optInt("schemaVersion") != 1 || component == null) {
+                    "Invalid or missing Android release metadata."
+                } else if (newer && trustedLink) {
+                    runOnUiThread { updateApkUrl = asset }
+                    "Android $remote is published as an unverified preview APK. Download it from GitHub, then review installation in Android. Updating in place requires the same signing key as the installed version."
+                } else if (newer) {
+                    "Android source version $remote is newer, but no downloadable APK for this device is published."
+                } else {
+                    "Installed version $installed. Latest source version $remote. No newer APK found."
+                }
             } catch (e: Exception) {
-                "Unable to check updates: ${e.localizedMessage}"
+                "Unable to check releases: ${e.localizedMessage}"
             }
             runOnUiThread { updateStatus = result }
         }.start()
+    }
+
+    private fun openUpdateDownload() {
+        val url = updateApkUrl ?: return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            status = "Opened official GitHub APK download. Android must approve installation; no update has been installed yet."
+        } catch (e: Exception) {
+            status = "Unable to open release link: ${e.localizedMessage}"
+        }
     }
 
     private fun launchTVService(pkg: String?, name: String) {
@@ -192,7 +287,7 @@ class MainActivity : ComponentActivity() {
             ) ?: throw IllegalStateException("The selected destination is not writable.")
             val json = JSONObject()
                 .put("format", "ItamarOS Native Android backup")
-                .put("version", "1.2.0")
+                .put("version", "1.3.0")
                 .put("bestGuess", prefs.getInt("bestGuess", 0))
                 .toString(2)
             contentResolver.openOutputStream(result, "w")?.use {

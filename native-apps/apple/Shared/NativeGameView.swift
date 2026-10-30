@@ -2,7 +2,7 @@ import SwiftUI
 
 struct NativeGameView: View {
     @AppStorage("itamaros.games.bestGuessStreak") private var best = 0
-    @State private var selectedGame = "Number Guess"
+    @State private var selectedGame: String?
     @State private var target = Int.random(in: 1...100)
     @State private var guess = 50
     @State private var streak = 0
@@ -13,20 +13,68 @@ struct NativeGameView: View {
     private let games = ["2048", "Snake", "Memory Match", "Tic-Tac-Toe", "Number Guess",
                          "Reaction Test", "Rock Paper Scissors", "Math Sprint", "Word Mix",
                          "Pattern Memory", "Connect Four"]
+    private let gameSymbols: [String: String] = [
+        "2048": "square.grid.3x3.fill",
+        "Snake": "point.topleft.down.curvedto.point.bottomright.up",
+        "Memory Match": "rectangle.on.rectangle.angled",
+        "Tic-Tac-Toe": "number.square.fill",
+        "Number Guess": "questionmark.circle.fill",
+        "Reaction Test": "bolt.circle.fill",
+        "Rock Paper Scissors": "hand.raised.fill",
+        "Math Sprint": "plus.forwardslash.minus",
+        "Word Mix": "character.book.closed.fill",
+        "Pattern Memory": "circle.hexagongrid.fill",
+        "Connect Four": "circle.grid.3x3.fill"
+    ]
     private let winLines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 22) {
-                    Text("11 offline native games").font(.headline)
-                    Picker("Choose a game", selection: $selectedGame) {
-                        ForEach(games, id: \.self) { title in Text(title).tag(title) }
+                    if let selectedGame {
+                        HStack {
+                            Button {
+                                self.selectedGame = nil
+                            } label: {
+                                Label("All games", systemImage: "chevron.left")
+                            }
+                            Spacer()
+                            Text(selectedGame).font(.headline)
+                        }
+                        .buttonStyle(.bordered)
+
+                        if selectedGame == "Number Guess" { numberGuess }
+                        else if selectedGame == "Tic-Tac-Toe" { ticTacToe }
+                        else { ExtraMobileGames(game: selectedGame) }
+                    } else {
+                        Text("Choose a game to start")
+                            .font(.title2.bold())
+                        Text("11 offline games")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()), GridItem(.flexible())
+                        ], spacing: 14) {
+                            ForEach(games, id: \.self) { name in
+                                Button {
+                                    selectedGame = name
+                                } label: {
+                                    VStack(spacing: 13) {
+                                        Image(systemName: gameSymbols[name] ?? "gamecontroller.fill")
+                                            .font(.system(size: 33, weight: .semibold))
+                                            .frame(height: 44)
+                                        Text(name)
+                                            .font(.subheadline.bold())
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 110)
+                                    .padding(8)
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
                     }
-                    .pickerStyle(.menu)
-                    if selectedGame == "Number Guess" { numberGuess }
-                    else if selectedGame == "Tic-Tac-Toe" { ticTacToe }
-                    else { ExtraMobileGames(game: selectedGame) }
                     Text("Your best scores are saved locally on this device.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

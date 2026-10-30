@@ -4,8 +4,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "1.2.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.3.0"
+    CURRENT_PROJECT_VERSION: "3"
     SWIFT_VERSION: "5.9"
 targets:
   ItamarOSiOS:
@@ -18,6 +18,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.mobile
+        CODE_SIGN_ENTITLEMENTS: iOS/ItamarOS.entitlements
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ItamarOS
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

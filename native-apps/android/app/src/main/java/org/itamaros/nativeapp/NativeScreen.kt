@@ -46,8 +46,11 @@ fun NativeAppScreen(
     device: String,
     status: String,
     updateStatus: String,
+    updateDownloadAvailable: Boolean,
+    onDownloadUpdate: () -> Unit,
     bestScore: Int,
     selectedMedia: Uri?,
+    selectedApkName: String?,
     onCheckUpdates: () -> Unit,
     onLaunchService: (String?, String) -> Unit,
     onOpenStoreListing: (String) -> Unit,
@@ -56,11 +59,14 @@ fun NativeAppScreen(
     onExport: () -> Unit,
     onStorageSettings: () -> Unit,
     onChooseMedia: () -> Unit,
+    onChoosePhotos: () -> Unit,
+    onChooseApk: () -> Unit,
+    onInstallApk: () -> Unit,
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
-        else listOf("Home", "Games", "Player", "Settings")
+        else listOf("Home", "Games", "Player", "Apps", "Settings")
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -85,7 +91,7 @@ fun NativeAppScreen(
                                 contentDescription = "ItamarOS logo",
                                 modifier = Modifier.size(126.dp)
                             )
-                            Text("ItamarOS 1.2", style = MaterialTheme.typography.headlineLarge)
+                            Text("ItamarOS 1.3", style = MaterialTheme.typography.headlineLarge)
                             Text("Native Android application • Not a WebView", color = MaterialTheme.colorScheme.secondary)
                             Text("Device: $device", modifier = Modifier.padding(top = 14.dp))
                             Text(if (isTv) "Android TV / Google TV" else "Android phone or tablet")
@@ -102,31 +108,41 @@ fun NativeAppScreen(
                     }
                     "Player" -> item {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Text("Native media", style = MaterialTheme.typography.headlineMedium)
-                            Text("Local playback uses Android VideoView and the system MediaPlayer engine, not a website.")
+                            Text("ItamarOS Player", style = MaterialTheme.typography.headlineMedium)
+                            Text("Preview images, watch videos and play audio from your device.")
                             if (selectedMedia != null) {
-                                key(selectedMedia) {
-                                    AndroidView(
-                                        factory = { context ->
-                                            VideoView(context).apply {
-                                                setVideoURI(selectedMedia)
-                                                setMediaController(android.widget.MediaController(context))
-                                                setOnPreparedListener { start() }
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp)
-                                    )
+                                key(selectedMedia) { NativeMediaPreview(selectedMedia) }
+                            }
+                            Button(onClick = onChooseMedia) {
+                                Text("Choose image, video or audio from Files")
+                            }
+                            if (!isTv) {
+                                Button(onClick = onChoosePhotos) {
+                                    Text("Choose photo or video from Gallery")
                                 }
                             }
-                            Button(onClick = onChooseMedia) { Text("Choose local audio/video") }
+                        }
+                    }
+                    "Apps" -> if (!isTv) item {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text("APK files", style = MaterialTheme.typography.headlineMedium)
+                            Text("Choose an APK you trust. Android's system installer checks the package and asks for your permission. ItamarOS cannot silently install apps.")
+                            Button(onClick = onChooseApk) { Text("Choose APK from Files") }
+                            if (selectedApkName != null) {
+                                Text("Selected: $selectedApkName")
+                                Button(onClick = onInstallApk) {
+                                    Text("Review installation in Android")
+                                }
+                            }
+                            Text(status, color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     "Streaming" -> if (isTv) item {
                         TVServiceScreen(onLaunchService)
                     }
                     "Settings" -> item {
-                        NativeSettings(isTv, device, status, updateStatus,
-                            onCheckUpdates, onChooseUSB, onExport, onStorageSettings)
+                        NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
+                            onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings)
                     }
                 }
             }
@@ -190,7 +206,9 @@ private fun NativeSettings(
     device: String,
     status: String,
     updates: String,
+    updateDownloadAvailable: Boolean,
     check: () -> Unit,
+    downloadUpdate: () -> Unit,
     chooseUSB: () -> Unit,
     export: () -> Unit,
     storageSettings: () -> Unit
@@ -203,6 +221,10 @@ private fun NativeSettings(
         Text("Android version: ${Build.VERSION.RELEASE}")
         Text("Release information: $updates")
         Button(onClick = check) { Text("Check for app updates") }
+        if (updateDownloadAvailable) {
+            Button(onClick = downloadUpdate) { Text("Download published APK update") }
+            Text("Install only through Android approval. Existing installation may require an identical signing certificate.")
+        }
         HorizontalDivider()
         Text("Accessibility", fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically) {

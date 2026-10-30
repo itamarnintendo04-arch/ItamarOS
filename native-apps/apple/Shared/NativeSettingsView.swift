@@ -31,7 +31,7 @@ struct NativeSettingsView: View {
                     #endif
                     LabeledContent("Language", value: Locale.current.identifier)
                     LabeledContent("Time zone", value: TimeZone.current.identifier)
-                    LabeledContent("App version", value: "1.1.0")
+                    LabeledContent("App version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
                 }
                 Section("Storage") {
                     #if os(tvOS)
