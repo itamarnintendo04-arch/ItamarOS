@@ -63,8 +63,8 @@ assert.ok(downloads.includes('iPhone/iPad IPA build artifacts'), 'Expose iOS dev
 assert.ok(downloads.includes('Android / Android TV APK build artifacts'), 'Expose Android developer package artifact page');
 assert.ok(downloads.includes('EXE download on hold pending security review'));
 assert.ok(downloads.includes('id="android-download"'), 'Android TV section must be on the download page');
-assert.ok(downloads.includes('ItamarOS-Android-1.1.0-debug.apk'), 'Downloader needs public direct APK URL');
-assert.ok(downloads.includes('v1.1-android-preview'), 'APK preview release must be separate from Windows release');
+assert.ok(downloads.includes('ItamarOS-Android-1.2.0-debug.apk'), 'Downloader needs public direct APK URL');
+assert.ok(downloads.includes('v1.2-android-preview'), 'APK preview release must be separate from Windows release');
 assert.ok(downloads.includes('Unverified developer preview'), 'Debug APK must have honest safety notice');
 assert.ok(load('.github/workflows/android-preview-release.yml').includes('gh release create'), 'APK preview publisher must attach public asset');
 assert.ok(load('.github/workflows/android-preview-release.yml').includes('apksigner'), 'Validate APK signature format before preview publishing');
