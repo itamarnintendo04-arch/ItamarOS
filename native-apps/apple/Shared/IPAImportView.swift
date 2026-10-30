@@ -26,18 +26,10 @@ struct IPAImportView: View {
         }
     }
 
-    @AppStorage("itamaros.ipa.accountEmails") private var savedEmailsJSON = "[]"
-    @AppStorage("itamaros.ipa.activeEmail") private var activeEmail = ""
-    @State private var emailInput = ""
     @State private var isPickingFile = false
     @State private var isImporting = false
     @State private var importedIPA: ImportedIPA?
     @State private var message = "No IPA selected."
-    @State private var accountMessage = "These are local email labels, not Apple sign-ins."
-
-    private var profiles: [String] {
-        (try? JSONDecoder().decode([String].self, from: Data(savedEmailsJSON.utf8))) ?? []
-    }
 
     var body: some View {
         NavigationStack {
@@ -46,70 +38,9 @@ struct IPAImportView: View {
                     Label("IPA Files", systemImage: "shippingbox")
                         .font(.title.bold())
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Apple Account profiles", systemImage: "person.crop.circle")
-                            .font(.title3.bold())
-                        Text("Save up to 5 Apple Account email labels on this device. Select only one profile at a time. This is not a login to Apple and does not authenticate or sign apps.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
-                        HStack {
-                            TextField("Apple Account email", text: $emailInput)
-                                .keyboardType(.emailAddress)
-                                .textContentType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .textFieldStyle(.roundedBorder)
-                                .accessibilityLabel("Email for a local Apple Account profile")
-                            Button("Add") { addProfile() }
-                                .disabled(profiles.count >= 5 || emailInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                        Text("\(profiles.count) of 5 saved · \(activeEmail.isEmpty ? "No active profile" : "1 active profile")")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        ForEach(profiles, id: \.self) { email in
-                            HStack(spacing: 8) {
-                                Image(systemName: email == activeEmail ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(email == activeEmail ? .green : .secondary)
-                                VStack(alignment: .leading) {
-                                    Text(email)
-                                        .font(.subheadline)
-                                        .textSelection(.enabled)
-                                    Text(email == activeEmail ? "Selected locally · not signed in" : "Inactive")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer(minLength: 6)
-                                if email == activeEmail {
-                                    Button("Sign out") {
-                                        activeEmail = ""
-                                        accountMessage = "Local profile deselected. Any session in an external signing tool must be signed out there separately."
-                                    }
-                                    .font(.caption)
-                                } else {
-                                    Button("Select") {
-                                        activeEmail = email
-                                        accountMessage = "Selected \(email). Authenticate separately in your authorized signing tool."
-                                    }
-                                    .font(.caption)
-                                }
-                                Button(role: .destructive) { removeProfile(email) } label: {
-                                    Image(systemName: "trash")
-                                }
-                                .accessibilityLabel("Remove \(email)")
-                            }
-                            .padding(.vertical, 6)
-                        }
-                        Text(accountMessage)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("Passwords, verification codes and signing certificates are never entered or saved in ItamarOS. Account authentication happens only in your chosen signing client.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding()
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    AppleAccountSignInView()
+                        .padding()
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
 
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Free Apple Account limits", systemImage: "info.circle")
@@ -159,6 +90,8 @@ struct IPAImportView: View {
                         Label("Install with an external tool", systemImage: "lock.shield")
                             .font(.headline)
                         Text("1. Set up AltStore Classic and AltServer on a trusted computer.\n2. Sign in with your own Apple Account inside the signing tool.\n3. Import the IPA using the share control above, or open the published ItamarOS source in AltStore.\n4. Approve installation on your device. ItamarOS cannot verify completion from here.")
+                        Link("Open Sideloadly for Windows or Mac",
+                             destination: URL(string: "https://sideloadly.io/")!)
                         Link("Official AltStore Classic instructions",
                              destination: URL(string: "https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows")!)
                         Link("ItamarOS downloads and available builds",
@@ -178,41 +111,6 @@ struct IPAImportView: View {
             .fileImporter(isPresented: $isPickingFile, allowedContentTypes: [.data]) { result in
                 importFile(result)
             }
-        }
-    }
-
-    private func addProfile() {
-        let email = emailInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard email.contains("@"), email.split(separator: "@").count == 2, !email.contains(" "), email.count <= 254 else {
-            accountMessage = "Enter a valid email address."
-            return
-        }
-        var list = profiles
-        guard list.count < 5 else {
-            accountMessage = "You can save up to 5 profiles."
-            return
-        }
-        guard !list.contains(email) else {
-            accountMessage = "This email is already in your list."
-            return
-        }
-        list.append(email)
-        persist(list)
-        emailInput = ""
-        accountMessage = "Email label saved locally. This is not an Apple login."
-    }
-
-    private func removeProfile(_ email: String) {
-        persist(profiles.filter { $0 != email })
-        if activeEmail == email { activeEmail = "" }
-        accountMessage = "Profile removed from ItamarOS. External signing-tool sessions are unchanged."
-    }
-
-    private func persist(_ list: [String]) {
-        let validated = Array(list.prefix(5))
-        if let data = try? JSONEncoder().encode(validated),
-           let json = String(data: data, encoding: .utf8) {
-            savedEmailsJSON = json
         }
     }
 
