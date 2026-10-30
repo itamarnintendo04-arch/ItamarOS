@@ -1,0 +1,106 @@
+name: Build ItamarOS Local IPA Signer
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "signer-ui/**"
+      - ".github/workflows/browser-ipa-signer.yml"
+  push:
+    branches: [main]
+    paths:
+      - "signer-ui/**"
+      - ".github/workflows/browser-ipa-signer.yml"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout ItamarOS source
+        uses: actions/checkout@v4
+        with:
+          path: site
+          persist-credentials: true
+      - name: Checkout pinned audited source of zsign WASM browser engine
+        uses: actions/checkout@v4
+        with:
+          repository: AntonP29/SylvaSigner
+          ref: f7127d6857a6aaa919b7430ef73baa262fe28070
+          path: engine
+          persist-credentials: false
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: engine/package-lock.json
+      - name: Install pinned engine dependencies
+        working-directory: engine
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Use ItamarOS interface and local-only signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp site/signer-ui/index.html engine/index.html
+          cp site/signer-ui/itamaros-main.ts engine/src/itamaros-main.ts
+          python3 - <<'PY'
+          from pathlib import Path
+          worker=Path("engine/src/zsign-worker.ts")
+          code=worker.read_text()
+          original="`/wasm/${variant}.mjs?v=${wasmCacheBust}`"
+          patched="`/signer/wasm/${variant}.mjs?v=${wasmCacheBust}`"
+          assert original in code, "Expected pinned zsign module URL changed upstream"
+          code=code.replace(original,patched)
+          original="`/wasm/${file}?v=${wasmCacheBust}`"
+          patched="`/signer/wasm/${file}?v=${wasmCacheBust}`"
+          assert original in code, "Expected pinned WASM dependency URL changed upstream"
+          code=code.replace(original,patched)
+          worker.write_text(code)
+          api=Path("engine/src/zsign-api.ts")
+          source=api.read_text()
+          assert '/mobile-zsign-worker.js?' in source
+          api.write_text(source.replace('/mobile-zsign-worker.js?', '/signer/mobile-zsign-worker.js?'))
+          PY
+      - name: Build self-hosted WebAssembly signing page
+        working-directory: engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm exec -- vite build --base=/signer/ --outDir "$GITHUB_WORKSPACE/site/signer" --emptyOutDir
+          test -s "$GITHUB_WORKSPACE/site/signer/index.html"
+          test -s "$GITHUB_WORKSPACE/site/signer/wasm/zsign.wasm"
+          test -s "$GITHUB_WORKSPACE/site/signer/wasm/zsign.mjs"
+          grep -q 'ItamarOS' "$GITHUB_WORKSPACE/site/signer/index.html"
+      - name: Preserve third-party license notices
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp engine/LICENSE site/signer/THIRD_PARTY_LICENSE.txt
+          cp engine/THIRD_PARTY_NOTICES.md site/signer/THIRD_PARTY_NOTICES.md
+          mkdir -p site/signer/licenses
+          cp engine/vendor/zsign/LICENSE site/signer/licenses/zsign-MIT.txt
+          cp engine/licenses/openssl-3.5.7.txt site/signer/licenses/openssl-3.5.7.txt
+      - name: Upload locally executable signer as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: itamaros-local-browser-ipa-signer
+          path: site/signer/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish verified static files to ItamarOS website
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        working-directory: site
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add signer/
+          if git diff --cached --quiet; then
+            echo 'Signer build unchanged.'
+            exit 0
+          fi
+          git commit -m 'Build and publish ItamarOS local WASM IPA signer [skip ci]'
+          git push origin HEAD:main
