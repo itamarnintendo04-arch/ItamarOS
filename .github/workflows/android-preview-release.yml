@@ -1,4 +1,4 @@
-name: Publish Android 1.1 Preview APK
+name: Publish Android 1.2 Preview APK
 on:
   workflow_dispatch:
   push:
@@ -36,15 +36,15 @@ jobs:
           source='native-apps/android/app/build/outputs/apk/debug/app-debug.apk'
           test -s "$source"
           mkdir -p dist
-          cp "$source" dist/ItamarOS-Android-1.1.0-debug.apk
-          sha256sum dist/ItamarOS-Android-1.1.0-debug.apk > dist/SHA256SUMS-Android.txt
-          "${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose dist/ItamarOS-Android-1.1.0-debug.apk
-          unzip -t dist/ItamarOS-Android-1.1.0-debug.apk > /dev/null
+          cp "$source" dist/ItamarOS-Android-1.2.0-debug.apk
+          sha256sum dist/ItamarOS-Android-1.2.0-debug.apk > dist/SHA256SUMS-Android.txt
+          "${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose dist/ItamarOS-Android-1.2.0-debug.apk
+          unzip -t dist/ItamarOS-Android-1.2.0-debug.apk > /dev/null
           cat dist/SHA256SUMS-Android.txt
       - name: Verify Android package identity
         shell: bash
         run: |
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging dist/ItamarOS-Android-1.1.0-debug.apk | grep "package: name='org.itamaros.nativeapp'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging dist/ItamarOS-Android-1.2.0-debug.apk | grep "package: name='org.itamaros.nativeapp'"
       - name: Describe prerelease safety limits
         run: |
           cat > dist/RELEASE_NOTES.txt <<'NOTES'
@@ -70,15 +70,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag='v1.1-android-preview'
+          tag='v1.2-android-preview'
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'A preview release already exists; refusing to overwrite test APK.'
             exit 1
           fi
           gh release create "$tag" \
-            dist/ItamarOS-Android-1.1.0-debug.apk \
+            dist/ItamarOS-Android-1.2.0-debug.apk \
             dist/SHA256SUMS-Android.txt \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title 'ItamarOS Android 1.1 — UNVERIFIED Native Preview' \
+            --title 'ItamarOS Android 1.2 — UNVERIFIED Native Preview' \
             --notes-file dist/RELEASE_NOTES.txt
