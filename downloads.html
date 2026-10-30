@@ -16,7 +16,7 @@ details{margin-top:16px}summary{cursor:pointer}footer{padding:24px 0;color:#99b7
 nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{height:42px;width:42px;object-fit:contain}h1{margin-top:48px}</style>
 </head><body><main>
 <nav><strong class="brand-nav"><img src="/assets/branding/itamaros-mark-512.png" width="42" height="42" alt=""> ItamarOS</strong><div><a href="/">Web Emulator</a><a href="https://github.com/itamarnintendo04-arch/ItamarOS" target="_blank" rel="noopener noreferrer">GitHub repository</a><a href="/feedback.html">💬 Feedback</a></div></nav>
-<h1>Download ItamarOS 1.3</h1>
+<h1>Download ItamarOS</h1>
 <p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
 <section class="card" id="device-files">
 <span class="badge">Choose your device</span>
@@ -62,8 +62,8 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card" id="linux-download" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
 <section class="card" id="iphone-download">
 <span class="badge">iPhone · iPad · Personal signing only</span>
-<h2>📱 ItamarOS iOS 1.3 — IPA</h2>
-<p>To install an iPhone developer IPA, use your own Apple Account in a separate signing/installation client such as <strong>Sideloadly</strong> on Windows/Mac or <strong>AltStore Classic</strong>. ItamarOS does <strong>not</strong> ask for or collect Apple Account passwords.</p>
+<h2>📱 ItamarOS iOS 1.4 — developer IPA</h2>
+<p>To install an iPhone developer IPA, use your own Apple Account in a separate signing/installation client such as <strong>Sideloadly</strong> on Windows/Mac or <strong>AltStore Classic</strong>. ItamarOS does <strong>not</strong> ask for or collect Apple Account passwords. Up to five local email labels can be saved inside the app, but only one may be selected; these labels do not authenticate accounts.</p>
 <a class="btn" href="https://sideloadly.io/" target="_blank" rel="noopener noreferrer" id="ios-signing-service">Open Sideloadly · Sign & install on computer</a>
 <a class="btn alt" href="https://altstore.io/" target="_blank" rel="noopener noreferrer">AltStore Classic</a>
 <div id="ios-release-status" role="status"><p>Checking for a public unsigned iPhone IPA release…</p></div>
@@ -176,20 +176,31 @@ function label(element,text){element.replaceChildren();const p=document.createEl
 
 (async()=>{
  const status=document.getElementById('ios-release-status');
- const tag='v1.3-ios-unsigned-preview';
- const expected='ItamarOS-1.3.0-iOS-UNSIGNED.ipa';
+ const tag='v1.4-ios-unsigned';
+ const expected='ItamarOS-1.4.0-iOS-UNSIGNED.ipa';
+ const base='https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/'+tag+'/';
  try{
   const res=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/'+tag,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
-  if(!res.ok)throw Error('Unsigned iOS release is not published yet');
+  if(!res.ok)throw Error('Unsigned iOS release not yet published');
   const release=await res.json();
-  const asset=Array.isArray(release.assets)?release.assets.find(a=>a.name===expected&&typeof a.browser_download_url==='string'&&a.browser_download_url.startsWith('https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/')):null;
-  if(!asset)throw Error('No downloadable unsigned IPA found');
-  const p=document.createElement('p');
-  p.textContent='Public unsigned IPA '+(asset.size/1048576).toFixed(1)+' MiB — needs personal developer signing before installation.';
-  const a=document.createElement('a');a.href=asset.browser_download_url;a.textContent='⬇ Download unsigned iPhone/iPad IPA 1.3';a.className='btn';a.rel='noopener noreferrer';a.target='_blank';
-  status.replaceChildren(p,a);
- }catch(e){
-  status.textContent='No public unsigned IPA currently available. You can check the iPhone/iPad GitHub Actions developer artifacts below. Downloading an IPA alone cannot install it.';
+  const assets=Array.isArray(release.assets)?release.assets:[];
+  const ipa=assets.find(a=>a.name===expected&&a.browser_download_url===base+expected&&a.size>0);
+  const source=assets.find(a=>a.name==='altstore-source.json'&&a.browser_download_url===base+'altstore-source.json'&&a.size>0);
+  if(!ipa)throw Error('Public unsigned IPA is missing');
+  const info=document.createElement('p');
+  info.textContent='Public unsigned IPA · '+(ipa.size/1048576).toFixed(1)+' MiB. Requires Apple-issued personal developer signing; downloading does not install it.';
+  const download=document.createElement('a');download.href=ipa.browser_download_url;download.className='btn alt';download.textContent='Download unsigned iPhone IPA 1.4';download.rel='noopener noreferrer';
+  status.replaceChildren(info,download);
+  if(source){
+   const note=document.createElement('p');note.textContent='If AltStore Classic is already configured with your Apple Account and a connected AltServer, you can open the ItamarOS source using the control below. Signing, provisioning, and device confirmation occur in AltStore, not on this website.';
+   const handoff=document.createElement('a');
+   handoff.href='altstore-classic://source?url='+encodeURIComponent(source.browser_download_url);
+   handoff.className='btn';handoff.textContent='Open ItamarOS in AltStore Classic';
+   handoff.setAttribute('aria-label','Open iPhone signing client; further setup and device approval required');
+   status.append(note,handoff);
+  }
+ }catch{
+  status.textContent='No public unsigned IPA currently available. Use the iPhone developer build page below, or open an external signing tool. There is no one-click browser installation.';
  }
 })();
 (()=>{
