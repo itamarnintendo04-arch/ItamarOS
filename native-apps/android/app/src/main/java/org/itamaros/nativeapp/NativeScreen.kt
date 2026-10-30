@@ -50,6 +50,8 @@ fun NativeAppScreen(
     selectedMedia: Uri?,
     onCheckUpdates: () -> Unit,
     onLaunchService: (String?, String) -> Unit,
+    onOpenStoreListing: (String) -> Unit,
+    onBrowseStore: () -> Unit,
     onChooseUSB: () -> Unit,
     onExport: () -> Unit,
     onStorageSettings: () -> Unit,
@@ -57,7 +59,7 @@ fun NativeAppScreen(
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
-    val tabs = if (isTv) listOf("Home", "Games", "Streaming", "Settings")
+    val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Games", "Player", "Settings")
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -93,7 +95,10 @@ fun NativeAppScreen(
                         }
                     }
                     "Games" -> item {
-                        NativeGuessGame(bestScore, onSaveScore)
+                        MobileGamesHub()
+                    }
+                    "Store" -> if (isTv) item {
+                        TVStoreScreen(status, onOpenStoreListing, onBrowseStore)
                     }
                     "Player" -> item {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
