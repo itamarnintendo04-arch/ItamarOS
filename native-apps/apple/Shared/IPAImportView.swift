@@ -26,6 +26,7 @@ struct IPAImportView: View {
         }
     }
 
+    @State private var isSignerPresented = false
     @State private var isPickingFile = false
     @State private var isImporting = false
     @State private var importedIPA: ImportedIPA?
@@ -87,6 +88,26 @@ struct IPAImportView: View {
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
 
                     VStack(alignment: .leading, spacing: 12) {
+                        Label("Sign IPA inside ItamarOS", systemImage: "signature")
+                            .font(.headline)
+                        Text("The signing workspace runs the ItamarOS zsign WebAssembly page inside this app. You need your own Apple-issued .p12 signing certificate and matching .mobileprovision. ItamarOS does not ask for your Apple ID password.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Button {
+                            isSignerPresented = true
+                        } label: {
+                            Label("Open IPA Signer", systemImage: "checkmark.shield")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Text("A successful signature produces an IPA to save or share. iOS still requires valid provisioning and an authorized installation method. This does not install apps automatically.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+
+                    VStack(alignment: .leading, spacing: 12) {
                         Label("Install with an external tool", systemImage: "lock.shield")
                             .font(.headline)
                         Text("1. Set up AltStore Classic and AltServer on a trusted computer.\n2. Sign in with your own Apple Account inside the signing tool.\n3. Import the IPA using the share control above, or open the published ItamarOS source in AltStore.\n4. Approve installation on your device. ItamarOS cannot verify completion from here.")
@@ -110,6 +131,9 @@ struct IPAImportView: View {
             .navigationTitle("IPA")
             .fileImporter(isPresented: $isPickingFile, allowedContentTypes: [.data]) { result in
                 importFile(result)
+            }
+            .sheet(isPresented: $isSignerPresented) {
+                EmbeddedIPASignerView()
             }
         }
     }
