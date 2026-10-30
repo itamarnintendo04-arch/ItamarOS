@@ -287,7 +287,7 @@ class MainActivity : ComponentActivity() {
             ) ?: throw IllegalStateException("The selected destination is not writable.")
             val json = JSONObject()
                 .put("format", "ItamarOS Native Android backup")
-                .put("version", "1.2.0")
+                .put("version", "1.3.0")
                 .put("bestGuess", prefs.getInt("bestGuess", 0))
                 .toString(2)
             contentResolver.openOutputStream(result, "w")?.use {
