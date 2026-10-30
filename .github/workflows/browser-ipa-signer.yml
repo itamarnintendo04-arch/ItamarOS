@@ -1,6 +1,11 @@
 name: Build ItamarOS Local IPA Signer
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "signer-ui/**"
+      - ".github/workflows/browser-ipa-signer.yml"
   push:
     branches: [main]
     paths:
