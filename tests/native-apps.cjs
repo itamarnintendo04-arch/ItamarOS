@@ -7,14 +7,17 @@ const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 const exists=p=>fs.existsSync(path.join(ROOT,p));
 const platformManifest=JSON.parse(read('updates/native-apps.json'));
-assert.equal(platformManifest.version,'1.2.0');
-assert.equal(platformManifest.status,'source-and-debug-preview');
+assert.equal(platformManifest.version,'1.3.0');
 assert.equal(platformManifest.signedBinariesPublished,false);
 assert.equal(platformManifest.components.length,8);
 for(const component of platformManifest.components) {
  if(['itamaros-android','itamaros-android-tv'].includes(component.id)) {
-  assert.match(component.package,/^https:\/\/github\.com\/itamarnintendo04-arch\/ItamarOS\/releases\/download\/v1\.2-android-preview\/ItamarOS-Android-1\.2\.0-debug\.apk$/);
-  assert.equal(component.releaseStatus,'unverified-debug-preview');
+  if(component.releaseStatus==='unverified-debug-preview') {
+   assert.match(component.package,/^https:\/\/github\.com\/itamarnintendo04-arch\/ItamarOS\/releases\/download\/v1\.3-android-preview\/ItamarOS-Android-1\.3\.0-debug\.apk$/);
+  } else {
+   assert.equal(component.releaseStatus,'source-only');
+   assert.equal(component.package,null,'Never advertise an unpublished Android APK');
+  }
  } else {
   assert.equal(component.package,null,'Unpublished native platforms must not invent binary downloads: '+component.id);
  }
