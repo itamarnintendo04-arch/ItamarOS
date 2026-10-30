@@ -35,7 +35,7 @@ struct DashboardView: View {
                         .frame(width: 125, height: 125)
                     Text("ItamarOS")
                         .font(.largeTitle.bold())
-                    Text("Native app • Version 1.1")
+                    Text("Native app • Version 1.2")
                         .foregroundStyle(.secondary)
                     #if os(tvOS)
                     Label("Native Apple TV app with remote support", systemImage: "play.tv")
