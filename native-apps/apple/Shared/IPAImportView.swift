@@ -1,5 +1,6 @@
 #if os(iOS)
 import Foundation
+import CryptoKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -10,6 +11,7 @@ struct IPAImportView: View {
         let url: URL
         let fileName: String
         let bytes: Int64
+        let sha256: String
     }
 
     private enum IPAImportError: LocalizedError {
@@ -135,6 +137,7 @@ struct IPAImportView: View {
                         if let file = importedIPA {
                             LabeledContent("File", value: file.fileName)
                             LabeledContent("Size", value: ByteCountFormatter.string(fromByteCount: file.bytes, countStyle: .file))
+                            LabeledContent("SHA-256", value: file.sha256)
                             LabeledContent("Type", value: "IPA (unverified)")
                             LabeledContent("Signature", value: "Not checked")
                             LabeledContent("Installation", value: "Not installed")
@@ -255,7 +258,15 @@ struct IPAImportView: View {
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let local = folder.appendingPathComponent(UUID().uuidString + "-" + source.lastPathComponent)
         try fm.copyItem(at: source, to: local)
-        return ImportedIPA(url: local, fileName: source.lastPathComponent, bytes: bytes)
+        let stream = try FileHandle(forReadingFrom: local)
+        defer { try? stream.close() }
+        var checksum = SHA256()
+        while true {
+            guard let chunk = try stream.read(upToCount: 1024 * 1024), !chunk.isEmpty else { break }
+            checksum.update(data: chunk)
+        }
+        let sha256 = checksum.finalize().map { String(format: "%02x", $0) }.joined()
+        return ImportedIPA(url: local, fileName: source.lastPathComponent, bytes: bytes, sha256: sha256)
     }
 }
 #endif
