@@ -18,6 +18,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.mobile
+        CODE_SIGN_ENTITLEMENTS: iOS/ItamarOS.entitlements
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ItamarOS
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
