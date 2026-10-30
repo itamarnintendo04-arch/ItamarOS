@@ -281,7 +281,7 @@ private struct MathSprintView: View {
         VStack(spacing: 12) {
             Text("Math Sprint").font(.title2.bold())
             Text("\(first) + \(second) = ?").font(.largeTitle)
-            TextField("Your answer", text: $answer).textFieldStyle(.roundedBorder)
+            TextField("Your answer", text: $answer)
             Button("Submit") {
                 if Int(answer) == first + second { total += 1; best = max(best, total); message = "Correct!" }
                 else { message = "Next question." }
@@ -305,7 +305,7 @@ private struct WordMixView: View {
         VStack(spacing: 12) {
             Text("Word Mix").font(.title2.bold())
             Text(mixed).font(.title.bold())
-            TextField("English word", text: $answer).textFieldStyle(.roundedBorder)
+            TextField("English word", text: $answer)
             Button("Check") {
                 if answer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == current {
                     solved += 1; best = max(best, solved); message = "Correct!"; next()
