@@ -19,7 +19,7 @@ private struct SavedAppleProfiles: Codable {
 }
 
 @MainActor
-private final class LocalAppleAccountStore: ObservableObject {
+final class LocalAppleAccountStore: ObservableObject {
     static let limit = 5
 
     @Published private(set) var profiles: [SavedAppleProfile] = []
@@ -161,7 +161,7 @@ private final class LocalAppleAccountStore: ObservableObject {
 }
 
 struct AppleAccountSignInView: View {
-    @StateObject private var store = LocalAppleAccountStore()
+    @EnvironmentObject private var store: LocalAppleAccountStore
     @State private var editingID: String?
     @State private var profileLabel = ""
 
