@@ -56,8 +56,15 @@ const ipaImport=read(appleRoot+'/Shared/IPAImportView.swift');
 assert.match(ipaImport,/#if os\(iOS\)/,'IPA file workflow should be iOS only');
 assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files picker');
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
-assert.doesNotMatch(ipaImport,/URLSession|http\.post|privateKey|password|\.install\(/i,'Do not secretly upload, sign or install user IPAs');
+assert.doesNotMatch(ipaImport,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b|Process\(/,'Do not collect Apple passwords, upload files or run a signing executable');
 assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
+assert.match(ipaImport,/kSecAttrAccessibleWhenUnlockedThisDeviceOnly/,'Store local account labels in device-only Keychain');
+assert.match(ipaImport,/profiles\.emails\.count >= 5/,'Allow only five email labels');
+assert.match(ipaImport,/selectedEmail/,'Exactly one active signing profile label');
+assert.match(ipaImport,/SHA256/,'Compute IPA checksum locally');
+assert.match(ipaImport,/ShareLink/,'Hand off IPA only after user explicitly shares');
+assert.match(ipaImport,/https:\/\/sideloadly\.io\//,'Signing client link should point to the verified official provider site');
+
 for(const p of ['iOS','tvOS','macOS','visionOS','watchOS']) {
  const assets=appleRoot+'/'+p+'/Assets.xcassets';
  assert.ok(exists(assets+'/AppIcon.appiconset/Contents.json'),p+' appicon metadata');
