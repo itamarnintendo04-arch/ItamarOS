@@ -16,16 +16,16 @@ details{margin-top:16px}summary{cursor:pointer}footer{padding:24px 0;color:#99b7
 nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{height:42px;width:42px;object-fit:contain}h1{margin-top:48px}</style>
 </head><body><main>
 <nav><strong class="brand-nav"><img src="/assets/branding/itamaros-mark-512.png" width="42" height="42" alt=""> ItamarOS</strong><div><a href="/">Web Emulator</a><a href="https://github.com/itamarnintendo04-arch/ItamarOS" target="_blank" rel="noopener noreferrer">GitHub repository</a><a href="/feedback.html">💬 Feedback</a></div></nav>
-<h1>Download ItamarOS 1.2</h1>
+<h1>Download ItamarOS</h1>
 <p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
 <section class="card" id="device-files">
 <span class="badge">Choose your device</span>
 <h2>Device-specific ItamarOS downloads</h2>
 <p>Choose the build for your device. Download links below only lead to actually published files or clearly marked developer build pages. ItamarOS is currently an app/preview on phones and TVs, not replacement firmware.</p>
 <div style="display:flex;flex-wrap:wrap;gap:8px">
-<a class="btn" href="#android-download">Android phone · APK 1.2</a>
+<a class="btn" href="#android-download">Android phone · APK 1.3</a>
 <a class="btn" href="#android-download">Android TV · same compatible APK</a>
-<a class="btn alt" href="#apple-builds">iPhone/iPad · unsigned developer IPA</a>
+<a class="btn alt" href="#iphone-download">iPhone/iPad · personal developer signing</a>
 <a class="btn alt" href="#apple-builds">Apple TV · source and build checks only</a>
 <a class="btn alt" href="#mac-download">Mac · Intel/Apple Silicon DMG</a>
 <a class="btn alt" href="#windows-download">Windows · download paused</a>
@@ -38,17 +38,17 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 
 <section class="card" id="android-download" aria-labelledby="android-heading" style="border-color:#62ac87">
 <span class="badge">Android phones · Tablets · Android TV / Google TV</span>
-<h2 id="android-heading">📱📺 ItamarOS Android 1.2 — APK</h2>
+<h2 id="android-heading">📱📺 ItamarOS Android 1.3 — APK</h2>
 <p>Native Android application in Kotlin / Jetpack Compose — <strong>not a WebView</strong>. The app detects whether it is running on a TV, phone or tablet and shows the appropriate interface.</p>
-<a class="btn" id="android-direct" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.2-android-preview/ItamarOS-Android-1.2.0-debug.apk" target="_self" download="ItamarOS-Android-1.2.0-debug.apk" rel="noopener" style="font-size:18px;padding:17px 22px">⬇ Download Android APK</a>
-<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.2-android-preview/ItamarOS-Android-1.2.0-debug.apk" download="ItamarOS-Android-1.2.0-debug.apk" rel="noopener">📺 Download for Android TV (same APK)</a>
-<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.2-android-preview/SHA256SUMS-Android.txt" rel="noopener">SHA-256 checksum</a>
-<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.2-android-preview" target="_blank" rel="noopener noreferrer">View APK version & SHA-256</a>
+<a class="btn" id="android-direct" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.3-android-preview/ItamarOS-Android-1.3.0-debug.apk" target="_self" download="ItamarOS-Android-1.3.0-debug.apk" rel="noopener" style="font-size:18px;padding:17px 22px">⬇ Download Android APK</a>
+<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.3-android-preview/ItamarOS-Android-1.3.0-debug.apk" download="ItamarOS-Android-1.3.0-debug.apk" rel="noopener">📺 Download for Android TV (same APK)</a>
+<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.3-android-preview/SHA256SUMS-Android.txt" rel="noopener">SHA-256 checksum</a>
+<a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.3-android-preview" target="_blank" rel="noopener noreferrer">View APK version & SHA-256</a>
 <p><strong>For Downloader on Android TV:</strong> open this page, select <em>Download Android APK</em>, and use the TV's permitted installation process. No ZIP extraction or GitHub sign-in should be required for the public GitHub Release asset.</p>
 <p style="background:#49371b;border:1px solid #d3a568;border-radius:10px;padding:13px"><strong>Unverified developer preview:</strong> Debug-signed test APK, not an official store release. Build and file checks do not establish malware safety. Use only on a spare test device; do not bypass Play Protect, antivirus warnings or TV security restrictions. This installs an app, <strong>not an operating system</strong>.</p>
 <details><summary><strong>Android TV: white screen or no Install prompt?</strong></summary>
 <ol style="color:#c8d7ef;line-height:1.75">
-<li>A white page in Downloader is <strong>not</strong> the Android installer. Open Downloader's <strong>Files</strong> section and check whether <code>ItamarOS-Android-1.2.0-debug.apk</code> was downloaded.</li>
+<li>A white page in Downloader is <strong>not</strong> the Android installer. Open Downloader's <strong>Files</strong> section and check whether <code>ItamarOS-Android-1.3.0-debug.apk</code> was downloaded.</li>
 <li>If the file is missing, use the direct download link above in a compatible browser on another device, then transfer the downloaded APK to the TV using a USB drive and open it with the TV's file manager. Do not install a web page, ZIP, or HTML file.</li>
 <li>Check the TV's <strong>internal available storage</strong>. Even though the APK is about 12 MB, Android needs additional working space to install it. Having only around 120 MB free may prevent installation. Do not delete important apps or data without a backup.</li>
 <li>If Android shows an installation or security warning, follow the device's normal security restrictions. Do not turn off Play Protect or bypass a warning to force the installation.</li>
@@ -60,18 +60,33 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card" id="mac-download" aria-live="polite"><span class="badge">Mac application · demo</span><h2>ItamarOS Demo for Mac</h2><p>Install the desktop emulator using a DMG image for Intel or Apple Silicon. It does not replace macOS. Pre-release builds are unsigned and may be blocked by macOS security policies.</p><p><a class="btn" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.1-demo/ItamarOS-Demo-1.1.0-Mac-arm64.dmg">⬇ Mac Apple Silicon DMG</a>
 <a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.1-demo/ItamarOS-Demo-1.1.0-Mac-x64.dmg">Mac Intel DMG</a></p><div id="macasset"><p>Checking GitHub for a Mac installation package…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml" target="_blank" rel="noopener noreferrer">See Mac build status</a></section>
 <section class="card" id="linux-download" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
+<section class="card" id="iphone-download">
+<span class="badge">iPhone · iPad · Personal signing only</span>
+<h2>📱 ItamarOS iOS 1.4 — developer IPA</h2>
+<p>To install an iPhone developer IPA, use your own Apple Account in a separate signing/installation client such as <strong>Sideloadly</strong> on Windows/Mac or <strong>AltStore Classic</strong>. ItamarOS does <strong>not</strong> ask for or collect Apple Account passwords. Up to five local email labels can be saved inside the app, but only one may be selected; these labels do not authenticate accounts.</p>
+<a class="btn" href="https://sideloadly.io/" target="_blank" rel="noopener noreferrer" id="ios-signing-service">Open Sideloadly · Sign & install on computer</a>
+<a class="btn alt" href="https://altstore.io/" target="_blank" rel="noopener noreferrer">AltStore Classic</a>
+<div id="ios-release-status" role="status"><p>Checking for a public unsigned iPhone IPA release…</p></div>
+<p>Choose an existing IPA below to inspect its local filename and share/save it. Selecting a file <strong>does not sign or install it</strong>. It stays in your browser until you explicitly choose to share; this site has no file upload endpoint.</p>
+<label for="ios-ipa-picker" style="display:block;margin:12px 0">Choose an IPA file from this device</label>
+<input id="ios-ipa-picker" type="file" accept=".ipa,application/octet-stream" style="max-width:100%">
+<p id="ios-file-info" role="status">No IPA selected.</p>
+<button id="ios-share-file" type="button" class="btn alt" hidden>Share selected IPA through device</button>
+<p><strong>Free Apple Account limits:</strong> generally 3 personally installed development apps per device and 7-day provisioning profiles, regardless of how many account labels you save in ItamarOS. The account is entered in your chosen signing tool, not on this website. Install and refresh actions are controlled by that client and the operating system.</p>
+<p><strong>Security:</strong> only sign software you trust. iPhone installation might fail if a developer entitlement is not supported by personal signing. ItamarOS cannot silently install or update iOS apps, and a browser button cannot bypass Apple provisioning.</p>
+</section>
 <section class="card" id="apple-builds">
 <span class="badge">Installation and developer files</span>
 <h2>Files you can download</h2>
-<p>The published Mac DMGs and Android 1.2 APK have direct downloads on this page; all published release assets appear below. For Android and iOS/iPadOS, GitHub Actions can provide separate native development builds. The iPhone package is an <strong>unsigned IPA</strong> intended for legitimate developer signing; it is not an App Store release.</p>
+<p>The published Mac DMGs and Android 1.3 APK have direct downloads on this page; all published release assets appear below. For Android and iOS/iPadOS, GitHub Actions can provide separate native development builds. The iPhone package is an <strong>unsigned IPA</strong> intended for legitimate developer signing; it is not an App Store release.</p>
 <a class="btn" href="https://github.com/itamarnintendo04-arch/ItamarOS/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">Download source ZIP</a>
 <a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-apple.yml" target="_blank" rel="noopener noreferrer">iPhone/iPad IPA build artifacts</a>
 <a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml" target="_blank" rel="noopener noreferrer">Android / Android TV APK build artifacts</a>
-<p>For Android TV and Android phones, use the <a href="#android-download" style="color:#c7e5ff">published version 1.2 APK download above</a>. GitHub Actions artifacts are temporary and may require sign-in; the public release APK is a direct downloadable file. If Downloader only shows a white page, use the Android TV troubleshooting steps above. Unsigned iPhone development IPA builds still use Apple signing tools. Never disable platform security to install an app.</p>
+<p>For Android TV and Android phones, use the <a href="#android-download" style="color:#c7e5ff">published version 1.3 APK download above</a>. GitHub Actions artifacts are temporary and may require sign-in; the public release APK is a direct downloadable file. If Downloader only shows a white page, use the Android TV troubleshooting steps above. Unsigned iPhone development IPA builds still use Apple signing tools. Never disable platform security to install an app.</p>
 </section>
 <section class="card" aria-live="polite"><h2>Other published releases</h2><p id="status">Checking GitHub Releases…</p><div id="releases"></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">View all releases on GitHub</a></section>
 <section class="card">
-<span class="badge">Native apps · Version 1.2 source projects</span>
+<span class="badge">Native apps · Version 1.3 source projects</span>
 <h2>ItamarOS for iPhone, iPad, Apple TV, Android & Android TV</h2>
 <p>Native applications are being built in SwiftUI (Apple) and Kotlin/Jetpack Compose (Android), not as WebViews. They include local games, settings and native media tools. Android TV can request a user-selected USB backup folder, but moving the app itself depends on the TV manufacturer and Android system settings.</p>
 <p><strong>No App Store/TestFlight or Google Play production release is available yet.</strong> Unsigned iPhone IPA and Android debug APK developer artifacts can be downloaded from the GitHub Actions builds above if they pass. These aren't installer images for replacing your phone's operating system.</p>
@@ -148,14 +163,68 @@ function label(element,text){element.replaceChildren();const p=document.createEl
  const state=document.getElementById('android-release-status');
  const btn=document.getElementById('android-direct');
  try{
-  const response=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/v1.2-android-preview',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+  const response=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/v1.3-android-preview',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
   if(!response.ok)throw Error('Release not yet published');
   const data=await response.json();
-  const asset=Array.isArray(data.assets)?data.assets.find(a=>a.name==='ItamarOS-Android-1.2.0-debug.apk'&&a.browser_download_url===btn.href):null;
+  const asset=Array.isArray(data.assets)?data.assets.find(a=>a.name==='ItamarOS-Android-1.3.0-debug.apk'&&a.browser_download_url===btn.href):null;
   if(!asset)throw Error('APK asset not yet published');
-  state.textContent='Public APK is available · '+(asset.size/1048576).toFixed(1)+' MiB · Version 1.2.0 debug preview.';
+  state.textContent='Public APK is available · '+(asset.size/1048576).toFixed(1)+' MiB · Version 1.3.0 debug preview.';
  }catch{
   state.textContent='The public APK release is not available yet. This link will work only after the verified build workflow publishes it.';
  }
+})();
+
+(async()=>{
+ const status=document.getElementById('ios-release-status');
+ const tag='v1.4-ios-unsigned';
+ const expected='ItamarOS-1.4.0-iOS-UNSIGNED.ipa';
+ const base='https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/'+tag+'/';
+ try{
+  const res=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/'+tag,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+  if(!res.ok)throw Error('Unsigned iOS release not yet published');
+  const release=await res.json();
+  const assets=Array.isArray(release.assets)?release.assets:[];
+  const ipa=assets.find(a=>a.name===expected&&a.browser_download_url===base+expected&&a.size>0);
+  const source=assets.find(a=>a.name==='altstore-source.json'&&a.browser_download_url===base+'altstore-source.json'&&a.size>0);
+  if(!ipa)throw Error('Public unsigned IPA is missing');
+  const info=document.createElement('p');
+  info.textContent='Public unsigned IPA · '+(ipa.size/1048576).toFixed(1)+' MiB. Requires Apple-issued personal developer signing; downloading does not install it.';
+  const download=document.createElement('a');download.href=ipa.browser_download_url;download.className='btn alt';download.textContent='Download unsigned iPhone IPA 1.4';download.rel='noopener noreferrer';
+  status.replaceChildren(info,download);
+  if(source){
+   const note=document.createElement('p');note.textContent='If AltStore Classic is already configured with your Apple Account and a connected AltServer, you can open the ItamarOS source using the control below. Signing, provisioning, and device confirmation occur in AltStore, not on this website.';
+   const handoff=document.createElement('a');
+   handoff.href='altstore-classic://source?url='+encodeURIComponent(source.browser_download_url);
+   handoff.className='btn';handoff.textContent='Open ItamarOS in AltStore Classic';
+   handoff.setAttribute('aria-label','Open iPhone signing client; further setup and device approval required');
+   status.append(note,handoff);
+  }
+ }catch{
+  status.textContent='No public unsigned IPA currently available. Use the iPhone developer build page below, or open an external signing tool. There is no one-click browser installation.';
+ }
+})();
+(()=>{
+ const input=document.getElementById('ios-ipa-picker');
+ const info=document.getElementById('ios-file-info');
+ const share=document.getElementById('ios-share-file');
+ let file;
+ input.addEventListener('change',()=>{
+  file=undefined;share.hidden=true;
+  const selected=input.files?.[0];
+  if(!selected)return void(info.textContent='No IPA selected.');
+  if(!/\.ipa$/i.test(selected.name))return void(info.textContent='Only .ipa files are supported. Nothing was uploaded.');
+  file=selected;
+  info.textContent='Selected '+selected.name+' · '+(selected.size/1048576).toFixed(1)+' MiB · local file only, not signed or installed.';
+  if(navigator.canShare?.({files:[file]}))share.hidden=false;
+ });
+ share.addEventListener('click',async()=>{
+  if(!file || !navigator.canShare?.({files:[file]}))return;
+  try{
+   await navigator.share({files:[file],title:'Share IPA for personal signing'});
+   info.textContent='Sharing completed or handed to another app. This does not confirm an installation.';
+  }catch(e){
+   if(e.name!=='AbortError')info.textContent='Unable to share the selected IPA: '+e.message;
+  }
+ });
 })();
 </script></body></html>
