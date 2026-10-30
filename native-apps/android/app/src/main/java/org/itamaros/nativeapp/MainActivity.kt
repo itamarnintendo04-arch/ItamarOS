@@ -129,6 +129,8 @@ class MainActivity : ComponentActivity() {
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
+                    updateDownloadAvailable = updateApkUrl != null,
+                    onDownloadUpdate = ::openUpdateDownload,
                     bestScore = bestScore,
                     selectedMedia = selectedMedia,
                     selectedApkName = selectedApkName,
@@ -152,8 +154,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var updateApkUrl by mutableStateOf<String?>(null)
+
     private fun checkUpdates() {
-        updateStatus = "Checking GitHub for native app release information…"
+        updateStatus = "Checking public release metadata…"
+        updateApkUrl = null
         Thread {
             val result = try {
                 val connection = URL(
@@ -163,15 +168,50 @@ class MainActivity : ComponentActivity() {
                 connection.readTimeout = 10000
                 val data = connection.getInputStream().bufferedReader().use { it.readText() }
                 val manifest = JSONObject(data)
-                val version = manifest.optString("version")
-                if (manifest.optInt("schemaVersion") != 1) "Invalid release metadata."
-                else if (version != "1.2.0") "App preview 1.2.0; source manifest version: $version. No signed production update is available."
-                else "App preview source 1.2.0. No signed production app release is published."
+                val id = if (isTv) "itamaros-android-tv" else "itamaros-android"
+                val components = manifest.getJSONArray("components")
+                val component = (0 until components.length())
+                    .map { components.getJSONObject(it) }
+                    .firstOrNull { it.optString("id") == id }
+                val installed = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.0.0"
+                val remote = component?.optString("version").orEmpty()
+                val asset = component?.optString("package").orEmpty()
+                val trustedLink = asset.startsWith(
+                    "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/"
+                ) && asset.endsWith(".apk")
+                val newer = remote.split('.').map { it.toIntOrNull() ?: 0 }
+                    .let { r -> installed.split('.').map { it.toIntOrNull() ?: 0 }.let { local ->
+                        (0 until maxOf(r.size, local.size)).firstNotNullOfOrNull { index ->
+                            val diff = r.getOrElse(index) { 0 } - local.getOrElse(index) { 0 }
+                            if (diff == 0) null else diff > 0
+                        } ?: false
+                    } }
+
+                if (manifest.optInt("schemaVersion") != 1 || component == null) {
+                    "Invalid or missing Android release metadata."
+                } else if (newer && trustedLink) {
+                    runOnUiThread { updateApkUrl = asset }
+                    "Android $remote is published as an unverified preview APK. Download it from GitHub, then review installation in Android. Updating in place requires the same signing key as the installed version."
+                } else if (newer) {
+                    "Android source version $remote is newer, but no downloadable APK for this device is published."
+                } else {
+                    "Installed version $installed. Latest source version $remote. No newer APK found."
+                }
             } catch (e: Exception) {
-                "Unable to check updates: ${e.localizedMessage}"
+                "Unable to check releases: ${e.localizedMessage}"
             }
             runOnUiThread { updateStatus = result }
         }.start()
+    }
+
+    private fun openUpdateDownload() {
+        val url = updateApkUrl ?: return
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            status = "Opened official GitHub APK download. Android must approve installation; no update has been installed yet."
+        } catch (e: Exception) {
+            status = "Unable to open release link: ${e.localizedMessage}"
+        }
     }
 
     private fun launchTVService(pkg: String?, name: String) {
