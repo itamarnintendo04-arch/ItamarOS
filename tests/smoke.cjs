@@ -63,8 +63,15 @@ assert.ok(downloads.includes('iPhone/iPad IPA build artifacts'), 'Expose iOS dev
 assert.ok(downloads.includes('Android / Android TV APK build artifacts'), 'Expose Android developer package artifact page');
 assert.ok(downloads.includes('EXE download on hold pending security review'));
 assert.ok(downloads.includes('id="android-download"'), 'Android TV section must be on the download page');
-assert.ok(downloads.includes('ItamarOS-Android-1.2.0-debug.apk'), 'Downloader needs public direct APK URL');
-assert.ok(downloads.includes('v1.2-android-preview'), 'APK preview release must be separate from Windows release');
+assert.ok(downloads.includes('id="iphone-download"'),'iOS personal signing section must be present');
+assert.ok(downloads.includes('id="ios-signing-service"'),'External signing tool action must be visible');
+assert.ok(downloads.includes('https://sideloadly.io/'),'Signing tool link must use its official verified domain');
+assert.ok(downloads.includes('id="ios-ipa-picker"'),'User can select a local IPA without uploading to this site');
+assert.ok(downloads.includes('id="ios-share-file"'),'Share IPA only using a real device share action');
+assert.ok(downloads.includes('v1.3-ios-unsigned-preview'),'Browser must check whether unsigned IPA has actually been published');
+
+assert.ok(downloads.includes('ItamarOS-Android-1.3.0-debug.apk'), 'Downloader needs public direct APK URL');
+assert.ok(downloads.includes('v1.3-android-preview'), 'APK preview release must be separate from Windows release');
 assert.ok(downloads.includes('Unverified developer preview'), 'Debug APK must have honest safety notice');
 assert.ok(load('.github/workflows/android-preview-release.yml').includes('gh release create'), 'APK preview publisher must attach public asset');
 assert.ok(load('.github/workflows/android-preview-release.yml').includes('apksigner'), 'Validate APK signature format before preview publishing');
