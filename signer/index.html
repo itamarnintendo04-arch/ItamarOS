@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08162d">
+  <meta name="description" content="Sign an IPA locally in your browser using your own Apple developer certificate and provisioning profile.">
+  <title>ItamarOS • Local IPA Signer</title>
+  <link rel="icon" href="/assets/branding/itamaros-favicon-32.png">
+  <style>:root{color:#eef4ff;background:#09162b;font-family:system-ui,-apple-system,Segoe UI,sans-serif}*{box-sizing:border-box}body{background:radial-gradient(at 75% -5%,#214580,#09162b 60%);min-height:100vh;margin:0}header,main,footer{max-width:920px;margin:auto;padding:22px}nav{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;display:flex}nav a,footer a,.inline-link{color:#b6d7ff}.brand{color:inherit;align-items:center;gap:12px;font-size:20px;font-weight:800;text-decoration:none;display:flex}.brand img{object-fit:contain;width:42px;height:42px}h1{margin:32px 0 14px;font-size:clamp(31px,6vw,50px)}.lead{color:#c5d9f2;font-size:17px;line-height:1.6}.card{background:#132d53dc;border:1px solid #48678d;border-radius:20px;margin:20px 0;padding:23px;box-shadow:0 10px 30px #030b2040}h2{margin:0 0 14px;font-size:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;display:grid}.field{gap:8px;min-width:0;display:grid}label{font-weight:650}input{color:#fff;width:100%;font:inherit;background:#081a35;border:1px solid #6381ab;border-radius:10px;padding:13px 11px}input[type=file]{max-width:100%;padding:11px}input::file-selector-button{cursor:pointer;background:#a4c6fa;border:0;border-radius:8px;padding:9px}input:focus-visible,button:focus-visible,a:focus-visible{outline-offset:3px;outline:3px solid #a3dcff}.hint,small{color:#b8cee8;line-height:1.5}.note{background:#193b65;border-left:4px solid #6caaf4;border-radius:9px;padding:10px 14px;line-height:1.6}.warning{background:#40341d;border-color:#e5b86c}.btn{color:#071d3b;cursor:pointer;background:#93bafe;border:0;border-radius:12px;padding:13px 21px;font-size:16px;font-weight:800;text-decoration:none;display:inline-block}.btn:disabled{opacity:.55;cursor:not-allowed}.btn.alt{color:#f6faff;background:#24476e;border:1px solid #537eac}.actions{flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px;display:flex}#progress{accent-color:#7db4fa;width:100%;height:12px}#log{white-space:pre-wrap;color:#d4e7ff;background:#061427;border:1px solid #486b96;border-radius:10px;max-height:190px;padding:12px;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto}.hidden{display:none!important}#status{font-weight:650;line-height:1.5}footer{color:#b3c7df;font-size:14px;line-height:1.6}@media (max-width:620px){.grid{grid-template-columns:1fr}.card{padding:18px}header,main,footer{padding:16px}}</style>
+  <script type="module" crossorigin src="/signer/assets/index-BRFZO-86.js"></script>
+</head>
+<body>
+  <header><nav>
+    <a class="brand" href="/downloads.html"><img src="/assets/branding/itamaros-mark-512.png" alt="">ItamarOS</a>
+    <a href="/downloads.html">Back to downloads</a>
+  </nav></header>
+  <main>
+    <h1>Sign IPA in your browser</h1>
+    <p class="lead">A real local code-signing tool powered by an open-source zsign WebAssembly engine. Files are processed in this browser, not uploaded to ItamarOS servers.</p>
+    <div class="note"><strong>Important:</strong> Signing requires a valid Apple-issued signing certificate <code>.p12</code> and a matching provisioning profile <code>.mobileprovision</code>. A free Apple ID alone is <strong>not</strong> sufficient to provide these files here. This does not install apps automatically or bypass iOS security checks.</div>
+    <form id="sign-form" class="card" novalidate>
+      <h2>1. Choose files</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="ipa">IPA to sign</label>
+          <input type="file" id="ipa" accept=".ipa" required>
+          <small>Use an app you own or have permission to sign.</small>
+        </div>
+        <div class="field">
+          <label for="identity">Your signing certificate (.p12)</label>
+          <input type="file" id="identity" accept=".p12,.pfx" required>
+          <small>Keep private keys secure; never share them with strangers.</small>
+        </div>
+        <div class="field">
+          <label for="profile">Provisioning profile (.mobileprovision)</label>
+          <input type="file" id="profile" accept=".mobileprovision" required>
+          <small>Must cover the app's identifier and the target device.</small>
+        </div>
+        <div class="field">
+          <label for="password">P12 certificate password (if required)</label>
+          <input type="password" id="password" autocomplete="off" spellcheck="false">
+          <small>Not your Apple ID password. Never saved or uploaded by ItamarOS.</small>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="sign" class="btn" type="submit">Sign IPA locally</button>
+        <a class="btn alt" href="https://developer.apple.com/help/account/provisioning-profiles/create-an-ad-hoc-provisioning-profile" rel="noopener noreferrer" target="_blank">Apple signing guide</a>
+      </div>
+    </form>
+    <section class="card" aria-live="polite">
+      <h2>2. Signing result</h2>
+      <p id="status" role="status">Choose an IPA, your certificate and provisioning profile to begin.</p>
+      <progress id="progress" class="hidden" value="0" max="100"></progress>
+      <div id="result" class="hidden">
+        <p>Your signed IPA was generated in this browser. iOS installation still requires valid device provisioning and an approved installation method.</p>
+        <a id="download" class="btn" href="#" download="ItamarOS-signed.ipa">Download signed IPA</a>
+      </div>
+      <details style="margin-top:16px"><summary>Show signing log</summary><pre id="log" aria-label="Code signing log"></pre></details>
+    </section>
+    <section class="card">
+      <h2>Privacy and safety</h2>
+      <p class="hint">IPA, certificate, private key, provisioning profile and password stay in browser memory during signing. Nothing is sent to an ItamarOS signing backend. Certificate data is not saved to localStorage, IndexedDB or your ItamarOS account list. Closing the page clears the active session.</p>
+      <div class="note warning">Signing an IPA does not make it safe, prove that its source is trustworthy, or guarantee it will install on your iPhone. Do not ignore Apple security alerts. Apple may reject incompatible signatures, entitlements and devices.</div>
+      <p><a class="inline-link" href="https://github.com/AntonP29/SylvaSigner" target="_blank" rel="noopener noreferrer">Open-source signer engine attribution (Sylva / zsign)</a> · <a class="inline-link" href="THIRD_PARTY_LICENSE.txt">License</a></p>
+    </section>
+  </main>
+  <footer>ItamarOS is independent from Apple. Sign only apps you are authorized to use. This is developer tooling, not App Store or TestFlight distribution.</footer>
+</body>
+</html>
