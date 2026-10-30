@@ -19,7 +19,7 @@
       "id": "itamaros-tvos",
       "name": "ItamarOS for Apple TV",
       "platform": "tvos",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "releaseStatus": "source-only",
       "package": null
     },
