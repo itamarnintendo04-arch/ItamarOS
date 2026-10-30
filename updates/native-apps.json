@@ -3,7 +3,7 @@
   "channel": "development",
   "version": "1.3.0",
   "publishedAt": "2026-10-30",
-  "status": "source-with-previous-debug-preview",
+  "status": "source-and-debug-preview",
   "signedBinariesPublished": false,
   "source": "https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native-apps",
   "components": [
@@ -52,16 +52,16 @@
       "name": "ItamarOS for Android phones and tablets",
       "platform": "android",
       "version": "1.3.0",
-      "releaseStatus": "source-only",
-      "package": null
+      "releaseStatus": "unverified-debug-preview",
+      "package": "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.3-android-preview/ItamarOS-Android-1.3.0-debug.apk"
     },
     {
       "id": "itamaros-android-tv",
       "name": "ItamarOS for Android TV",
       "platform": "android-tv",
       "version": "1.3.0",
-      "releaseStatus": "source-only",
-      "package": null
+      "releaseStatus": "unverified-debug-preview",
+      "package": "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.3-android-preview/ItamarOS-Android-1.3.0-debug.apk"
     },
     {
       "id": "itamaros-windows-native",
