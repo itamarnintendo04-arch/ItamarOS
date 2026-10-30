@@ -63,8 +63,10 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card" id="iphone-download">
 <span class="badge">iPhone · iPad · Personal signing only</span>
 <h2>📱 ItamarOS iOS 1.4 — developer IPA</h2>
-<p>To install an iPhone developer IPA, use your own Apple Account in a separate signing/installation client such as <strong>Sideloadly</strong> on Windows/Mac or <strong>AltStore Classic</strong>. ItamarOS does <strong>not</strong> ask for or collect Apple Account passwords. Up to five local email labels can be saved inside the app, but only one may be selected; these labels do not authenticate accounts.</p>
-<a class="btn" href="https://sideloadly.io/" target="_blank" rel="noopener noreferrer" id="ios-signing-service">Open Sideloadly · Sign & install on computer</a>
+<p><strong>Sign right here on ItamarOS:</strong> our local WebAssembly signer accepts an IPA, your own .p12 certificate, and an Apple provisioning profile. The signing process runs on your device in the browser and downloads a signed IPA. No ItamarOS server receives your private key, IPA, certificate password or Apple ID credentials. An Apple ID alone does not create a valid certificate or guarantee installation.</p>
+<a class="btn" href="/signer/" id="ios-browser-signer">🔏 Sign IPA on ItamarOS (in your browser)</a>
+<p class="intro" style="font-size:14px">A valid Apple-issued certificate and provisioning profile are required. Signing is separate from device installation. The iOS device must still accept your provisioning and permissions. For signing with a free Apple ID without exported certificate files, use a supported personal developer tool instead.</p>
+<a class="btn alt" href="https://sideloadly.io/" target="_blank" rel="noopener noreferrer" id="ios-signing-service">Open Sideloadly · external alternative</a>
 <a class="btn alt" href="https://altstore.io/" target="_blank" rel="noopener noreferrer">AltStore Classic</a>
 <div id="ios-release-status" role="status"><p>Checking for a public unsigned iPhone IPA release…</p></div>
 <p>Choose an existing IPA below to inspect its local filename and share/save it. Selecting a file <strong>does not sign or install it</strong>. It stays in your browser until you explicitly choose to share; this site has no file upload endpoint.</p>
