@@ -39,7 +39,7 @@ struct DashboardView: View {
                         .frame(width: 125, height: 125)
                     Text("ItamarOS")
                         .font(.largeTitle.bold())
-                    Text("Native app • Version 1.3")
+                    Text("Native app • Version 1.4")
                         .foregroundStyle(.secondary)
                     #if os(tvOS)
                     Label("Native Apple TV app with remote support", systemImage: "play.tv")
@@ -53,10 +53,6 @@ struct DashboardView: View {
                     Text("Games and preferences are stored in this app, not in the website. This app does not replace iOS, iPadOS or tvOS.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
-                    #if os(iOS)
-                    AppleAccountSignInView()
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                    #endif
                     Button("Check for app updates") {
                         Task { await releases.check() }
                     }
