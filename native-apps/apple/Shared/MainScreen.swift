@@ -15,6 +15,10 @@ struct MainScreen: View {
                 .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
             LocalMediaView()
                 .tabItem { Label("Player", systemImage: "play.rectangle.fill") }
+            #if os(iOS)
+            IPAImportView()
+                .tabItem { Label("IPA", systemImage: "shippingbox") }
+            #endif
             #endif
             NativeSettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
