@@ -62,6 +62,13 @@ assert.ok(downloads.includes('/feedback.html'), 'Downloads must link to the feed
 assert.ok(downloads.includes('iPhone/iPad IPA build artifacts'), 'Expose iOS developer package artifact page');
 assert.ok(downloads.includes('Android / Android TV APK build artifacts'), 'Expose Android developer package artifact page');
 assert.ok(downloads.includes('EXE download on hold pending security review'));
+assert.ok(downloads.includes('id="android-download"'), 'Android TV section must be on the download page');
+assert.ok(downloads.includes('ItamarOS-Android-1.1.0-debug.apk'), 'Downloader needs public direct APK URL');
+assert.ok(downloads.includes('v1.1-android-preview'), 'APK preview release must be separate from Windows release');
+assert.ok(downloads.includes('Unverified developer preview'), 'Debug APK must have honest safety notice');
+assert.ok(load('.github/workflows/android-preview-release.yml').includes('gh release create'), 'APK preview publisher must attach public asset');
+assert.ok(load('.github/workflows/android-preview-release.yml').includes('apksigner'), 'Validate APK signature format before preview publishing');
+
 assert.ok(!downloads.includes("link(p,'Download Windows demo"), 'Do not offer a direct EXE download while antivirus alert is unresolved');
 const publishingWorkflow=load('.github/workflows/desktop-demo.yml');
 assert.ok(!publishingWorkflow.includes('gh release upload'), 'Disable auto-publish of unreviewed Windows EXE');
