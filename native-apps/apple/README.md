@@ -1,4 +1,4 @@
-# ItamarOS 1.2 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.3 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
@@ -34,3 +34,11 @@ Additional targets include a standalone native **macOS** app (not Electron), **A
 The native iOS/iPadOS `IPAImportView.swift` accepts one locally selected `.ipa` file from the system Files picker. The file is copied into the app's temporary cache (rather than being sent to ItamarOS servers), then the user may explicitly share that file with another installed tool via iOS Share Sheet. The file's extension and non-zero size are checked; this **does not verify signatures or prove the archive is trustworthy**. Other file types are refused.
 
 There is intentionally **no remote signing-service API, automatic install button, credential upload, or promise of free arbitrary IPA signing**. iOS requires Apple-approved code signing/provisioning and a supported installation/distribution route. Apple allows free personal on-device testing through Xcode on a Mac using a Personal Team, with short-lived provisioning, but regular public app distribution requires an eligible account and route. Do not collect Apple passwords or private signing certificates in this feature.
+
+## Local Apple profiles (maximum five)
+
+The iPhone/iPad Home screen includes native **Sign in with Apple** and a **local profile list**. The app may save up to five previously authorized Apple user identifiers with optional local display names, and lets the user select an authorized profile, rename, sign out locally, and remove any saved profile. Records stay in the device-only, when-unlocked Apple Keychain and are not uploaded to ItamarOS services. No Apple passwords, private certificates, authorization codes, or identity tokens are saved.
+
+**Platform limitation:** Apple's native Sign in with Apple authentication works with the iCloud Apple Account currently signed in to the iPhone. The five saved entries are not five concurrently active Apple sessions; only one local profile is active. Switching profiles requires a valid Apple authorization, and logging out locally does not log the user out of system iCloud or revoke Apple's app authorization. Users may revoke authorization through the Apple Account settings.
+
+**Important:** Sign in with Apple is an identity authentication feature and does not sign IPA files. The profile count is an ItamarOS interface limit, **not** a way to raise Apple's free Personal Team limits (three installed developer apps per device, seven-day provisioning). Signed installation still requires a separate valid Apple-issued signing/provisioning mechanism. The Sign in with Apple entitlement must be enabled for the actual developer team's App ID before the feature can work on a signed device build; an unsigned development IPA cannot use it.
