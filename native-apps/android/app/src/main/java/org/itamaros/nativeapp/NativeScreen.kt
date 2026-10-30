@@ -48,6 +48,7 @@ fun NativeAppScreen(
     updateStatus: String,
     bestScore: Int,
     selectedMedia: Uri?,
+    selectedApkName: String?,
     onCheckUpdates: () -> Unit,
     onLaunchService: (String?, String) -> Unit,
     onOpenStoreListing: (String) -> Unit,
@@ -56,11 +57,14 @@ fun NativeAppScreen(
     onExport: () -> Unit,
     onStorageSettings: () -> Unit,
     onChooseMedia: () -> Unit,
+    onChoosePhotos: () -> Unit,
+    onChooseApk: () -> Unit,
+    onInstallApk: () -> Unit,
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
-        else listOf("Home", "Games", "Player", "Settings")
+        else listOf("Home", "Games", "Player", "Apps", "Settings")
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -102,23 +106,33 @@ fun NativeAppScreen(
                     }
                     "Player" -> item {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Text("Native media", style = MaterialTheme.typography.headlineMedium)
-                            Text("Local playback uses Android VideoView and the system MediaPlayer engine, not a website.")
+                            Text("ItamarOS Player", style = MaterialTheme.typography.headlineMedium)
+                            Text("Preview images, watch videos and play audio from your device.")
                             if (selectedMedia != null) {
-                                key(selectedMedia) {
-                                    AndroidView(
-                                        factory = { context ->
-                                            VideoView(context).apply {
-                                                setVideoURI(selectedMedia)
-                                                setMediaController(android.widget.MediaController(context))
-                                                setOnPreparedListener { start() }
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp)
-                                    )
+                                key(selectedMedia) { NativeMediaPreview(selectedMedia) }
+                            }
+                            Button(onClick = onChooseMedia) {
+                                Text("Choose image, video or audio from Files")
+                            }
+                            if (!isTv) {
+                                Button(onClick = onChoosePhotos) {
+                                    Text("Choose photo or video from Gallery")
                                 }
                             }
-                            Button(onClick = onChooseMedia) { Text("Choose local audio/video") }
+                        }
+                    }
+                    "Apps" -> if (!isTv) item {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text("APK files", style = MaterialTheme.typography.headlineMedium)
+                            Text("Choose an APK you trust. Android's system installer checks the package and asks for your permission. ItamarOS cannot silently install apps.")
+                            Button(onClick = onChooseApk) { Text("Choose APK from Files") }
+                            if (selectedApkName != null) {
+                                Text("Selected: $selectedApkName")
+                                Button(onClick = onInstallApk) {
+                                    Text("Review installation in Android")
+                                }
+                            }
+                            Text(status, color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                     "Streaming" -> if (isTv) item {
