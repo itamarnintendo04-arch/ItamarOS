@@ -53,16 +53,16 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
           mkdir -p unsigned/Payload
           ditto "$APP" unsigned/Payload/ItamarOSiOS.app
-          (cd unsigned && /usr/bin/zip -qry "../ItamarOS-1.3.0-iOS-UNSIGNED.ipa" Payload)
-          unzip -t "ItamarOS-1.3.0-iOS-UNSIGNED.ipa" >/dev/null
-          shasum -a 256 "ItamarOS-1.3.0-iOS-UNSIGNED.ipa" > "SHA256SUMS-iOS.txt"
+          (cd unsigned && /usr/bin/zip -qry "../ItamarOS-1.4.0-iOS-UNSIGNED.ipa" Payload)
+          unzip -t "ItamarOS-1.4.0-iOS-UNSIGNED.ipa" >/dev/null
+          shasum -a 256 "ItamarOS-1.4.0-iOS-UNSIGNED.ipa" > "SHA256SUMS-iOS.txt"
           echo "This unsigned development IPA requires legitimate developer signing/provisioning before iPhone installation." > UNSIGNED-READ-ME.txt
       - name: Upload development IPA as downloadable GitHub Actions artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ItamarOS-1.3.0-iPhone-iPad-UNSIGNED-IPA
+          name: ItamarOS-1.4.0-iPhone-iPad-UNSIGNED-IPA
           path: |
-            native-apps/apple/ItamarOS-1.3.0-iOS-UNSIGNED.ipa
+            native-apps/apple/ItamarOS-1.4.0-iOS-UNSIGNED.ipa
             native-apps/apple/SHA256SUMS-iOS.txt
             native-apps/apple/UNSIGNED-READ-ME.txt
           if-no-files-found: error
@@ -80,4 +80,86 @@ jobs:
             echo 'Unsigned iOS preview already published; no replacement.'
             exit 0
           fi
-          gh release create "$tag"             ItamarOS-1.3.0-iOS-UNSIGNED.ipa             SHA256SUMS-iOS.txt             UNSIGNED-READ-ME.txt             --target "$GITHUB_SHA"             --prerelease             --title 'ItamarOS iOS 1.3 — UNSIGNED developer preview'             --notes 'UNSIGNED iPhone/iPad IPA for personal developer signing with a compatible tool. This IPA will NOT install directly from Safari, is NOT signed by Apple, and is NOT a TestFlight/App Store build. Do not share Apple passwords or signing certificates with ItamarOS.'
+          gh release create "$tag"             ItamarOS-1.4.0-iOS-UNSIGNED.ipa             SHA256SUMS-iOS.txt             UNSIGNED-READ-ME.txt             --target "$GITHUB_SHA"             --prerelease             --title 'ItamarOS iOS 1.3 — UNSIGNED developer preview'             --notes 'UNSIGNED iPhone/iPad IPA for personal developer signing with a compatible tool. This IPA will NOT install directly from Safari, is NOT signed by Apple, and is NOT a TestFlight/App Store build. Do not share Apple passwords or signing certificates with ItamarOS.'
+
+  publish-personal-signing-preview:
+    name: Publish iOS unsigned IPA and AltStore source
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: apple-project-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ItamarOS-1.4.0-iPhone-iPad-UNSIGNED-IPA
+          path: dist
+      - name: Verify the real iOS archive and build AltStore Classic source metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, json, pathlib, plistlib, zipfile
+          root = pathlib.Path("dist")
+          ipa = root / "ItamarOS-1.4.0-iOS-UNSIGNED.ipa"
+          assert ipa.is_file() and ipa.stat().st_size > 0, "Actual iOS archive missing"
+          with zipfile.ZipFile(ipa) as archive:
+              assert archive.testzip() is None, "IPA is corrupt"
+              info = plistlib.loads(archive.read("Payload/ItamarOSiOS.app/Info.plist"))
+          version = info["CFBundleShortVersionString"]
+          bundle = info["CFBundleIdentifier"]
+          assert version == "1.4.0" and bundle == "org.itamaros.mobile", "Unexpected identity or version"
+          repo = "itamarnintendo04-arch/ItamarOS"
+          tag = "v1.4-ios-unsigned"
+          base = f"https://github.com/{repo}/releases/download/{tag}/"
+          icon = f"https://raw.githubusercontent.com/{repo}/main/assets/branding/itamaros-mark-512.png"
+          source = {
+              "name": "ItamarOS Developer Preview",
+              "identifier": "org.itamaros.unsigned.preview",
+              "subtitle": "Personal-signing development IPA",
+              "sourceURL": base + "altstore-source.json",
+              "iconURL": icon,
+              "website": f"https://github.com/{repo}",
+              "apps": [{
+                  "name": "ItamarOS",
+                  "bundleIdentifier": bundle,
+                  "developerName": "ItamarOS",
+                  "subtitle": "Native games, media and files",
+                  "localizedDescription": "Developer-built unsigned IPA. Requires a compatible local signing tool, valid personal Apple developer provisioning and device approval. ItamarOS does not store Apple passwords.",
+                  "iconURL": icon,
+                  "category": "utilities",
+                  "versions": [{
+                      "version": version,
+                      "buildVersion": str(info["CFBundleVersion"]),
+                      "date": datetime.datetime.now(datetime.timezone.utc).date().isoformat(),
+                      "downloadURL": base + ipa.name,
+                      "size": ipa.stat().st_size,
+                      "minOSVersion": str(info.get("MinimumOSVersion", "17.0")),
+                  }]
+              }],
+              "news": [],
+          }
+          (root / "altstore-source.json").write_text(json.dumps(source, indent=2) + "\n")
+          print("Prepared public unsigned IPA metadata for", bundle, version)
+          PY
+      - name: Publish public, explicitly unsigned iOS developer prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: itamarnintendo04-arch/ItamarOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='v1.4-ios-unsigned'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Release already exists. Refusing to overwrite an existing IPA.'
+            exit 1
+          fi
+          gh release create "$tag" \
+            dist/ItamarOS-1.4.0-iOS-UNSIGNED.ipa \
+            dist/SHA256SUMS-iOS.txt \
+            dist/UNSIGNED-READ-ME.txt \
+            dist/altstore-source.json \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title 'ItamarOS iOS 1.4 — UNSIGNED PERSONAL-SIGNING PREVIEW' \
+            --notes 'This is an unsigned developer IPA for the user to sign with their own Apple-issued identity. It does not install on its own. No Apple passwords or device data are collected by ItamarOS. Sign-in with Apple is unrelated to code signing. Use only valid device provisioning; never bypass security warnings.'
