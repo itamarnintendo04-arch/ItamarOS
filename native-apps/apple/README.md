@@ -34,3 +34,11 @@ Additional targets include a standalone native **macOS** app (not Electron), **A
 The native iOS/iPadOS `IPAImportView.swift` accepts one locally selected `.ipa` file from the system Files picker. The file is copied into the app's temporary cache (rather than being sent to ItamarOS servers), then the user may explicitly share that file with another installed tool via iOS Share Sheet. The file's extension and non-zero size are checked; this **does not verify signatures or prove the archive is trustworthy**. Other file types are refused.
 
 There is intentionally **no remote signing-service API, automatic install button, credential upload, or promise of free arbitrary IPA signing**. iOS requires Apple-approved code signing/provisioning and a supported installation/distribution route. Apple allows free personal on-device testing through Xcode on a Mac using a Personal Team, with short-lived provisioning, but regular public app distribution requires an eligible account and route. Do not collect Apple passwords or private signing certificates in this feature.
+
+## Personal signing and updates
+
+Scarlet-style shared enterprise certificates are not shipped with ItamarOS. They are not ItamarOS's property and Apple may revoke them. There is no hosted public Scarlet signing API integrated into this project. Sign in with Apple authorizes user identity but does not authorize app signing or installation.
+
+The unsigned IPA produced by the Apple CI workflow is a developer artifact, not a device-installable release. A user may sign their own ItamarOS build using a valid, legitimately issued Apple developer certificate and compatible provisioning through their own local development tools. Free Apple development accounts have time-limited developer provisioning. Replacing an existing installation requires compatible signing identity, app identifier and Apple-approved installation permissions.
+
+Never paste Apple Account passwords into ItamarOS or send signing private keys to unknown services. Neither automatic IPA self-updating nor universal on-device code signing is implemented.
