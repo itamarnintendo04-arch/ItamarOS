@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "channel": "development",
-  "version": "1.1.0",
-  "publishedAt": "2026-10-29",
-  "status": "source-only",
+  "version": "1.2.0",
+  "publishedAt": "2026-10-30",
+  "status": "source-and-debug-preview",
   "signedBinariesPublished": false,
   "source": "https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native-apps",
   "components": [
@@ -11,7 +11,7 @@
       "id": "itamaros-ios",
       "name": "ItamarOS for iPhone/iPad",
       "platform": "ios-ipados",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "releaseStatus": "source-only",
       "package": null
     },
@@ -19,7 +19,7 @@
       "id": "itamaros-tvos",
       "name": "ItamarOS for Apple TV",
       "platform": "tvos",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "releaseStatus": "source-only",
       "package": null
     },
@@ -51,17 +51,17 @@
       "id": "itamaros-android",
       "name": "ItamarOS for Android phones and tablets",
       "platform": "android",
-      "version": "1.1.0",
-      "releaseStatus": "source-only",
-      "package": null
+      "version": "1.2.0",
+      "releaseStatus": "unverified-debug-preview",
+      "package": "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.2-android-preview/ItamarOS-Android-1.2.0-debug.apk"
     },
     {
       "id": "itamaros-android-tv",
       "name": "ItamarOS for Android TV",
       "platform": "android-tv",
-      "version": "1.1.0",
-      "releaseStatus": "source-only",
-      "package": null
+      "version": "1.2.0",
+      "releaseStatus": "unverified-debug-preview",
+      "package": "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/v1.2-android-preview/ItamarOS-Android-1.2.0-debug.apk"
     },
     {
       "id": "itamaros-windows-native",
