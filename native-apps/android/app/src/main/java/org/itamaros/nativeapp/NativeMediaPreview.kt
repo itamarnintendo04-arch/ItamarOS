@@ -1,6 +1,9 @@
 package org.itamaros.nativeapp
 
 import android.media.MediaPlayer
+import android.graphics.ImageDecoder
+import android.graphics.drawable.AnimatedImageDrawable
+import android.os.Build
 import android.net.Uri
 import android.widget.ImageView
 import android.widget.MediaController
@@ -21,16 +24,30 @@ fun NativeMediaPreview(uri: Uri) {
     val type = remember(uri) { context.contentResolver.getType(uri).orEmpty() }
     when {
         type.startsWith("image/") -> {
+            // ImageDecoder preserves all GIF frames and animates them on Android 9+.
+            // On older Android devices the standard image preview shows the first frame.
+            val animated = remember(uri, type) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                    (type.equals("image/gif", ignoreCase = true) || uri.toString().lowercase().contains(".gif"))) {
+                    runCatching {
+                        ImageDecoder.decodeDrawable(ImageDecoder.createSource(context.contentResolver, uri))
+                    }.getOrNull()
+                } else null
+            }
+            DisposableEffect(animated) {
+                (animated as? AnimatedImageDrawable)?.start()
+                onDispose { (animated as? AnimatedImageDrawable)?.stop() }
+            }
             AndroidView(
                 factory = { viewContext ->
                     ImageView(viewContext).apply {
                         adjustViewBounds = true
                         scaleType = ImageView.ScaleType.FIT_CENTER
-                        setImageURI(uri)
+                        if (animated != null) setImageDrawable(animated) else setImageURI(uri)
                         contentDescription = "Selected image"
                     }
                 },
-                update = { it.setImageURI(uri) },
+                update = { if (animated != null) it.setImageDrawable(animated) else it.setImageURI(uri) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp)
             )
         }
@@ -100,6 +117,6 @@ fun NativeMediaPreview(uri: Uri) {
             }
         }
 
-        else -> Text("Unsupported media format. Choose an image, video or audio file.")
+        else -> Text("Unsupported media format. Choose an image, animated GIF, video or audio file.")
     }
 }
