@@ -406,25 +406,56 @@ private fun winner4(board: List<Int>, player: Int): Boolean {
     var board by remember { mutableStateOf(List(42) { 0 }) }
     var player by remember { mutableIntStateOf(1) }
     var winner by remember { mutableStateOf("") }
-    Text("Connect Four · ${if (winner.isEmpty()) "Player $player's turn" else winner}")
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
-        repeat(7) { col ->
-            OutlinedButton(onClick = {
-                val row = (5 downTo 0).firstOrNull { board[it*7+col] == 0 }
-                if (row != null) {
-                    val next = board.toMutableList(); next[row*7+col] = player; board = next
-                    if (winner4(next, player)) winner = "Player $player wins!"
-                    else if (next.none { it == 0 }) winner = "Draw"
-                    else player = 3-player
-                }
-            }, enabled = winner.isEmpty() && board[col] == 0,
-                modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("↓") }
+    var releaseX by remember { mutableFloatStateOf(0f) }
+    val drop: (Int) -> Unit = { col ->
+        if (col in 0..6 && winner.isEmpty()) {
+            val row = (5 downTo 0).firstOrNull { board[it*7+col] == 0 }
+            if (row != null) {
+                val next = board.toMutableList()
+                next[row*7+col] = player
+                board = next
+                if (winner4(next, player)) winner = "Player $player wins!"
+                else if (next.none { it == 0 }) winner = "Draw"
+                else player = 3-player
+            }
         }
     }
-    (0..5).forEach { row ->
-        Text((0..6).joinToString(" ") { col ->
-            when (board[row*7+col]) { 1 -> "🔴"; 2 -> "🟡"; else -> "⚪" }
-        })
+    Text("Connect Four · ${if (winner.isEmpty()) "Player $player's turn" else winner}")
+    Text("🔴 Drag on the board to choose a column 🟡")
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+        repeat(7) { col ->
+            OutlinedButton(onClick = { drop(col) },
+                enabled = winner.isEmpty() && board[col] == 0,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(0.dp)) {
+                Text(if (player == 1) "🔴" else "🟡")
+            }
+        }
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .background(Color(0xFF2256BB), RoundedCornerShape(14.dp))
+            .padding(8.dp)
+            .pointerInput(board) {
+                detectDragGestures(
+                    onDragStart = { releaseX = it.x },
+                    onDrag = { change, _ -> change.consume(); releaseX = change.position.x },
+                    onDragEnd = {
+                        val col = (releaseX / (size.width.toFloat() / 7f)).toInt().coerceIn(0, 6)
+                        drop(col)
+                    }
+                )
+            }
+    ) {
+        (0..5).forEach { row ->
+            Text(
+                (0..6).joinToString("  ") { col ->
+                    when (board[row*7+col]) { 1 -> "🔴"; 2 -> "🟡"; else -> "⚪" }
+                },
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
     Button(onClick = { board = List(42) { 0 }; player = 1; winner = "" }) { Text("New round") }
 }
