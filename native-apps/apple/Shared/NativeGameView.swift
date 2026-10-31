@@ -43,6 +43,7 @@ struct NativeGameView: View {
                             Text(selectedGame).font(.headline)
                         }
                         .buttonStyle(.bordered)
+                        GameArtworkView(game: selectedGame)
 
                         if selectedGame == "Number Guess" { numberGuess }
                         else if selectedGame == "Tic-Tac-Toe" { ticTacToe }
@@ -61,9 +62,9 @@ struct NativeGameView: View {
                                     selectedGame = name
                                 } label: {
                                     VStack(spacing: 13) {
-                                        Image(systemName: gameSymbols[name] ?? "gamecontroller.fill")
-                                            .font(.system(size: 33, weight: .semibold))
-                                            .frame(height: 44)
+                                        GameArtworkView(game: name)
+                                            .frame(height: 75)
+                                            .clipped()
                                         Text(name)
                                             .font(.subheadline.bold())
                                             .multilineTextAlignment(.center)
@@ -90,11 +91,12 @@ struct NativeGameView: View {
         VStack(spacing: 14) {
             Text("Number Guess").font(.title2.bold())
             Text(result)
-            HStack(spacing: 18) {
-                Button("−") { guess = max(1, guess - 1) }
-                Text("Guess: \(guess)").font(.title2)
-                Button("+") { guess = min(100, guess + 1) }
-            }
+            Text("Guess: \(guess)").font(.title2)
+            Slider(value: Binding(
+                get: { Double(guess) },
+                set: { guess = min(100, max(1, Int($0.rounded()))) }
+            ), in: 1...100, step: 1)
+                .accessibilityLabel("Slide to choose a number")
             Button("Submit guess") { submitGuess() }.buttonStyle(.borderedProminent)
             Text("Streak: \(streak) · Best: \(best)").foregroundStyle(.secondary)
         }
