@@ -1,12 +1,18 @@
-# ◈ ItamarOS — Version 1.6.1
+# ◈ ItamarOS — Native iOS 1.6.2 / Android 1.7 source
 
 **ItamarOS** is a personal operating-system project featuring a PC desktop edition, an installable desktop demonstration, and a responsive browser emulator.
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
+## ItamarOS Connect — cross-device messaging preview
+
+Native iOS and Android source now includes profile usernames/photos, groups with optional description/photo, time-limited invite links and QR, chats, channels, synced selected contacts, opt-in verified phone discovery, room media, polls, message edit/delete, delivery/read receipts with an opt-out, and one-time **text** viewing. These are **unverified source features**: internet chat is not live until the Supabase backend is deployed and security-tested. There is no complete WhatsApp parity, background push or end-to-end encryption. One-time media is not implemented.
+
+See [Connect setup, migrations and limitations](messaging/README.md). The [iOS IPA builds](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml) are unsigned. The [Android test APK builds](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml) are debug-signed. Only a successful run has a downloadable file; neither is a production release. All older versions remain linked below.
+
 ## iPhone/iPad downloads — version archive
 
-The current native iOS source version is **1.6.1**. The iOS 1.6 package is built as an **unsigned IPA** by GitHub Actions, not a signed release. **A workflow link is not a claim that the build succeeded or that an IPA is already downloadable.** To obtain it, open the workflow, select **Run workflow**, wait for a successful run, and download the **ItamarOS-iOS-1.6.1-unsigned-IPA** artifact from the run page (GitHub sign-in may be required). A successful build may still need validation and appropriate Apple-issued signing before installing on a device.
+The current native iOS source version is **1.6.2**. The iOS 1.6 package is built as an **unsigned IPA** by GitHub Actions, not a signed release. **A workflow link is not a claim that the build succeeded or that an IPA is already downloadable.** To obtain it, open the workflow, select **Run workflow**, wait for a successful run, and download the **ItamarOS-iOS-1.6.2-unsigned-IPA** artifact from the run page (GitHub sign-in may be required). A successful build may still need validation and appropriate Apple-issued signing before installing on a device.
 
 - [Build/download iOS 1.6 unsigned IPA (GitHub Actions)](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml)
 - [iOS 1.6 SwiftUI source](native-apps/apple/) · [iOS app build instructions](native-apps/apple/README.md)
