@@ -44,8 +44,14 @@ struct NativeGameView: View {
                         }
                         .buttonStyle(.bordered)
 
-                        if selectedGame == "Number Guess" { numberGuess }
-                        else if selectedGame == "Tic-Tac-Toe" { ticTacToe }
+                        if selectedGame == "Number Guess" {
+                            GameArtBanner(name: selectedGame)
+                            numberGuess
+                        }
+                        else if selectedGame == "Tic-Tac-Toe" {
+                            GameArtBanner(name: selectedGame)
+                            ticTacToe
+                        }
                         else { ExtraMobileGames(game: selectedGame) }
                     } else {
                         Text("Choose a game to start")
@@ -90,11 +96,19 @@ struct NativeGameView: View {
         VStack(spacing: 14) {
             Text("Number Guess").font(.title2.bold())
             Text(result)
-            HStack(spacing: 18) {
+            Text("Guess: \(guess)").font(.title2.bold())
+            #if os(tvOS)
+            HStack {
                 Button("−") { guess = max(1, guess - 1) }
-                Text("Guess: \(guess)").font(.title2)
                 Button("+") { guess = min(100, guess + 1) }
             }
+            #else
+            Slider(value: Binding(get: { Double(guess) },
+                                  set: { guess = Int($0) }),
+                   in: 1...100, step: 1)
+                .tint(.purple)
+                .accessibilityLabel("Drag to choose a number from 1 to 100")
+            #endif
             Button("Submit guess") { submitGuess() }.buttonStyle(.borderedProminent)
             Text("Streak: \(streak) · Best: \(best)").foregroundStyle(.secondary)
         }
@@ -109,10 +123,11 @@ struct NativeGameView: View {
             Text(winner.isEmpty ? "Turn: \(turn)" : "Result: \(winner)")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
                 ForEach(0..<9, id: \.self) { index in
-                    Button(board[index].isEmpty ? "·" : board[index]) { play(at: index) }
+                    Button(board[index].isEmpty ? "✨" : board[index] == "X" ? "❌" : "⭕") { play(at: index) }
                         .font(.system(size: 26, weight: .heavy))
                         .frame(minHeight: 62)
                         .frame(maxWidth: .infinity)
+                        .background(.cyan.opacity(0.16), in: RoundedRectangle(cornerRadius: 12))
                         .buttonStyle(.bordered)
                         .disabled(!board[index].isEmpty || !winner.isEmpty)
                 }

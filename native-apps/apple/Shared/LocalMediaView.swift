@@ -32,6 +32,7 @@ struct LocalMediaView: View {
     @State private var scopedURL: URL?
     @State private var temporaryVideoURL: URL?
     @State private var stillImage: Image?
+    @State private var gifData: Data?
     @State private var isAudio = false
     @State private var errorMessage: String?
     #if os(iOS)
@@ -45,7 +46,11 @@ struct LocalMediaView: View {
                     Label("ItamarOS Player", systemImage: "play.rectangle.fill")
                         .font(.title.bold())
 
-                    if let stillImage {
+                    if let gifData {
+                        AnimatedGIFView(data: gifData)
+                            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 420)
+                            .accessibilityLabel("Animated GIF")
+                    } else if let stillImage {
                         stillImage
                             .resizable()
                             .scaledToFit()
@@ -69,7 +74,7 @@ struct LocalMediaView: View {
                         }
                         .padding()
                     } else {
-                        ContentUnavailableView("Choose a photo, video or audio file", systemImage: "photo.on.rectangle.angled")
+                        ContentUnavailableView("Choose a photo, GIF, video or audio file", systemImage: "photo.on.rectangle.angled")
                     }
 
                     Text(fileName)
@@ -96,7 +101,7 @@ struct LocalMediaView: View {
                             .font(.footnote)
                             .foregroundStyle(.red)
                     }
-                    Text("Images are displayed locally. Audio and video use Apple's AVKit. Supported formats depend on the device and codecs.")
+                    Text("Still images and animated GIFs are displayed locally (GIF via ImageIO). Audio and video use Apple's AVKit. Supported formats depend on the device and codecs.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -107,7 +112,7 @@ struct LocalMediaView: View {
             .navigationTitle("Player")
             .fileImporter(
                 isPresented: $selectingFile,
-                allowedContentTypes: [.image, .movie, .audio, .mpeg4Movie],
+                allowedContentTypes: [.image, .gif, .movie, .audio, .mpeg4Movie],
                 allowsMultipleSelection: false
             ) { result in
                 switch result {
@@ -137,6 +142,7 @@ struct LocalMediaView: View {
         player?.pause()
         player = nil
         stillImage = nil
+        gifData = nil
         isAudio = false
         errorMessage = nil
         scopedURL?.stopAccessingSecurityScopedResource()
@@ -149,6 +155,15 @@ struct LocalMediaView: View {
 
     private func showImage(data: Data, name: String) {
         releasePrevious()
+        if data.starts(with: Data("GIF87a".utf8)) || data.starts(with: Data("GIF89a".utf8)) {
+            guard data.count <= 18 * 1024 * 1024 else {
+                errorMessage = "This GIF is too large to animate safely (18 MB maximum)."
+                return
+            }
+            gifData = data
+            fileName = name
+            return
+        }
         #if os(macOS)
         guard let picture = NSImage(data: data) else {
             errorMessage = "This image format could not be opened."

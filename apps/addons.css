@@ -129,3 +129,24 @@ body[data-contrast="high"]{filter:contrast(1.25)}
 /* Only apps designed for TV remote and screen are shown on TV. */
 body[data-device="tv"] main.desktop .app:not([data-tv-compatible="true"]){display:none!important}
 header .site-repo-link[href="/feedback.html"]{display:inline-flex;align-items:center;border:1px solid #5b93d175;background:#0b366d70;border-radius:8px;padding:7px 12px}
+
+/* Colorful touch-first games; original game illustrations from local SVG data. */
+#itamar-games .ios-game-art { display:block; width:min(100%,480px);height:auto;max-height:160px;object-fit:cover;margin:12px auto 18px;border-radius:18px;box-shadow:0 10px 28px #0005;pointer-events:none}
+#itamar-games .ios-game-polished {background:linear-gradient(145deg,#ffffff0b,#456a9a16);border:1px solid #8bc2ff33;border-radius:18px;padding:14px;margin-top:12px}
+#itamar-games .ios-game-polished button{transition:transform .12s,filter .12s}
+#itamar-games .ios-game-polished button:active{transform:scale(.93);filter:brightness(1.2)}
+#itamar-games .ios-snake,#itamar-games .ios-2048,#itamar-games .ios-memory,#ios-mini-area .ios-connect-board {touch-action:none;max-width:100%;border-radius:16px;box-shadow:0 7px 21px #0004}
+#itamar-games .ios-2048 > div{border-radius:12px;box-shadow:inset 0 -4px 7px #0002;font-weight:800;color:#172c40}
+#itamar-games .ios-2048 [data-number="2"]{background:#faf1da}
+#itamar-games .ios-2048 [data-number="4"]{background:#fff0ad}
+#itamar-games .ios-2048 [data-number="8"]{background:#ffcd8c}
+#itamar-games .ios-2048 [data-number="16"]{background:#ff9e85}
+#itamar-games .ios-2048 [data-number="32"]{background:#ff718c}
+#itamar-games .ios-2048 [data-number="64"]{background:#f36ac0}
+#itamar-games .ios-memory button{font-size:clamp(23px,5vw,37px);background:linear-gradient(135deg,#6a5ce4,#bc78dd)}
+#itamar-games .ios-memory button.found{background:linear-gradient(135deg,#287c69,#7fdda1)}
+#itamar-games .ios-connect-board{touch-action:none;background:linear-gradient(150deg,#2577e7,#122f91)!important}
+#itamar-games .ios-game-sound-toggle{background:#15365b;color:#fff;min-height:42px;border:1px solid #90c3f8;border-radius:18px;padding:10px 16px}
+#itamar-games .ios-game-swipe-hint{font-size:13px;color:#b5ddff;line-height:1.5}
+#itamar-games .ios-game-choice-art{display:inline-block;min-width:48px;font-size:clamp(26px,5vw,40px);filter:drop-shadow(0 3px 2px #0004)}
+@media(hover:none){#itamar-games button{min-height:42px}#itamar-games input{min-height:46px}}

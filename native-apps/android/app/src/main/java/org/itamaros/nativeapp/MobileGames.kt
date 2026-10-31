@@ -1,6 +1,8 @@
 package org.itamaros.nativeapp
 
 import android.os.SystemClock
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
@@ -9,6 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlin.math.abs
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -64,6 +71,17 @@ fun MobileGamesHub() {
             Button(onClick = { selected = null }) { Text("← All games") }
             Text("${gameLogos[selected] ?: "🎮"}  $selected",
                 style = MaterialTheme.typography.titleLarge)
+            Box(
+                modifier = Modifier.fillMaxWidth().height(114.dp)
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFF5E59DC), Color(0xFF28C1CB), Color(0xFF5FDB8C))),
+                        RoundedCornerShape(18.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("${gameLogos[selected] ?: "🎮"} ✨",
+                    style = MaterialTheme.typography.displayLarge)
+            }
             when (selected) {
                 "2048" -> Game2048()
                 "Snake" -> SnakeGame()
@@ -145,14 +163,29 @@ private fun shift2048(board: List<Int>, direction: Int): Pair<List<Int>, Int> {
     var board by remember { mutableStateOf(new2048()) }
     var score by remember { mutableIntStateOf(0) }
     Text("Combine identical tiles to reach 2048.")
-    BoardGrid(4, board.map { if (it == 0) "·" else it.toString() }, {}, { true })
-    Text("Score: $score"); SavedBest("2048", score)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { val (b, g) = shift2048(board, 2); board = b; score += g }) { Text("↑") }
-        Button(onClick = { val (b, g) = shift2048(board, 0); board = b; score += g }) { Text("←") }
-        Button(onClick = { val (b, g) = shift2048(board, 3); board = b; score += g }) { Text("↓") }
-        Button(onClick = { val (b, g) = shift2048(board, 1); board = b; score += g }) { Text("→") }
+    var dx by remember { mutableFloatStateOf(0f) }
+    var dy by remember { mutableFloatStateOf(0f) }
+    Box(modifier = Modifier.pointerInput(board) {
+        detectDragGestures(
+            onDragStart = { dx = 0f; dy = 0f },
+            onDrag = { change, movement ->
+                change.consume(); dx += movement.x; dy += movement.y
+            },
+            onDragEnd = {
+                if (maxOf(abs(dx), abs(dy)) > 15f) {
+                    val direction = if (abs(dx) > abs(dy)) { if (dx > 0) 1 else 0 }
+                        else { if (dy > 0) 3 else 2 }
+                    val (next, gain) = shift2048(board, direction)
+                    board = next
+                    score += gain
+                }
+            }
+        )
+    }) {
+        BoardGrid(4, board.map { if (it == 0) "✨" else it.toString() }, {}, { true })
     }
+    Text("Swipe the board to merge matching tiles.")
+    Text("Score: $score"); SavedBest("2048", score)
     Button(onClick = { board = new2048(); score = 0 }) { Text("New game") }
 }
 
@@ -180,18 +213,36 @@ private fun newFood(snake: List<Pair<Int,Int>>): Pair<Int,Int> {
         }
     }
     Text("Snake · Score: $score ${if (over) "· Game over" else ""}"); SavedBest("snake", score)
-    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+    var swipeX by remember { mutableFloatStateOf(0f) }
+    var swipeY by remember { mutableFloatStateOf(0f) }
+    Column(verticalArrangement = Arrangement.spacedBy(1.dp),
+        modifier = Modifier.fillMaxWidth()
+            .background(Color(0xFF145A47), RoundedCornerShape(14.dp))
+            .padding(10.dp)
+            .pointerInput(heading) {
+                detectDragGestures(
+                    onDragStart = { swipeX = 0f; swipeY = 0f },
+                    onDrag = { change, movement -> change.consume(); swipeX += movement.x; swipeY += movement.y },
+                    onDragEnd = {
+                        if (maxOf(abs(swipeX), abs(swipeY)) > 12f) {
+                            val newDirection = if (abs(swipeX) > abs(swipeY))
+                                (if (swipeX > 0) 1 else -1) to 0
+                            else 0 to (if (swipeY > 0) 1 else -1)
+                            if (newDirection.first != -heading.first || newDirection.second != -heading.second) {
+                                heading = newDirection
+                            }
+                        }
+                    }
+                )
+            }
+    ) {
         (0..9).forEach { y ->
             Text((0..9).joinToString(" ") { x ->
-                when (x to y) { snake.first() -> "🟩"; food -> "🍎"; else -> if ((x to y) in snake) "🟢" else "▫️" }
+                when (x to y) { snake.first() -> "🐍"; food -> "🍒"; else -> if ((x to y) in snake) "🟢" else "🌿" }
             }, maxLines = 1)
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("↑" to (0 to -1), "←" to (-1 to 0), "↓" to (0 to 1), "→" to (1 to 0)).forEach { (symbol, dir) ->
-            Button(onClick = { if (dir.first != -heading.first || dir.second != -heading.second) heading = dir }) { Text(symbol) }
-        }
-    }
+    Text("Drag or swipe across the board to steer the snake.")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = { if (!over) running = !running }) { Text(if (running) "Pause" else "Start") }
         Button(onClick = { snake = listOf(4 to 5, 3 to 5, 2 to 5); food = 7 to 5; heading = 1 to 0; score = 0; over = false; running = false }) { Text("Restart") }
@@ -355,25 +406,56 @@ private fun winner4(board: List<Int>, player: Int): Boolean {
     var board by remember { mutableStateOf(List(42) { 0 }) }
     var player by remember { mutableIntStateOf(1) }
     var winner by remember { mutableStateOf("") }
-    Text("Connect Four · ${if (winner.isEmpty()) "Player $player's turn" else winner}")
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
-        repeat(7) { col ->
-            OutlinedButton(onClick = {
-                val row = (5 downTo 0).firstOrNull { board[it*7+col] == 0 }
-                if (row != null) {
-                    val next = board.toMutableList(); next[row*7+col] = player; board = next
-                    if (winner4(next, player)) winner = "Player $player wins!"
-                    else if (next.none { it == 0 }) winner = "Draw"
-                    else player = 3-player
-                }
-            }, enabled = winner.isEmpty() && board[col] == 0,
-                modifier = Modifier.weight(1f), contentPadding = PaddingValues(0.dp)) { Text("↓") }
+    var releaseX by remember { mutableFloatStateOf(0f) }
+    val drop: (Int) -> Unit = { col ->
+        if (col in 0..6 && winner.isEmpty()) {
+            val row = (5 downTo 0).firstOrNull { board[it*7+col] == 0 }
+            if (row != null) {
+                val next = board.toMutableList()
+                next[row*7+col] = player
+                board = next
+                if (winner4(next, player)) winner = "Player $player wins!"
+                else if (next.none { it == 0 }) winner = "Draw"
+                else player = 3-player
+            }
         }
     }
-    (0..5).forEach { row ->
-        Text((0..6).joinToString(" ") { col ->
-            when (board[row*7+col]) { 1 -> "🔴"; 2 -> "🟡"; else -> "⚪" }
-        })
+    Text("Connect Four · ${if (winner.isEmpty()) "Player $player's turn" else winner}")
+    Text("🔴 Drag on the board to choose a column 🟡")
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.fillMaxWidth()) {
+        repeat(7) { col ->
+            OutlinedButton(onClick = { drop(col) },
+                enabled = winner.isEmpty() && board[col] == 0,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(0.dp)) {
+                Text(if (player == 1) "🔴" else "🟡")
+            }
+        }
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .background(Color(0xFF2256BB), RoundedCornerShape(14.dp))
+            .padding(8.dp)
+            .pointerInput(board) {
+                detectDragGestures(
+                    onDragStart = { releaseX = it.x },
+                    onDrag = { change, _ -> change.consume(); releaseX = change.position.x },
+                    onDragEnd = {
+                        val col = (releaseX / (size.width.toFloat() / 7f)).toInt().coerceIn(0, 6)
+                        drop(col)
+                    }
+                )
+            }
+    ) {
+        (0..5).forEach { row ->
+            Text(
+                (0..6).joinToString("  ") { col ->
+                    when (board[row*7+col]) { 1 -> "🔴"; 2 -> "🟡"; else -> "⚪" }
+                },
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
     Button(onClick = { board = List(42) { 0 }; player = 1; winner = "" }) { Text("New round") }
 }

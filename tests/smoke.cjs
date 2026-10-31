@@ -35,7 +35,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
+for(const file of ['apps/player.js','apps/game-fx.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -46,6 +46,24 @@ for(const m of html.matchAll(/<script\s+defer\s+src="([^"]+)"/g)){
 }
 assert.ok(html.includes("launch('player')"));
 assert.ok(html.includes("launch('games')"));
+assert.ok(html.includes('/apps/game-fx.js?v=1.2.0'),'Bundle SFX/illustration runtime before games');
+assert.ok(load('desktop/prepare.cjs').includes('apps/game-fx.js'),'Desktop build must include local game SFX');
+assert.ok(load('sw.js').includes('/apps/game-fx.js?v=1.2.0'),'PWA must cache game SFX for offline play');
+const gameFX=load('apps/game-fx.js');
+assert.ok(gameFX.includes('Calinou/kenney-interface-sounds') && gameFX.includes('Creative Commons CC0'),'Game sounds must be sourced from CC0 Kenney with clear attribution');
+assert.ok(gameFX.includes('data:audio/wav;base64,'),'Sound bytes must be bundled and playable offline, not streamed from unknown servers');
+assert.ok(gameFX.includes('pointerdown') && gameFX.includes('pointerup'),'Games use drag and swipe gestures');
+assert.ok(gameFX.includes('localStorage.getItem(\'itamaros-game-sound\')'),'Users can save game sound settings');
+const mainGames=load('apps/games.js');
+const miniGames=load('apps/more-games.js');
+assert.ok(mainGames.includes("Swipe the tiles in any direction"),'2048 swipe support required');
+assert.ok(mainGames.includes("Drag/swipe on the board"),'Snake swipe support required');
+assert.ok(mainGames.includes("🍒") || mainGames.includes("cherries"),'Cartoon Snake should draw cherry food');
+assert.ok(miniGames.includes("Drag a disc into a column"),'Connect Four must support a draggable disc');
+const mediaSource=load('apps/player.js');
+assert.ok(mediaSource.includes("image/*,audio/*,video/*,.gif"),'Web media picker must support GIF images');
+assert.ok(mediaSource.includes("s.image.src=track.url"),'Web media player must show images/GIFs outside the video decoder');
+
 assert.ok(html.includes('data-tv-only="true"'), 'TV Streaming must be TV-only in the desktop grid');
 assert.ok(html.includes("if(!tv&&n==='TV Streaming')return false"), 'TV Streaming must be hidden outside TV mode');
 assert.ok(html.includes("if(!btn?.dataset.tvCompatible)return false"), 'TV search should exclude apps without TV support');
@@ -119,7 +137,7 @@ class Element{
  pause(){this.paused=true}
  play(){this.paused=false;return Promise.resolve()}
  load(){}
- getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+ getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){},createLinearGradient(){return {addColorStop(){}}},save(){},restore(){},translate(){},rotate(){},moveTo(){},quadraticCurveTo(){},stroke(){},ellipse(){},rect(){}}}
  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
  querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if((selector==='[data-game]'&&e.dataset.game)||(selector==='[data-mini]'&&e.dataset.mini))found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
