@@ -300,6 +300,11 @@ struct ItamarGroupPollsView: View {
     }
 }
 
+struct ItamarGroupRoute: Identifiable {
+    let token: String
+    var id: String { token }
+}
+
 struct ItamarGroupInfoView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     let room: ItamarCloudRoom
