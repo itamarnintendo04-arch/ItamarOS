@@ -383,6 +383,13 @@ private struct ItamarCloudExploreView: View {
     }
 }
 
+private func firstItamarLink(_ text:String) -> URL? {
+    let detector=try? NSDataDetector(types:NSTextCheckingResult.CheckingType.link.rawValue)
+    let range=NSRange(text.startIndex..<text.endIndex,in:text)
+    return detector?.matches(in:text,range:range).compactMap{$0.url}
+        .first(where:{$0.scheme == "https" || $0.scheme == "http"})
+}
+
 private struct OpenedOnceText: Identifiable {
     let id = UUID()
     let body: String
@@ -423,6 +430,12 @@ private struct ItamarCloudThreadView: View {
                                     Text(message.deleted_at == nil ? message.body : "Message deleted")
                                         .opacity(message.deleted_at == nil ? 1 : 0.65)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                    if message.deleted_at == nil,
+                                       message.is_view_once != true,
+                                       let url=firstItamarLink(message.body) {
+                                        Link("Open shared link",destination:url)
+                                            .font(.caption)
+                                    }
                                     if message.edited_at != nil && message.deleted_at == nil {
                                         Text("Edited").font(.caption2).foregroundStyle(.secondary)
                                     }
