@@ -4,6 +4,10 @@ These are **native app sources**; no WebView, Electron, or hosted-site wrapper i
 
 **Targets:** `ItamarOSiOS` for iOS/iPadOS 17+, `ItamarOStvOS` for tvOS 17+, `ItamarOSmacOS` for macOS 14+, `ItamarOSvisionOS` for visionOS 2+, and `ItamarOSwatchOS` for watchOS 10+. watchOS uses its own SwiftUI Watch app; other targets share the native SwiftUI implementation. Support depends on an appropriate SDK and developer signing. The Apple App Store's app thinning selects architecture/device-appropriate assets once a signed app is published. See `project.yml`.
 
+## Local two-player games and bot difficulty (iOS 1.6)
+
+Memory Match, Tic-Tac-Toe, Rock Paper Scissors, and Connect Four now let you select **With a friend** (two people sharing one device) or **Against a bot**, with **Easy / Medium / Hard** difficulty. Memory Match scores pairs separately, switches turns after misses, and the bot learns only cards that were revealed. Tic-Tac-Toe uses minimax on Hard; Connect Four uses look-ahead; Rock Paper Scissors predicts only from earlier rounds. Other mini-games stay single-player. Native iOS builds must be regenerated after these source changes; the original unsigned IPA artifact is not automatically replaced.
+
 ## Build on Mac
 
 1. Install a supported Xcode version and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
