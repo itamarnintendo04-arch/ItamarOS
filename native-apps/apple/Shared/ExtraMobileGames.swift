@@ -673,11 +673,19 @@ private struct ConnectFourView: View {
                 for (dc, dr) in [(1,0), (0,1), (1,1), (-1,1)] {
                     let endX = c + 3*dc, endY = r + 3*dr
                     guard endX >= 0, endX < 7, endY >= 0, endY < 6 else { continue }
-                    let window = (0..<4).map { t in state[(r+t*dr)*7+c+t*dc] }
-                    let mine = window.filter { $0 == 2 }.count
-                    let other = window.filter { $0 == 1 }.count
-                    if other == 0 { score += [0, 1, 9, 75, 500][mine] }
-                    if mine == 0 { score -= [0, 1, 9, 75, 500][other] }
+                    var mine = 0
+                    var other = 0
+                    for step in 0..<4 {
+                        let column = c + dc * step
+                        let row = r + dr * step
+                        let position = row * 7 + column
+                        let token = state[position]
+                        if token == 2 { mine += 1 }
+                        if token == 1 { other += 1 }
+                    }
+                    let weights = [0, 1, 9, 75, 500]
+                    if other == 0 { score += weights[mine] }
+                    if mine == 0 { score -= weights[other] }
                 }
             }
         }
