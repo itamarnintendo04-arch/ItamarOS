@@ -217,6 +217,7 @@ struct ItamarCloudProfileView: View {
             }
             if !required {
                 Section("Chats and notifications") {
+                    NavigationLink("Device contacts (optional)") { ItamarOnlineContactsView() }
                     Button("Allow message notifications") {
                         Task {
                             do {
