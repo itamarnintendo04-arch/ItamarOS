@@ -28,6 +28,30 @@ function defaults(){return {scores:{'2048':0,snake:0,memory:0,tictactoe:0,reacti
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return defaults();const d=defaults();for(const k of Object.keys(d))if(k in s&&s[k]&&typeof s[k]==='object')d[k]={...d[k],...s[k]};if(!Array.isArray(d.game2048.board)||d.game2048.board.length!==16)d.game2048=defaults().game2048;if(!Array.isArray(d.tictactoe.board)||d.tictactoe.board.length!==9)d.tictactoe=defaults().tictactoe;if(!Array.isArray(d.snake.body)||!d.snake.body.length)d.snake=defaults().snake;return d}catch{return defaults()}}
 let saveData=load();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(saveData))}catch{}};
+
+function matchFor(game){
+ saveData.matches??={};
+ return saveData.matches[game]??={mode:'friend',difficulty:'medium'};
+}
+function matchControls(area,game,reset){
+ const match=matchFor(game);
+ const title=make('p','Who do you want to play against?','ios-caption');area.append(title);
+ const opponent=make('select');opponent.setAttribute('aria-label','Choose opponent');
+ for(const [value,label] of [['friend','With a friend'],['bot','Against a bot']]){
+  const option=make('option',label);option.value=value;opponent.append(option)
+ }
+ opponent.value=match.mode;area.append(opponent);
+ const level=make('select');level.setAttribute('aria-label','Bot difficulty');
+ for(const [value,label] of [['easy','Easy'],['medium','Medium'],['hard','Hard']]){
+  const option=make('option',label);option.value=value;level.append(option)
+ }
+ level.value=match.difficulty;level.hidden=match.mode!=='bot';area.append(level);
+ opponent.onchange=()=>{match.mode=opponent.value;save();reset()};
+ level.onchange=()=>{match.difficulty=level.value;save();reset()};
+ if(match.mode==='friend')area.append(make('p','Two friends play in turns on the same device.','ios-caption'));
+ return match;
+}
+
 function stopTimers(){clearInterval(timer);timer=null;clearTimeout(flipTimeout);flipTimeout=null}
 function cleanup(){stopTimers()}
 function mount(){
@@ -49,7 +73,7 @@ function mount(){
  if(window.ItamarMoreGames)window.ItamarMoreGames.mount(wrapper);
 }
 function switchTo(game){
- stopTimers();current=game;
+ stopTimers();memoryToken++;ticToken++;current=game;
  for(const b of root?.querySelectorAll('[data-game]')||[])b.classList.toggle('ios-active',b.dataset.game===game);
  const area=$('itamar-game-area');if(!area)return;area.replaceChildren();
  if(game==='2048')render2048();else if(game==='snake'){saveData.snake.running=false;save();renderSnake()}else if(game==='memory'){showing=[];renderMemory()}else if(game==='tictactoe')renderTicTacToe();else if(game==='guess')renderGuess();else if(game==='reaction')renderReaction();else if(game==='rps')renderRPS();else if(game==='math')renderMath();else if(game==='word')renderWord();else if(game==='pattern')renderPattern();
@@ -149,30 +173,70 @@ function renderSnake(){
  a.append(make('p','Drag your finger along the board to steer the cartoon snake. Keyboard arrows also work.','ios-caption'));
 }
 function randomize(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]]}return array}
-function memoryReset(){saveData.memory={cards:randomize(icons.flatMap(x=>[x,x])),matched:[],moves:0,finished:false};save();renderMemory()}
-let showing=[];
-function memoryPick(i){
- const g=saveData.memory;if(g.finished||showing.includes(i)||g.matched.includes(i)||showing.length>=2)return;
- showing.push(i);renderMemory();
+let showing=[],memoryToken=0,ticToken=0;
+function memoryReset(){
+ memoryToken++;showing=[];
+ saveData.memory={cards:randomize(icons.flatMap(x=>[x,x])),matched:[],moves:0,finished:false,turn:0,points:[0,0],known:{}};
+ save();renderMemory();
+}
+function memoryPick(i,byBot=false){
+ const g=saveData.memory,m=matchFor('memory');
+ if(g.finished||showing.includes(i)||g.matched.includes(i)||showing.length>=2||(m.mode==='bot'&&g.turn===1&&!byBot))return;
+ showing.push(i);
+ g.known??={};g.points??=[0,0];g.turn??=0;
+ if(m.mode==='bot'&&(m.difficulty==='hard'||(m.difficulty==='medium'&&Math.random()<.55)))g.known[i]=g.cards[i];
+ renderMemory();
  if(showing.length===2){
-   g.moves++;
-   if(g.cards[showing[0]]===g.cards[showing[1]]){
-    g.matched.push(...showing);showing=[];
-    effect('collect');if(g.matched.length===g.cards.length){effect('win');g.finished=true;saveData.scores.memory=saveData.scores.memory?Math.min(saveData.scores.memory,g.moves):g.moves}
-    save();renderMemory()
-   }else{save();flipTimeout=setTimeout(()=>{showing=[];renderMemory()},850)}
+  g.moves++;const a=showing[0],b=showing[1],token=memoryToken;
+  flipTimeout=setTimeout(()=>{
+   if(token!==memoryToken||current!=='memory')return;
+   if(g.cards[a]===g.cards[b]){
+    g.matched.push(a,b);g.points[g.turn]++;effect('collect');
+    if(g.matched.length===g.cards.length){effect('win');g.finished=true;saveData.scores.memory=saveData.scores.memory?Math.min(saveData.scores.memory,g.moves):g.moves}
+   }else g.turn=1-g.turn;
+   showing=[];save();renderMemory();
+   if(!g.finished&&m.mode==='bot'&&g.turn===1)memoryBotTurn();
+  },850);
  }
+}
+function memoryBotTurn(){
+ const g=saveData.memory,m=matchFor('memory'),token=memoryToken;
+ flipTimeout=setTimeout(()=>{
+  if(token!==memoryToken||current!=='memory'||g.finished||g.turn!==1||showing.length)return;
+  const possible=g.cards.map((_,i)=>i).filter(i=>!g.matched.includes(i)),knowledge=g.known||{};
+  const known=possible.filter(i=>knowledge[i]!==undefined);
+  const knownPair=known.find(i=>known.some(j=>j!==i&&knowledge[i]===knowledge[j]));
+  const first=(m.difficulty!=='easy'&&knownPair!==undefined)?knownPair:possible[Math.floor(Math.random()*possible.length)];
+  if(first===undefined)return;memoryPick(first,true);
+  flipTimeout=setTimeout(()=>{
+   if(token!==memoryToken||current!=='memory'||showing.length!==1||showing[0]!==first)return;
+   const rest=possible.filter(i=>i!==first&&!g.matched.includes(i));
+   const remembered=rest.find(i=>knowledge[i]===g.cards[first]);
+   const second=(m.difficulty!=='easy'&&remembered!==undefined)?remembered:rest[Math.floor(Math.random()*rest.length)];
+   if(second!==undefined)memoryPick(second,true);
+  },370);
+ },470);
 }
 function renderMemory(){
  const a=$('itamar-game-area');if(!a||current!=='memory')return;a.replaceChildren();const g=saveData.memory;
  if(!g.cards.length){memoryReset();return}
+ g.turn??=0;g.points??=[0,0];g.known??={};
  a.append(make('h3','Memory Match'));artwork(a,'memory');
- a.append(make('p','Moves: '+g.moves+' · Best completion: '+(saveData.scores.memory||'—')+' moves'));
+ const m=matchControls(a,'memory',memoryReset);
+ a.append(make('p','Pairs: Player 1 '+g.points[0]+' · '+(m.mode==='bot'?'Bot':'Player 2')+' '+g.points[1]));
+ if(g.finished)a.append(make('p',g.points[0]===g.points[1]?'Draw!':g.points[0]>g.points[1]?'Player 1 wins!':(m.mode==='bot'?'Bot':'Player 2')+' wins!','ios-success'));
+ else a.append(make('p','Turn: '+(g.turn===0?'Player 1':m.mode==='bot'?'Bot':'Player 2')+' · Moves: '+g.moves));
  const grid=make('div',undefined,'ios-board ios-memory');
- g.cards.forEach((symbol,i)=>{const flipped=g.matched.includes(i)||showing.includes(i);const b=button(flipped?symbol:'?',()=>memoryPick(i));b.setAttribute('aria-label','Memory card '+(i+1)+(flipped?', '+symbol:''));b.classList.toggle('found',g.matched.includes(i));if(g.matched.includes(i))b.disabled=true;grid.append(b)});
- a.append(grid);
- if(g.finished)a.append(make('p','All pairs matched! Your result has been saved.','ios-success'));
- a.append(button('New memory game',()=>{if(confirm('Start new Memory Match game?')){showing=[];clearTimeout(flipTimeout);memoryReset()}}));
+ g.cards.forEach((symbol,i)=>{
+  const flipped=g.matched.includes(i)||showing.includes(i);
+  const b=button(flipped?symbol:'?',()=>memoryPick(i));
+  b.setAttribute('aria-label','Memory card '+(i+1)+(flipped?', '+symbol:''));
+  b.classList.toggle('found',g.matched.includes(i));
+  b.disabled=g.finished||g.matched.includes(i)||showing.length>=2||(m.mode==='bot'&&g.turn===1);
+  grid.append(b);
+ });a.append(grid);
+ a.append(make('p','Best completed: '+(saveData.scores.memory||'—')+' moves','ios-caption'));
+ a.append(button('New memory game',()=>memoryReset()));
 }
 const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function tictactoeResult(board){for(const line of lines){const [a,b,c]=line;if(board[a]&&board[a]===board[b]&&board[a]===board[c])return board[a]}return board.every(Boolean)?'tie':''}
