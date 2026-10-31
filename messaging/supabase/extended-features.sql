@@ -125,7 +125,9 @@ begin
   insert into public.itamar_members(room_id,user_id,role) values(group_id,auth.uid(),'admin');
   insert into public.itamar_members(room_id,user_id,role)
     select distinct group_id,p.id,'member'
-    from public.itamar_profiles p where p.username=any(p_usernames) and p.id<>auth.uid()
+    from public.itamar_profiles p where p.username = any(array(
+      select lower(trim(leading '@' from btrim(v))) from unnest(p_usernames) v
+    )) and p.id<>auth.uid()
       and not exists(select 1 from public.itamar_blocks b where
         (b.blocker_id=p.id and b.blocked_id=auth.uid()) or
         (b.blocker_id=auth.uid() and b.blocked_id=p.id))
