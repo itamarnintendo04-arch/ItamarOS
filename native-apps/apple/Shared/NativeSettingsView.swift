@@ -40,6 +40,16 @@ struct NativeSettingsView: View {
                     Text("App data stays in this app's sandbox. Use the system Files app for user-selected external documents where supported.")
                     #endif
                 }
+                #if os(iOS)
+                Section("Messages and family") {
+                    NavigationLink("Profile, contacts, notifications and parent QR") {
+                        ItamarProfileView()
+                    }
+                    Text("Chats and channels are currently local previews, not a live messaging network.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                #endif
                 Section("Software Updates") {
                     Button("Check for updates") {
                         Task { await updates.check() }
