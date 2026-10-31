@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#2366cf">
+  <title>ItamarOS · Parent setup</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#142343;background:#eaf1fc}
+    *{box-sizing:border-box}body{margin:0;padding:24px}
+    main{max-width:520px;margin:30px auto;background:#fff;border-radius:20px;padding:28px;box-shadow:0 12px 40px #12376322}
+    .brand{display:flex;align-items:center;gap:12px;color:#1749a6;font-weight:750;font-size:22px}
+    .brand img{width:40px;height:40px}h1{font-size:25px;margin:25px 0 10px}
+    p{line-height:1.55;color:#455775}label{display:block;margin:16px 0 5px;font-weight:650}
+    input,select{width:100%;padding:13px;border-radius:11px;border:1px solid #a1b5cf;font:inherit}
+    button,.button{display:block;width:100%;border:0;background:#2065d0;color:white;border-radius:12px;padding:14px;font:inherit;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;margin-top:15px}
+    .secondary{background:#e5efff;color:#1a4f9d}.note{padding:13px 15px;border-radius:12px;background:#f0f4fb;font-size:14px}
+    .good{color:#116c4c}#error{color:#a12033}#result{margin-top:16px}footer{font-size:13px;color:#65758b;margin-top:25px}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="brand"><img alt="" src="/assets/branding/itamaros-mark-512.png"> ItamarOS</header>
+    <h1>Set up a parent or guardian</h1>
+    <p>Scan this invitation to open the ItamarOS app on your own phone, or preview the registration here.</p>
+    <p class="note"><strong>Development preview:</strong> This form saves details only in this browser. It does not contact the inviting device, verify identity, create a remote account or activate parental controls. Do not enter sensitive documents or passwords.</p>
+    <p id="error" role="alert" hidden>Invitation missing or invalid. Ask for a new QR code.</p>
+    <section id="setup" hidden>
+      <a id="openApp" class="button" href="#">Open in the ItamarOS app</a>
+      <p id="appHint" class="note">If ItamarOS is installed and registered for app links, your phone can open the app. If it stays on this page, use the button or continue in the browser.</p>
+      <form id="parentForm">
+        <label for="parentName">Your name</label>
+        <input id="parentName" autocomplete="name" required maxlength="70">
+        <label for="parentEmail">Email (optional)</label>
+        <input id="parentEmail" type="email" autocomplete="email" maxlength="120">
+        <label for="relation">Relationship</label>
+        <select id="relation"><option>Parent</option><option>Legal guardian</option></select>
+        <button type="submit" class="secondary">Save preview on this browser</button>
+      </form>
+      <p id="result" aria-live="polite"></p>
+    </section>
+    <footer>ItamarOS is a development project. A secure, consent-based server is required before real cross-device family linking can be enabled.</footer>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+      const params = new URLSearchParams(location.search);
+      const invite = (params.get('invite') || '').toLowerCase();
+      const valid = /^[a-f0-9]{32}$/.test(invite);
+      document.getElementById('error').hidden = valid;
+      document.getElementById('setup').hidden = !valid;
+      if (!valid) return;
+
+      const appLink = 'itamaros://parent?invite=' + encodeURIComponent(invite);
+      document.getElementById('openApp').href = appLink;
+      const result = document.getElementById('result');
+      document.getElementById('parentForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const name = document.getElementById('parentName').value.trim();
+        const email = document.getElementById('parentEmail').value.trim();
+        const relation = document.getElementById('relation').value;
+        if (!name) return;
+        try {
+          sessionStorage.setItem('itamaros-parent-preview-' + invite, JSON.stringify({name, email, relation}));
+          result.className = 'good';
+          result.textContent = 'Saved on this browser for this session only. Your account has NOT been linked to the other device.';
+        } catch {
+          result.textContent = 'The browser did not allow local storage. No details were saved.';
+        }
+      });
+
+      // Best effort only: browsers may require a tap. Universal Links require an
+      // Apple-app-site-association file and Apple developer team credentials.
+      const isApplePhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isApplePhone && !sessionStorage.getItem('itamaros-parent-app-attempted')) {
+        try {
+          sessionStorage.setItem('itamaros-parent-app-attempted', 'yes');
+          window.location.assign(appLink);
+        } catch {
+          // Form remains available as a fallback.
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
