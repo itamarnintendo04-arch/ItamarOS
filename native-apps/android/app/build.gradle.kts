@@ -11,12 +11,15 @@ android {
         applicationId = "org.itamaros.nativeapp"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.3.0"
+        versionCode = 4
+        versionName = "1.7.0"
+        buildConfigField("String", "ITAMAR_SUPABASE_URL", "\"${providers.gradleProperty("ITAMAR_SUPABASE_URL").orElse("").get()}\"")
+        buildConfigField("String", "ITAMAR_SUPABASE_PUBLISHABLE_KEY", "\"${providers.gradleProperty("ITAMAR_SUPABASE_PUBLISHABLE_KEY").orElse("").get()}\"")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -40,5 +43,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.12.1")
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("com.google.zxing:core:3.5.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
