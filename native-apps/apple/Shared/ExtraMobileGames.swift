@@ -424,25 +424,37 @@ private struct ConnectFourView: View {
         VStack(spacing: 12) {
             Text("Connect Four · 2 players").font(.title2.bold())
             Text(winner.isEmpty ? "Player \(player)'s turn" : winner)
-            HStack(spacing: 2) {
-                ForEach(0..<7, id: \.self) { col in
-                    Button("↓") { drop(col) }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
-                        .disabled(!winner.isEmpty || board[col] != 0)
-                }
-            }
-            VStack(spacing: 0) {
-                ForEach(0..<6, id: \.self) { row in
-                    HStack(spacing: 0) {
-                        ForEach(0..<7, id: \.self) { col in
-                            Text(board[row*7+col] == 1 ? "🔴" : board[row*7+col] == 2 ? "🟡" : "⚪")
-                                .font(.system(size: 18))
-                                .frame(maxWidth: .infinity)
+            Text("Tap a column or drag across the board to drop a disk.")
+                .font(.caption).foregroundStyle(.secondary)
+            GeometryReader { geometry in
+                VStack(spacing: 4) {
+                    ForEach(0..<6, id: \.self) { row in
+                        HStack(spacing: 4) {
+                            ForEach(0..<7, id: \.self) { col in
+                                Button { drop(col) } label: {
+                                    Circle()
+                                        .fill(board[row*7+col] == 1 ? Color.red : board[row*7+col] == 2 ? Color.yellow : Color.white)
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
+                                        .padding(3)
+                                        .frame(maxWidth: .infinity)
+                                        .aspectRatio(1, contentMode: .fit)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(!winner.isEmpty)
+                            }
                         }
                     }
                 }
+                .padding(6)
+                .background(Color(red: 0.13, green: 0.41, blue: 0.8), in: RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 14).onEnded { gesture in
+                    let x = min(max(gesture.location.x, 0), geometry.size.width - 1)
+                    let col = Int(x / max(1, geometry.size.width / 7))
+                    drop(min(6, max(0, col)))
+                })
             }
+            .frame(height: 255)
             Button("New round") { board = Array(repeating: 0, count: 42); player = 1; winner = "" }
         }
     }
