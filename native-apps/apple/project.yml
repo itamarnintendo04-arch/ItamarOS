@@ -19,8 +19,6 @@ targets:
       path: iOS/Info.plist
       properties:
         NSContactsUsageDescription: "Contacts are used only when you explicitly choose names for private local message drafts. They are never uploaded."
-        ITAMAROS_SUPABASE_URL: ""
-        ITAMAROS_SUPABASE_PUBLISHABLE_KEY: ""
         ITAMAR_SUPABASE_URL: ""
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: ""
         CFBundleURLTypes:
