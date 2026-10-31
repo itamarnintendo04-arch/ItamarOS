@@ -49,7 +49,7 @@ assert.match(nativeGames,/DragGesture\(minimumDistance: 6\)/,'Native Snake must 
 assert.match(nativeGames,/DragGesture\(minimumDistance: 0\)/,'Native Connect Four must allow placement by touch and drag');
 assert.match(read(appleRoot+'/Shared/NativeGameView.swift'),/GameArtworkView\(game: selectedGame\)/,'Selected native game should display colorful artwork');
 
-assert.match(nativeMedia,/\.image, \.movie, \.audio/,'Apple Files picker must allow image, video and audio');
+assert.match(nativeMedia,/\.image, \.gif, \.movie, \.audio/,'Apple Files picker must allow image, GIF, video and audio');
 assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit');
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
 assert.match(appleSignIn,/SignInWithAppleButton/,'Apple sign-in uses AuthenticationServices');
