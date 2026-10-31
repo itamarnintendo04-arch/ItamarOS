@@ -146,7 +146,7 @@ final class ItamarCloudService: ObservableObject {
         userID = session?.userID
     }
 
-    private func request(
+    func request(
         _ route: String, method: String = "GET",
         data: [String: Any]? = nil, authorized: Bool = true,
         query: [URLQueryItem] = [], allowRetry: Bool = true,
