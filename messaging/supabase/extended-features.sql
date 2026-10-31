@@ -254,3 +254,46 @@ grant execute on function public.itamar_create_poll(uuid,text,text[],boolean) to
 grant execute on function public.itamar_vote_poll(uuid,integer) to authenticated;
 
 -- Review with Supabase database/security advisors before enabling production.
+
+
+-- Attachments: a PRIVATE bucket limited to 20 MiB and explicitly allowed media/document types.
+-- Access is controlled by room membership, not by guessing a URL.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values('itamar-connect-media','itamar-connect-media',false,20971520,
+  array['image/jpeg','image/png','image/gif','image/webp','image/heic','video/mp4',
+  'video/quicktime','audio/mpeg','audio/mp4','audio/wav','application/pdf',
+  'text/plain','text/vcard','text/calendar'])
+on conflict (id) do nothing;
+
+alter table public.itamar_messages add column if not exists attachment_path text;
+alter table public.itamar_messages add column if not exists attachment_name text;
+alter table public.itamar_messages add column if not exists attachment_mime text;
+
+create policy "itamar room members upload attachments" on storage.objects
+ for insert to authenticated with check(
+  bucket_id='itamar-connect-media' and
+  array_length(storage.foldername(name),1)>=2 and
+  public.itamar_is_member((storage.foldername(name))[1]::uuid)
+ );
+create policy "itamar room members view attachments" on storage.objects
+ for select to authenticated using(
+  bucket_id='itamar-connect-media' and
+  array_length(storage.foldername(name),1)>=2 and
+  public.itamar_is_member((storage.foldername(name))[1]::uuid)
+ );
+
+-- Only accept message attachment metadata that points to the sender's own room folder.
+drop policy if exists "send authorized messages" on public.itamar_messages;
+create policy "send authorized messages" on public.itamar_messages
+ for insert to authenticated with check (
+  sender_id=auth.uid() and public.itamar_is_member(room_id)
+  and (attachment_path is null or
+      (split_part(attachment_path,'/',1)=room_id::text and
+       attachment_mime=any(array['image/jpeg','image/png','image/gif','image/webp','image/heic',
+           'video/mp4','video/quicktime','audio/mpeg','audio/mp4','audio/wav',
+           'application/pdf','text/plain','text/vcard','text/calendar'])))
+  and exists(select 1 from public.itamar_rooms r where r.id=room_id
+     and (r.kind in ('chat','group') or r.owner_id=auth.uid()))
+  and not exists(select 1 from public.itamar_members other join public.itamar_blocks b
+      on b.blocker_id=other.user_id where other.room_id=room_id and b.blocked_id=auth.uid())
+ );
