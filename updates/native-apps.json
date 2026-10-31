@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "channel": "development",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "publishedAt": "2026-10-31",
   "status": "source-and-debug-preview",
   "signedBinariesPublished": false,
@@ -11,7 +11,7 @@
       "id": "itamaros-ios",
       "name": "ItamarOS for iPhone/iPad",
       "platform": "ios-ipados",
-      "version": "1.6.1",
+      "version": "1.6.2",
       "releaseStatus": "source-only",
       "package": null
     },
