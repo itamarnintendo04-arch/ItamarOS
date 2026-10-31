@@ -25,6 +25,7 @@ struct ItamarPoll: Identifiable, Decodable {
 }
 
 struct ItamarDeliveryReceipt: Decodable {
+    let message_id: UUID
     let delivered_at: String?
     let read_at: String?
 }
@@ -173,6 +174,23 @@ extension ItamarCloudService {
     func acknowledge(room:UUID, opened: Bool) async throws {
         _ = try await request("/rest/v1/rpc/itamar_ack_messages",method:"POST",
             data:["p_room":room.uuidString.lowercased(),"p_opened":opened])
+    }
+    func receiptSummaries(for messages:[ItamarCloudMessage]) async throws -> [UUID:ItamarReceiptSummary] {
+        let outgoing=Array(messages.filter{$0.sender_id==userID}.suffix(40))
+        guard !outgoing.isEmpty else { return [:] }
+        let ids=outgoing.map{$0.id.uuidString.lowercased()}.joined(separator:",")
+        let data=try await request("/rest/v1/itamar_message_receipts",
+            query:[URLQueryItem(name:"message_id",value:"in.(\(ids))"),
+                   URLQueryItem(name:"select",value:"message_id,delivered_at,read_at")])
+        let rows=try JSONDecoder().decode([ItamarDeliveryReceipt].self,from:data)
+        var summary=[UUID:ItamarReceiptSummary]()
+        for row in rows {
+            let old=summary[row.message_id] ?? ItamarReceiptSummary(delivered:0,read:0)
+            summary[row.message_id]=ItamarReceiptSummary(
+                delivered:old.delivered+(row.delivered_at == nil ? 0 : 1),
+                read:old.read+(row.read_at == nil ? 0 : 1))
+        }
+        return summary
     }
     func messageReceipts(id: UUID) async throws -> ItamarReceiptSummary {
         let data = try await request("/rest/v1/itamar_message_receipts",
