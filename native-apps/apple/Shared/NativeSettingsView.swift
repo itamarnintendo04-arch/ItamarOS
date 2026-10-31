@@ -45,7 +45,10 @@ struct NativeSettingsView: View {
                     NavigationLink("Profile, contacts, notifications and parent QR") {
                         ItamarProfileView()
                     }
-                    Text("Chats and channels are currently local previews, not a live messaging network.")
+                    Text(ItamarCloudConfig.enabled ?
+                         "Cloud chat is enabled. Remote background push still requires APNs service setup." :
+                         "Chats and channels are local previews until you configure a secure backend.")
+                        
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
