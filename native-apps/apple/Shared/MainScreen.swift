@@ -43,7 +43,7 @@ struct DashboardView: View {
                         .frame(width: 125, height: 125)
                     Text("ItamarOS")
                         .font(.largeTitle.bold())
-                    Text("Native app • Version 1.6")
+                    Text("Native app • Version 1.6.1")
                         .foregroundStyle(.secondary)
                     #if os(tvOS)
                     Label("Native Apple TV app with remote support", systemImage: "play.tv")
@@ -68,11 +68,20 @@ struct DashboardView: View {
                     Text(releases.status)
                         .font(.footnote)
                         .multilineTextAlignment(.center)
+                    #if os(iOS)
+                    Text("Messages, channels, updates and profiles are currently saved on this iPhone only.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    #endif
                 }
                 .frame(maxWidth: .infinity)
                 .padding(30)
             }
             .navigationTitle("Home")
+        }
+        .task {
+            if releases.lastChecked == nil { await releases.check() }
         }
     }
 }
