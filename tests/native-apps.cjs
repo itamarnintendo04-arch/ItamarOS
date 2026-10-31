@@ -7,7 +7,7 @@ const ROOT=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 const exists=p=>fs.existsSync(path.join(ROOT,p));
 const platformManifest=JSON.parse(read('updates/native-apps.json'));
-assert.equal(platformManifest.version,'1.5.0');
+assert.equal(platformManifest.version,'1.6.0');
 assert.equal(platformManifest.signedBinariesPublished,false);
 assert.equal(platformManifest.components.length,8);
 for(const component of platformManifest.components) {
