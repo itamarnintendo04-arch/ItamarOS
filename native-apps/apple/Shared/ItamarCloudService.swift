@@ -254,6 +254,8 @@ final class ItamarCloudService: ObservableObject {
         let loadedUpdates = try JSONDecoder().decode([ItamarCloudUpdate].self, from: await updatesData)
         profile = profiles.first
         rooms = loadedRooms
+        // Server acknowledges delivery when this signed-in client refreshes its inbox.
+        _ = try? await request("/rest/v1/rpc/itamar_ack_inbox",method:"POST",data:[:])
         // Local activity is limited to unmuted rooms by the server.
         updates = loadedUpdates
         if !notificationsInitialized {
