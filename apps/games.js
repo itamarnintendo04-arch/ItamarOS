@@ -35,9 +35,8 @@ function mount(){
 function switchTo(game){
  stopTimers();current=game;
  for(const b of root?.querySelectorAll('[data-game]')||[])b.classList.toggle('ios-active',b.dataset.game===game);
- const area=$('itamar-game-area');if(!area)return;area.replaceChildren();
+ const area=$('itamar-game-area');if(!area)return;area.replaceChildren();fx()?.decorate(a,current);
  if(game==='2048')render2048();else if(game==='snake'){saveData.snake.running=false;save();renderSnake()}else if(game==='memory'){showing=[];renderMemory()}else if(game==='tictactoe')renderTicTacToe();else if(game==='guess')renderGuess();else if(game==='reaction')renderReaction();else if(game==='rps')renderRPS();else if(game==='math')renderMath();else if(game==='word')renderWord();else if(game==='pattern')renderPattern();
- fx()?.decorate(area,game);
 }
 function reset2048(){const game=saveData.game2048={board:empty2048(),score:0,over:false};spawn(game.board);spawn(game.board);save();render2048()}
 function spawn(board){const spots=[];for(let i=0;i<16;i++)if(board[i]===0)spots.push(i);if(!spots.length)return false;const pos=spots[Math.floor(Math.random()*spots.length)];board[pos]=Math.random()<.9?2:4;return true}
@@ -61,7 +60,7 @@ function play2048(direction){
 }
 function canMove(board){if(board.includes(0))return true;for(let i=0;i<16;i++){if(i%4<3&&board[i]===board[i+1])return true;if(i<12&&board[i]===board[i+4])return true}return false}
 function render2048(){
- const a=$('itamar-game-area');if(!a||current!=='2048')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='2048')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.game2048;if(g.board.every(v=>v===0)){spawn(g.board);spawn(g.board);save()}
  a.append(make('h3','2048 · Merge matching tiles'));
  a.append(make('p','Score: '+g.score+' · Best: '+saveData.scores['2048']));
@@ -115,7 +114,7 @@ function drawSnake(){
  }
 }
 function renderSnake(){
- const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.snake;
  a.append(make('h3','Snake'));
  const score=make('p','', 'ios-caption');score.id='snake-score';a.append(score);
@@ -142,7 +141,7 @@ function memoryPick(i){
  }
 }
 function renderMemory(){
- const a=$('itamar-game-area');if(!a||current!=='memory')return;a.replaceChildren();const g=saveData.memory;
+ const a=$('itamar-game-area');if(!a||current!=='memory')return;a.replaceChildren();fx()?.decorate(a,current);const g=saveData.memory;
  if(!g.cards.length){memoryReset();return}
  a.append(make('h3','Memory Match'));
  a.append(make('p','Moves: '+g.moves+' · Best completion: '+(saveData.scores.memory||'—')+' moves'));
@@ -165,7 +164,7 @@ const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function tictactoeResult(board){for(const line of lines){const [a,b,c]=line;if(board[a]&&board[a]===board[b]&&board[a]===board[c])return board[a]}return board.every(Boolean)?'tie':''}
 function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){cue('win');g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
 function renderTicTacToe(){
- const a=$('itamar-game-area');if(!a||current!=='tictactoe')return;a.replaceChildren();const g=saveData.tictactoe;
+ const a=$('itamar-game-area');if(!a||current!=='tictactoe')return;a.replaceChildren();fx()?.decorate(a,current);const g=saveData.tictactoe;
  a.append(make('h3','Tic-Tac-Toe · 2 players'));
  a.append(make('p',g.winner?(g.winner==='tie'?'Draw!':'Winner: '+g.winner):'Turn: '+g.turn));
  const board=make('div',undefined,'ios-board');board.style.gridTemplateColumns='repeat(3,1fr)';board.style.maxWidth='300px';
@@ -181,7 +180,7 @@ function message(area,text){const p=make('p',text,'ios-caption');area.append(p);
 function renderGuess(){
  const a=$('itamar-game-area');if(!a||current!=='guess')return;
  const g=saveData.extras.guess;if(!g.target){g.target=rand(1,100);g.tries=0;g.last='';save()}
- a.replaceChildren();a.append(make('h3','Guess the number'));
+ a.replaceChildren();fx()?.decorate(a,current);a.append(make('h3','Guess the number'));
  message(a,'A secret number from 1 to 100. Try to find it!');
  message(a,'Attempts: '+g.tries+' · Best (fewest): '+(saveData.scores.guess||'—'));
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='number';input.min='1';input.max='100';input.placeholder='1–100';input.setAttribute('aria-label','Your guess');row.append(input);
@@ -197,7 +196,7 @@ function renderGuess(){
 let reactionReadyAt=0,reactionStart=0;
 function renderReaction(){
  const a=$('itamar-game-area');if(!a||current!=='reaction')return;
- a.replaceChildren();a.append(make('h3','Reaction timer'));
+ a.replaceChildren();fx()?.decorate(a,current);a.append(make('h3','Reaction timer'));
  message(a,'Press Start, then wait for the button to turn green. Do not press too early.');
  message(a,'Fastest time: '+(saveData.scores.reaction?saveData.scores.reaction+' ms':'—'));
  const result=message(a,'Ready?');
@@ -218,7 +217,7 @@ function renderReaction(){
 }
 const rpsChoices=['Rock','Paper','Scissors'];
 function renderRPS(){
- const a=$('itamar-game-area');if(!a||current!=='rps')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='rps')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.extras.rps;a.append(make('h3','Rock Paper Scissors'));
  message(a,'You vs the computer. No wagers, just fun.');
  message(a,'Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties);
@@ -242,7 +241,7 @@ function nextMath(){
  save();
 }
 function renderMath(){
- const a=$('itamar-game-area');if(!a||current!=='math')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='math')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.extras.math;if(!g.question)nextMath();
  a.append(make('h3','Math Sprint'));message(a,'Correct: '+g.correct+' / '+g.total);
  const q=g.question;message(a,q.a+' '+q.op+' '+q.b+' = ?');
@@ -257,7 +256,7 @@ function renderMath(){
 }
 const wordBank=[['star','A bright object in the night sky'],['planet','A world orbiting a star'],['cloud','You see it in the sky'],['ocean','A large body of saltwater'],['music','Sounds arranged in rhythm'],['forest','Many trees growing together'],['puzzle','A game that tests your thinking'],['camera','Used to capture photos'],['rocket','A vehicle that travels to space'],['screen','Displays images and text']];
 function renderWord(){
- const a=$('itamar-game-area');if(!a||current!=='word')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='word')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.extras.word;
  const [word,hint]=wordBank[g.current%wordBank.length];
  const letters=word.toUpperCase().split(''),shuffled=letters.slice().sort(()=>Math.random()-.5).join(' ');
@@ -269,7 +268,7 @@ function renderWord(){
 }
 let patternShow=false,patternIndex=0;
 function renderPattern(){
- const a=$('itamar-game-area');if(!a||current!=='pattern')return;a.replaceChildren();
+ const a=$('itamar-game-area');if(!a||current!=='pattern')return;a.replaceChildren();fx()?.decorate(a,current);
  const g=saveData.extras.pattern;if(!Array.isArray(g.sequence))g.sequence=[];
  a.append(make('h3','Pattern Memory'));
  message(a,'Remember the sequence of numbers, then repeat it.');
