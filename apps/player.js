@@ -9,7 +9,7 @@ const fmt=s=>Number.isFinite(s)?Math.floor(s/3600)>0?Math.floor(s/3600)+':'+Stri
 function preference(){try{return JSON.parse(localStorage.getItem('itamaros-player-prefs')||'{}')}catch{return {}}}
 function persist(){if(!state)return;const m=state.media;localStorage.setItem('itamaros-player-prefs',JSON.stringify({volume:m.volume,rate:m.playbackRate,loop:state.loop,shuffle:state.shuffle,brightness:state.brightness,contrast:state.contrast,saturation:state.saturation,eqGains:state.eqGains,aspect:state.aspect,rotation:state.rotation,mirror:state.mirror,zoom:state.zoom}))}
 function status(text){const e=$('player-message');if(e)e.textContent=text}
-function release(){if(!state)return;const s=state;if(s.audioContext)s.audioContext.close().catch(()=>{});if(s.media){s.media.pause();s.media.removeAttribute('src');s.media.load()}if(s.image)s.image.removeAttribute('src')for(const url of s.urls)URL.revokeObjectURL(url);state=null}
+function release(){if(!state)return;const s=state;if(s.audioContext)s.audioContext.close().catch(()=>{});if(s.media){s.media.pause();s.media.removeAttribute('src');s.media.load()}if(s.image)s.image.removeAttribute('src');for(const url of s.urls)URL.revokeObjectURL(url);state=null}
 function cleanupDetached(){if(state&&!document.contains(state.media))release()}
 function mount(){
  cleanupDetached();release();
