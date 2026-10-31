@@ -118,6 +118,51 @@ private class AndroidConnectApi {
         request("/rest/v1/rpc/itamar_vote_poll","POST",
             JSONObject().put("p_poll",poll).put("p_option",option))
     }
+
+    suspend fun makeInvite(room:String):String {
+        val text=request("/rest/v1/rpc/itamar_make_group_invite","POST",
+            JSONObject().put("p_room",room))
+        return text.trim().trim('"')
+    }
+    suspend fun acceptInvite(token:String) {
+        request("/rest/v1/rpc/itamar_accept_group_invite","POST",
+            JSONObject().put("p_secret",token))
+    }
+    suspend fun renameGroup(room:String,title:String,description:String){
+        request("/rest/v1/rpc/itamar_set_group_details","POST",
+            JSONObject().put("p_room",room).put("p_title",title)
+                .put("p_description",description).put("p_avatar",JSONObject.NULL))
+    }
+    suspend fun edit(id:String,text:String){
+        request("/rest/v1/rpc/itamar_edit_message","POST",
+            JSONObject().put("p_message",id).put("p_body",text))
+    }
+    suspend fun delete(id:String){
+        request("/rest/v1/rpc/itamar_delete_message","POST",
+            JSONObject().put("p_message",id))
+    }
+    suspend fun sendOnce(room:String,text:String){
+        request("/rest/v1/rpc/itamar_send_once_text","POST",
+            JSONObject().put("p_room",room).put("p_text",text))
+    }
+    suspend fun openOnce(id:String):String =
+        request("/rest/v1/rpc/itamar_open_once_text","POST",
+            JSONObject().put("p_message",id)).trim().trim('"')
+    suspend fun acknowledge(room:String,opened:Boolean){
+        request("/rest/v1/rpc/itamar_ack_messages","POST",
+            JSONObject().put("p_room",room).put("p_opened",opened))
+    }
+    suspend fun receipt(messageID:String):Pair<Int,Int>{
+        val result=JSONArray(request("/rest/v1/itamar_message_receipts?message_id=eq."+
+            messageID+"&select=delivered_at,read_at"))
+        var delivered=0;var read=0
+        for(i in 0 until result.length()){
+            val r=result.optJSONObject(i)?:continue
+            if(!r.isNull("delivered_at"))delivered++
+            if(!r.isNull("read_at"))read++
+        }
+        return delivered to read
+    }
     suspend fun uploadAttachment(context:Context,uri:Uri,room:String){
         if(!configured)throw IllegalStateException("Connect is not configured")
         val mime=context.contentResolver.getType(uri)?:throw IllegalStateException("Unknown file type")
@@ -184,6 +229,10 @@ private class AndroidConnectApi {
 @Composable
 private fun PublicContactQR(username:String){
     val url="https://itamaros-web-emulator.onrender.com/contact.html?username="+username
+    PublicLinkQR(url)
+}
+@Composable
+private fun PublicLinkQR(url:String){
     val bitmap=remember(url){
         runCatching{
             val encoded=MultiFormatWriter().encode(url,BarcodeFormat.QR_CODE,200,200)
@@ -221,6 +270,13 @@ fun AndroidConnectScreen(){
     var pollOptions by remember{mutableStateOf("Yes\nNo")}
     var lookupResult by remember{mutableStateOf("")}
     var notice by remember{mutableStateOf("")}
+    var inviteToken by remember{mutableStateOf("")}
+    var inviteToJoin by remember{mutableStateOf("")}
+    var groupDescription by remember{mutableStateOf("")}
+    var editingID by remember{mutableStateOf("")}
+    var viewOnce by remember{mutableStateOf(false)}
+    var openedSecret by remember{mutableStateOf("")}
+    var receipts by remember{mutableStateOf(mapOf<String,Pair<Int,Int>>())}
     var ownPhone by remember{mutableStateOf("")}
     var ownCode by remember{mutableStateOf("")}
     var searchable by remember{mutableStateOf(false)}
@@ -293,6 +349,12 @@ fun AndroidConnectScreen(){
                 Text("Allow finding me by verified phone")
             }
             Button(onClick={perform{api.phoneDiscovery(searchable)}}){Text("Save phone privacy")}
+            OutlinedTextField(inviteToJoin,{inviteToJoin=it},label={Text("Group invitation code (optional)")})
+            Button(onClick={perform{
+                api.acceptInvite(inviteToJoin)
+                inviteToJoin=""
+                rooms=api.rooms()
+            }},enabled=inviteToJoin.length==48){Text("Accept and join invited group")}
             Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
         }
         "Contacts"->{
@@ -332,6 +394,7 @@ fun AndroidConnectScreen(){
                         TextButton(onClick={perform{
                             selectedRoom=id
                             messages=api.messages(id)
+                            api.acknowledge(id,true)
                             if(room.optString("kind")=="group")polls=api.polls(id)
                         }}){Text(room.optString("title"))}
                         Button(onClick={perform{api.mute(id,!room.optBoolean("muted"));rooms=api.rooms()}}){
@@ -355,14 +418,79 @@ fun AndroidConnectScreen(){
                 Button(onClick={selectedRoom=""}){Text("← Back")}
                 for(i in 0 until messages.length()){
                     val entry=messages.optJSONObject(i)?:continue
-                    Text((if(entry.optString("sender_id")==api.userID)"You: " else "Member: ")+entry.optString("body"))
+                    val id=entry.optString("id")
+                    val own=entry.optString("sender_id")==api.userID
+                    val deleted=entry.optString("deleted_at")!="null"&&!entry.isNull("deleted_at")
+                    Text((if(own)"You: " else "Member: ")+
+                        (if(deleted)"Message deleted" else entry.optString("body"))+
+                        (if(!entry.isNull("edited_at"))" (edited)" else ""))
+                    if(own && !deleted){
+                        Button(onClick={perform{
+                            val res=api.receipt(id)
+                            receipts=receipts+(id to res)
+                        }}){
+                            val current=receipts[id]
+                            Text(if(current?.second?:0>0)"✓✓ Read"
+                                 else if(current?.first?:0>0)"✓✓ Delivered" else "✓ Sent")
+                        }
+                        Row {
+                            Button(onClick={editingID=id;message=entry.optString("body")}){Text("Edit")}
+                            Button(onClick={perform{
+                                api.delete(id)
+                                messages=api.messages(selectedRoom)
+                            }}){Text("Delete")}
+                        }
+                    }
+                    if(entry.optBoolean("is_view_once",false)&&!own&&!deleted){
+                        Button(onClick={perform{
+                            openedSecret=api.openOnce(id)
+                        }}){Text("Open once")}
+                    }
                 }
+                if(openedSecret.isNotBlank()){
+                    AlertDialog(onDismissRequest={openedSecret=""},
+                        title={Text("View-once text")},
+                        text={Text(openedSecret+"\n\nScreenshots cannot be prevented.")},
+                        confirmButton={TextButton(onClick={openedSecret=""}){Text("Close")}})
+                }
+                if(editingID.isBlank()) {
+                    Row {
+                        Checkbox(viewOnce,onCheckedChange={viewOnce=it})
+                        Text("View once (text only)")
+                    }
+                }else Text("Editing message")
                 OutlinedTextField(message,{message=it},label={Text("Message or link")})
-                Button(onClick={perform{api.send(selectedRoom,message);message="";messages=api.messages(selectedRoom)}}){Text("Send")}
+                Button(onClick={perform{
+                    when {
+                        editingID.isNotBlank()->{api.edit(editingID,message);editingID=""}
+                        viewOnce->{api.sendOnce(selectedRoom,message);viewOnce=false}
+                        else->api.send(selectedRoom,message)
+                    }
+                    message=""
+                    messages=api.messages(selectedRoom)
+                }}){Text(if(editingID.isNotBlank())"Save edit" else "Send")}
+                if(editingID.isNotBlank()) Button(onClick={editingID="";message=""}){Text("Cancel edit")}
                 Button(onClick={chooseAttachment.launch(arrayOf("image/*","video/*","audio/*","application/pdf","text/plain","text/vcard","text/calendar"))}){
                     Text("Attach media, file or contact card (max 20 MB)")
                 }
                 if(tab=="Groups"){
+                    OutlinedTextField(title,{title=it},label={Text("Group name")})
+                    OutlinedTextField(groupDescription,{groupDescription=it},label={Text("Description (optional)")})
+                    Button(onClick={perform{api.renameGroup(selectedRoom,title,groupDescription)}}){
+                        Text("Save group name and description")
+                    }
+                    Button(onClick={perform{inviteToken=api.makeInvite(selectedRoom)}}){
+                        Text("Create shareable invite (48 hours)")
+                    }
+                    if(inviteToken.isNotBlank()){
+                        val groupLink="https://itamaros-web-emulator.onrender.com/join.html?invite="+inviteToken
+                        PublicLinkQR(groupLink)
+                        Button(onClick={
+                            ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{
+                                type="text/plain";putExtra(Intent.EXTRA_TEXT,groupLink)
+                            },"Share group invitation"))
+                        }){Text("Invite via link or message")}
+                    }
                     Text("Polls",style=MaterialTheme.typography.titleMedium)
                     for(i in 0 until polls.length()){
                         val poll=polls.optJSONObject(i)?:continue
