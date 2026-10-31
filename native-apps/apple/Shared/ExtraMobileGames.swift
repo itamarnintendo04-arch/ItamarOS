@@ -26,32 +26,42 @@ private struct Game2048View: View {
     @State private var board = [Int](repeating: 0, count: 16)
     @State private var score = 0
 
+    private func tileColor(_ value: Int) -> Color {
+        if value == 0 { return Color.gray.opacity(0.17) }
+        let colors: [Color] = [.yellow, .mint, .pink, .orange, .cyan, .purple]
+        return colors[min(colors.count - 1, max(0, Int(log2(Double(value))) - 1))]
+    }
+
+    private func swipeTiles(_ drag: CGSize) {
+        guard max(abs(drag.width), abs(drag.height)) > 18 else { return }
+        let direction: String
+        if abs(drag.width) > abs(drag.height) {
+            direction = drag.width > 0 ? "→" : "←"
+        } else {
+            direction = drag.height > 0 ? "↓" : "↑"
+        }
+        move(direction)
+    }
+
+    private var tileGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
+            ForEach(0..<16, id: \.self) { i in
+                Text(board[i] == 0 ? "·" : String(board[i]))
+                    .font(.headline)
+                    .foregroundStyle(.black.opacity(0.75))
+                    .frame(maxWidth: .infinity, minHeight: 58)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(tileColor(board[i])))
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 18).onEnded { swipeTiles($0.translation) })
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             Text("2048").font(.title2.bold())
             Text("Merge identical tiles. Score: \(score) · Best: \(best)")
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
-                ForEach(0..<16, id: \.self) { i in
-                    Text(board[i] == 0 ? "·" : String(board[i]))
-                        .font(.headline)
-                        .foregroundStyle(.black.opacity(0.75))
-                        .frame(maxWidth: .infinity, minHeight: 58)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(board[i] == 0 ? Color.gray.opacity(0.17) :
-                                    [Color.yellow, Color.mint, Color.pink, Color.orange, Color.cyan, Color.purple][min(5, Int(log2(Double(max(2, board[i])))) - 1)])
-                        )
-                }
-            }
-            .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 18).onEnded { value in
-                let drag = value.translation
-                guard max(abs(drag.width), abs(drag.height)) > 18 else { return }
-                let direction = abs(drag.width) > abs(drag.height)
-                    ? (drag.width > 0 ? "→" : "←")
-                    : (drag.height > 0 ? "↓" : "↑")
-                move(direction)
-            })
+            tileGrid
             Text("Swipe the tiles in any direction to merge them.")
                 .font(.caption).foregroundStyle(.secondary)
             Button("New game") { reset() }
