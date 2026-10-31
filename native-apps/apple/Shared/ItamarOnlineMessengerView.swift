@@ -421,7 +421,7 @@ private struct ItamarCloudThreadView: View {
                                 if mine { Spacer(minLength: 45) }
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(message.deleted_at == nil ? message.body : "Message deleted")
-                                        .italic(message.deleted_at != nil)
+                                        .opacity(message.deleted_at == nil ? 1 : 0.65)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     if message.edited_at != nil && message.deleted_at == nil {
                                         Text("Edited").font(.caption2).foregroundStyle(.secondary)
@@ -454,8 +454,8 @@ private struct ItamarCloudThreadView: View {
                                         Text(String(message.created_at.prefix(16)).replacingOccurrences(of:"T",with:" "))
                                         if mine {
                                             let receipt=receipts[message.id]
-                                            Text(receipt?.read ?? 0 > 0 ? "✓✓" :
-                                                 receipt?.delivered ?? 0 > 0 ? "✓✓" : "✓")
+                                            Text((receipt?.read ?? 0) > 0 ? "✓✓" :
+                                                 (receipt?.delivered ?? 0) > 0 ? "✓✓" : "✓")
                                                 .fontWeight(.bold)
                                                 .foregroundStyle(receipt?.read ?? 0 > 0 ? Color.blue : Color.secondary)
                                                 .accessibilityLabel(receipt?.read ?? 0 > 0 ? "Read" :
