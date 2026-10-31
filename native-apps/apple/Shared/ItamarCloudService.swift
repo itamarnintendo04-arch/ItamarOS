@@ -247,7 +247,7 @@ final class ItamarCloudService: ObservableObject {
         async let profileData = request("/rest/v1/itamar_profiles",
             query: [URLQueryItem(name: "id", value: "eq.\(userID.uuidString.lowercased())"),
                     URLQueryItem(name: "select", value: "id,username,display_name,about,avatar_path,read_receipts_enabled")])
-        async let roomsData = request("/rest/v1/rpc/itamar_my_rooms", method: "POST", data: [:])
+        async let roomsData = request("/rest/v1/rpc/itamar_my_rooms_v2", method: "POST", data: [:])
         async let updatesData = request("/rest/v1/rpc/itamar_my_updates", method: "POST", data: [:])
         let profiles = try JSONDecoder().decode([ItamarCloudProfile].self, from: await profileData)
         let loadedRooms = try JSONDecoder().decode([ItamarCloudRoom].self, from: await roomsData)
@@ -427,6 +427,41 @@ final class ItamarCloudService: ObservableObject {
             UUID().uuidString+"-"+safeName)
         try data.write(to:destination,options:.atomic)
         return destination
+    }
+
+
+    func uploadAvatarJPEG(_ bytes: Data, group: UUID? = nil) async throws -> String {
+        guard let userID, let session,
+              ItamarCloudConfig.enabled,
+              let base=URL(string:ItamarCloudConfig.url) else {
+            throw ItamarCloudError.unauthenticated
+        }
+        guard bytes.count > 0 && bytes.count <= 3*1024*1024 else {
+            throw ItamarCloudError.badResponse("Profile images must be under 3 MB.")
+        }
+        let prefix = group.map { "groups/" + $0.uuidString.lowercased() } ??
+            "profiles/" + userID.uuidString.lowercased()
+        let path=prefix+"/"+UUID().uuidString.lowercased()+".jpg"
+        guard let endpoint=URL(string:"/storage/v1/object/itamar-connect-avatars/"+path,relativeTo:base)
+        else { throw ItamarCloudError.unavailable }
+        var req=URLRequest(url:endpoint)
+        req.httpMethod="POST"
+        req.setValue(ItamarCloudConfig.publicKey,forHTTPHeaderField:"apikey")
+        req.setValue("Bearer "+session.access,forHTTPHeaderField:"Authorization")
+        req.setValue("image/jpeg",forHTTPHeaderField:"Content-Type")
+        req.setValue("false",forHTTPHeaderField:"x-upsert")
+        let (data,response)=try await URLSession.shared.upload(for:req,from:bytes)
+        guard let http=response as? HTTPURLResponse,(200...299).contains(http.statusCode) else {
+            let status=(response as? HTTPURLResponse)?.statusCode ?? 0
+            let detail=String(data:data,encoding:.utf8) ?? ""
+            throw ItamarCloudError.badResponse("Image upload rejected (\(status)): \(String(detail.prefix(180)))")
+        }
+        return path
+    }
+    func publicAvatarURL(_ path: String?) -> URL? {
+        guard let path, path.allSatisfy({ $0.isASCII && !$0.isWhitespace }),
+            let base=URL(string:ItamarCloudConfig.url) else { return nil }
+        return URL(string:"/storage/v1/object/public/itamar-connect-avatars/"+path,relativeTo:base)
     }
 
 }
