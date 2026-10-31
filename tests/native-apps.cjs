@@ -35,7 +35,12 @@ for(const x of ['Shared/ItamarOSApp.swift','Shared/NativeGameView.swift','Shared
 }
 const nativeMedia=read(appleRoot+'/Shared/LocalMediaView.swift');
 assert.match(nativeMedia,/PhotosPicker\(/,'iOS player must allow choosing media from Photos');
-assert.match(nativeMedia,/\.image, \.movie, \.audio/,'Apple Files picker must allow image, video and audio');
+assert.match(nativeMedia,/\.image, \.gif, \.movie, \.audio/,'Apple Files picker must allow images, GIF, video and audio');
+assert.match(nativeMedia,/AnimatedGIFView\(data: gifData\)/,'Apple player must display animated GIF content');
+const appleGIF=read(appleRoot+'/Shared/AnimatedGIFView.swift');
+assert.match(appleGIF,/CGImageSourceCreateWithData/,'Apple animated GIFs must use native ImageIO');
+assert.match(appleGIF,/startAnimating\(\)/,'Apple GIF frames must animate');
+assert.match(appleGIF,/maxBytes = 18 \* 1024 \* 1024/,'Limit oversized GIF files');
 assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit');
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
 assert.match(appleSignIn,/SignInWithAppleButton/,'Apple sign-in uses AuthenticationServices');
@@ -60,6 +65,11 @@ assert.match(ipaImport,/\.fileImporter\(/,'Choose IPA from the official Files pi
 assert.match(ipaImport,/ShareLink\(/,'User must explicitly share IPA with a tool they choose');
 assert.doesNotMatch(ipaImport,/SecureField\(|URLSession|URLRequest|\.identityToken\b|\.authorizationCode\b|Process\(/,'Do not collect Apple passwords, upload files or run a signing executable');
 assert.match(read(appleRoot+'/Shared/MainScreen.swift'),/IPAImportView\(\)/,'IPA tab should be accessible in iPhone app');
+const appleGames=read(appleRoot+'/Shared/ExtraMobileGames.swift');
+assert.match(appleGames,/GameArtBanner/,'Native Apple games should have colorful illustrations');
+assert.match(appleGames,/DragGesture\(minimumDistance: 17\)/,'Apple 2048 must support swipe directions');
+assert.match(appleGames,/DragGesture\(minimumDistance: 13\)/,'Apple Snake must support dragging');
+assert.match(appleGames,/pos == food \? "🍒"/,'Apple Snake should draw cherries');
 const embeddedSigner=read(appleRoot+'/Shared/EmbeddedIPASignerView.swift');
 assert.match(embeddedSigner,/#if os\(iOS\)/,'The IPA signer must be restricted to iOS');
 assert.match(ipaImport,/EmbeddedIPASignerView\(\)/,'User should be able to open the signer in IPA tab');
@@ -94,6 +104,12 @@ assert.match(androidManifest,/android.hardware.touchscreen" android:required="fa
 assert.ok(exists(androidRoot+'/app/src/main/res/drawable-nodpi/itamaros_logo.png'));
 assert.ok(exists(androidRoot+'/app/src/main/res/drawable-nodpi/itamaros_tv_banner.png'));
 const androidMedia=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/NativeMediaPreview.kt');
+assert.match(androidMedia,/ImageDecoder.decodeDrawable/,'Android GIF playback must decode animated frames');
+assert.match(androidMedia,/AnimatedImageDrawable/,'Android GIF playback should be animated');
+const androidGames=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/MobileGames.kt');
+assert.match(androidGames,/detectDragGestures/,'Android games must accept swipes and drags');
+assert.match(androidGames,/snake.first\(\) -> "🐍"/,'Android Snake must use cartoon snake illustration');
+assert.match(androidGames,/food -> "🍒"/,'Android Snake should draw cherries');
 assert.match(androidMedia,/ImageView/,'Android preview must support images');
 assert.match(androidMedia,/VideoView/,'Android preview must support video');
 assert.match(androidMedia,/MediaPlayer/,'Android preview must support audio');
