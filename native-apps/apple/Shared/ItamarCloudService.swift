@@ -21,6 +21,8 @@ struct ItamarCloudRoom: Codable, Identifiable {
     let owner_id: UUID
     let muted: Bool?
     let latest_at: String?
+    let description: String?
+    let avatar_path: String?
 }
 
 struct ItamarCloudMessage: Codable, Identifiable {
@@ -32,6 +34,9 @@ struct ItamarCloudMessage: Codable, Identifiable {
     let attachment_path: String?
     let attachment_name: String?
     let attachment_mime: String?
+    let edited_at: String?
+    let deleted_at: String?
+    let is_view_once: Bool?
 }
 
 struct ItamarCloudUpdate: Codable, Identifiable {
@@ -47,6 +52,8 @@ struct ItamarCloudProfile: Codable {
     let username: String
     let display_name: String
     let about: String
+    let avatar_path: String?
+    let read_receipts_enabled: Bool?
 }
 
 private struct CloudUser: Codable {
@@ -239,7 +246,7 @@ final class ItamarCloudService: ObservableObject {
         guard let userID else { return }
         async let profileData = request("/rest/v1/itamar_profiles",
             query: [URLQueryItem(name: "id", value: "eq.\(userID.uuidString.lowercased())"),
-                    URLQueryItem(name: "select", value: "id,username,display_name,about")])
+                    URLQueryItem(name: "select", value: "id,username,display_name,about,avatar_path,read_receipts_enabled")])
         async let roomsData = request("/rest/v1/rpc/itamar_my_rooms", method: "POST", data: [:])
         async let updatesData = request("/rest/v1/rpc/itamar_my_updates", method: "POST", data: [:])
         let profiles = try JSONDecoder().decode([ItamarCloudProfile].self, from: await profileData)
@@ -265,7 +272,7 @@ final class ItamarCloudService: ObservableObject {
     func loadPublicChannels() async throws {
         let raw = try await request("/rest/v1/itamar_rooms",
             query: [URLQueryItem(name: "kind", value: "eq.channel"),
-                    URLQueryItem(name: "select", value: "id,title,kind,owner_id"),
+                    URLQueryItem(name: "select", value: "id,title,kind,owner_id,description,avatar_path"),
                     URLQueryItem(name: "order", value: "created_at.desc"),
                     URLQueryItem(name: "limit", value: "50")])
         channels = try JSONDecoder().decode([ItamarCloudRoom].self, from: raw)
@@ -310,7 +317,7 @@ final class ItamarCloudService: ObservableObject {
     func messages(in roomID: UUID) async throws -> [ItamarCloudMessage] {
         let raw = try await request("/rest/v1/itamar_messages",
             query: [URLQueryItem(name: "room_id", value: "eq.\(roomID.uuidString.lowercased())"),
-                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime"),
+                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime,edited_at,deleted_at,is_view_once"),
                     URLQueryItem(name: "order", value: "created_at.asc"),
                     URLQueryItem(name: "limit", value: "100")])
         return try JSONDecoder().decode([ItamarCloudMessage].self, from: raw)
