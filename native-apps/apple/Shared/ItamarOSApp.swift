@@ -6,6 +6,7 @@ struct ItamarOSApp: App {
     #if os(iOS)
     @StateObject private var appleAccounts = LocalAppleAccountStore()
     @StateObject private var messages = ItamarMessagesStore()
+    @StateObject private var cloud = ItamarCloudService()
     @State private var parentRoute: ItamarParentRoute?
     #endif
 
@@ -16,6 +17,7 @@ struct ItamarOSApp: App {
             .environmentObject(releases)
             .environmentObject(appleAccounts)
             .environmentObject(messages)
+            .environmentObject(cloud)
             .onOpenURL { url in
                 guard url.scheme?.lowercased() == "itamaros",
                       url.host?.lowercased() == "parent",
@@ -26,8 +28,13 @@ struct ItamarOSApp: App {
                 parentRoute = ItamarParentRoute(inviteCode: code)
             }
             .sheet(item: $parentRoute) { route in
-                ItamarParentRegistrationView(inviteCode: route.inviteCode)
-                    .environmentObject(messages)
+                if ItamarCloudConfig.enabled {
+                    ItamarCloudParentRegistrationView(inviteCode: route.inviteCode)
+                        .environmentObject(cloud)
+                } else {
+                    ItamarParentRegistrationView(inviteCode: route.inviteCode)
+                        .environmentObject(messages)
+                }
             }
         #else
         MainScreen()
