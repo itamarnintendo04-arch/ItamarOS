@@ -34,15 +34,26 @@ private struct Game2048View: View {
                 ForEach(0..<16, id: \.self) { i in
                     Text(board[i] == 0 ? "·" : String(board[i]))
                         .font(.headline)
+                        .foregroundStyle(.black.opacity(0.75))
                         .frame(maxWidth: .infinity, minHeight: 58)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 9))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(board[i] == 0 ? Color.gray.opacity(0.17) :
+                                    [Color.yellow, Color.mint, Color.pink, Color.orange, Color.cyan, Color.purple][min(5, Int(log2(Double(max(2, board[i])))) - 1)])
+                        )
                 }
             }
-            HStack {
-                ForEach(["↑","←","↓","→"], id: \.self) { direction in
-                    Button(direction) { move(direction) }.buttonStyle(.borderedProminent)
-                }
-            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 18).onEnded { value in
+                let drag = value.translation
+                guard max(abs(drag.width), abs(drag.height)) > 18 else { return }
+                let direction = abs(drag.width) > abs(drag.height)
+                    ? (drag.width > 0 ? "→" : "←")
+                    : (drag.height > 0 ? "↓" : "↑")
+                move(direction)
+            })
+            Text("Swipe the tiles in any direction to merge them.")
+                .font(.caption).foregroundStyle(.secondary)
             Button("New game") { reset() }
         }
         .onAppear { if board.allSatisfy({ $0 == 0 }) { reset() } }
@@ -104,32 +115,42 @@ private struct SnakeView: View {
     @State private var running = false
     @State private var finished = false
     @State private var score = 0
+    @State private var lastDrag: CGSize = .zero
     private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 12) {
             Text("Snake").font(.title2.bold())
             Text("Score: \(score) · Best: \(best)\(finished ? " · Game over" : "")")
-            VStack(spacing: 0) {
+            VStack(spacing: 1) {
                 ForEach(0..<10, id: \.self) { row in
                     HStack(spacing: 1) {
                         ForEach(0..<10, id: \.self) { col in
                             let pos = row * 10 + col
-                            Text(pos == snake.first ? "🟩" : pos == food ? "🍎" : snake.contains(pos) ? "🟢" : "▫️")
-                                .font(.system(size: 15))
+                            CartoonSnakeCell(head: pos == snake.first,
+                                             food: pos == food,
+                                             body: snake.contains(pos))
                                 .frame(maxWidth: .infinity)
                         }
                     }
                 }
             }
-            HStack {
-                ForEach(0..<4, id: \.self) { i in
-                    let symbols = ["↑", "←", "↓", "→"]
-                    let deltas = [-10, -1, 10, 1]
-                    Button(symbols[i]) { if deltas[i] != -direction { direction = deltas[i] } }
-                        .buttonStyle(.bordered)
+            .padding(6)
+            .background(Color.green.opacity(0.22), in: RoundedRectangle(cornerRadius: 14))
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 6)
+                .onChanged { value in
+                    let dx = value.translation.width - lastDrag.width
+                    let dy = value.translation.height - lastDrag.height
+                    guard max(abs(dx), abs(dy)) >= 16 else { return }
+                    let next = abs(dx) > abs(dy) ? (dx > 0 ? 1 : -1) : (dy > 0 ? 10 : -10)
+                    if next != -direction { direction = next }
+                    lastDrag = value.translation
                 }
-            }
+                .onEnded { _ in lastDrag = .zero })
+            Text("Drag on the board to steer the cartoon snake toward the cherries.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             HStack {
                 Button(running ? "Pause" : "Start") { if !finished { running.toggle() } }
                 Button("Restart") { reset() }
@@ -381,25 +402,38 @@ private struct ConnectFourView: View {
         VStack(spacing: 12) {
             Text("Connect Four · 2 players").font(.title2.bold())
             Text(winner.isEmpty ? "Player \(player)'s turn" : winner)
-            HStack(spacing: 2) {
-                ForEach(0..<7, id: \.self) { col in
-                    Button("↓") { drop(col) }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
-                        .disabled(!winner.isEmpty || board[col] != 0)
-                }
+            Text("Drag a disc to a column or tap the board to drop it.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Circle().fill(player == 1 ? Color.red.gradient : Color.yellow.gradient)
+                    .frame(width: 36, height: 36)
+                Text("Player \(player) disc").font(.subheadline.bold())
             }
-            VStack(spacing: 0) {
-                ForEach(0..<6, id: \.self) { row in
-                    HStack(spacing: 0) {
-                        ForEach(0..<7, id: \.self) { col in
-                            Text(board[row*7+col] == 1 ? "🔴" : board[row*7+col] == 2 ? "🟡" : "⚪")
-                                .font(.system(size: 18))
-                                .frame(maxWidth: .infinity)
+            GeometryReader { geometry in
+                VStack(spacing: 3) {
+                    ForEach(0..<6, id: \.self) { row in
+                        HStack(spacing: 3) {
+                            ForEach(0..<7, id: \.self) { col in
+                                Circle()
+                                    .fill(board[row*7+col] == 1 ? Color.red.gradient :
+                                          board[row*7+col] == 2 ? Color.yellow.gradient :
+                                          Color.white.gradient)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .accessibilityLabel("Column \(col + 1), row \(row + 1)")
+                            }
                         }
                     }
                 }
+                .padding(7)
+                .background(Color.blue.gradient, in: RoundedRectangle(cornerRadius: 14))
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onEnded { value in
+                    let width = max(1, geometry.size.width)
+                    let column = min(6, max(0, Int(value.location.x / width * 7)))
+                    drop(column)
+                })
             }
+            .frame(height: 220)
             Button("New round") { board = Array(repeating: 0, count: 42); player = 1; winner = "" }
         }
     }
