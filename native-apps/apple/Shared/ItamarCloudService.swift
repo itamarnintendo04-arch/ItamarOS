@@ -297,10 +297,10 @@ final class ItamarCloudService: ObservableObject {
     }
 
     func setMuted(_ muted: Bool, roomID: UUID) async throws {
-        guard let userID else { throw ItamarCloudError.unauthenticated }
-        _ = try await request("/rest/v1/itamar_members", method: "PATCH", data: ["muted": muted],
-            query: [URLQueryItem(name: "room_id", value: "eq.\(roomID.uuidString.lowercased())"),
-                    URLQueryItem(name: "user_id", value: "eq.\(userID.uuidString.lowercased())")])
+        // Only the signed-in member can change their own mute setting.
+        // Use the guarded RPC instead of PATCHing membership rows directly.
+        _ = try await request("/rest/v1/rpc/itamar_set_mute", method: "POST",
+            data: ["p_room": roomID.uuidString.lowercased(), "p_muted": muted])
         try await reload()
     }
 
