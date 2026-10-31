@@ -383,6 +383,11 @@ private struct ItamarCloudExploreView: View {
     }
 }
 
+private struct OpenedOnceText: Identifiable {
+    let id = UUID()
+    let body: String
+}
+
 private struct SharedAttachmentFile: Identifiable {
     let url: URL
     var id: String { url.absoluteString }
@@ -398,6 +403,10 @@ private struct ItamarCloudThreadView: View {
     @State private var poll: Task<Void, Never>?
     @State private var showFilePicker = false
     @State private var sharedFile: URL?
+    @State private var openedOnce: OpenedOnceText?
+    @State private var editingID: UUID?
+    @State private var sendOnce = false
+    @State private var receipts = [UUID:ItamarReceiptSummary]()
 
     private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
@@ -411,8 +420,25 @@ private struct ItamarCloudThreadView: View {
                             HStack {
                                 if mine { Spacer(minLength: 45) }
                                 VStack(alignment: .leading, spacing: 5) {
-                                    Text(message.body)
+                                    Text(message.deleted_at == nil ? message.body : "Message deleted")
+                                        .italic(message.deleted_at != nil)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                    if message.edited_at != nil && message.deleted_at == nil {
+                                        Text("Edited").font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                    if message.is_view_once == true && !mine {
+                                        Button {
+                                            Task {
+                                                do {
+                                                    let value = try await cloud.openOnceText(message:message.id)
+                                                    openedOnce = OpenedOnceText(body:value)
+                                                } catch { error=error.localizedDescription }
+                                            }
+                                        } label: {
+                                            Label("Open once",systemImage:"eye")
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
                                     if message.attachment_path != nil {
                                         Button {
                                             Task {
@@ -424,13 +450,39 @@ private struct ItamarCloudThreadView: View {
                                         }
                                         .buttonStyle(.bordered)
                                     }
-                                    Text(String(message.created_at.prefix(16)).replacingOccurrences(of: "T", with: " "))
-                                        .font(.caption2).foregroundStyle(.secondary)
+                                    HStack(spacing:6) {
+                                        Text(String(message.created_at.prefix(16)).replacingOccurrences(of:"T",with:" "))
+                                        if mine {
+                                            let receipt=receipts[message.id]
+                                            Text(receipt?.read ?? 0 > 0 ? "✓✓" :
+                                                 receipt?.delivered ?? 0 > 0 ? "✓✓" : "✓")
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(receipt?.read ?? 0 > 0 ? Color.blue : Color.secondary)
+                                                .accessibilityLabel(receipt?.read ?? 0 > 0 ? "Read" :
+                                                    receipt?.delivered ?? 0 > 0 ? "Delivered" : "Sent")
+                                        }
+                                    }.font(.caption2).foregroundStyle(.secondary)
                                 }
                                 .padding(12)
                                 .background(mine ? Color.blue.opacity(0.16) : Color.gray.opacity(0.12),
                                             in: RoundedRectangle(cornerRadius: 14))
                                 .frame(maxWidth: 310)
+                                .contextMenu {
+                                    if mine && message.deleted_at == nil {
+                                        if message.attachment_path == nil && message.is_view_once != true {
+                                            Button("Edit message",systemImage:"pencil") {
+                                                draft=message.body
+                                                editingID=message.id
+                                            }
+                                        }
+                                        Button("Delete message",systemImage:"trash",role:.destructive) {
+                                            Task {
+                                                do { try await cloud.deleteMessage(id:message.id); await reloadThread() }
+                                                catch { error=error.localizedDescription }
+                                            }
+                                        }
+                                    }
+                                }
                                 if !mine { Spacer(minLength: 45) }
                             }
                             .id(message.id)
@@ -445,6 +497,16 @@ private struct ItamarCloudThreadView: View {
                 }
             }
             if canPost {
+                if editingID != nil {
+                    HStack {
+                        Text("Editing message").font(.caption.bold())
+                        Spacer()
+                        Button("Cancel") { editingID=nil;draft="" }
+                    }.padding(.horizontal)
+                } else {
+                    Toggle("View once (text only)",isOn:$sendOnce)
+                        .font(.caption).padding(.horizontal)
+                }
                 HStack {
                     TextField("Message", text: $draft, axis: .vertical)
                         .textFieldStyle(.roundedBorder).lineLimit(1...4)
@@ -452,8 +514,16 @@ private struct ItamarCloudThreadView: View {
                         let toSend = draft; draft = ""
                         Task {
                             do {
-                                try await cloud.send(toSend, in: room.id)
-                                messages = try await cloud.messages(in: room.id)
+                                if let edit=editingID {
+                                    try await cloud.editMessage(id:edit,text:toSend)
+                                    editingID=nil
+                                } else if sendOnce {
+                                    try await cloud.sendOnceText(room:room.id,text:toSend)
+                                    sendOnce=false
+                                } else {
+                                    try await cloud.send(toSend,in:room.id)
+                                }
+                                await reloadThread()
                             } catch {
                                 error = error.localizedDescription
                                 draft = toSend
@@ -501,14 +571,28 @@ private struct ItamarCloudThreadView: View {
                 .toolbar { Button("Done") { sharedFile = nil } }
             }
         }
+        .sheet(item:$openedOnce) { item in
+            NavigationStack {
+                VStack(spacing:16) {
+                    Text("View-once text").font(.title2.bold())
+                    Text(item.body).textSelection(.disabled)
+                    Text("This message is shown only once in the app. Screenshots cannot be prevented.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                .padding().navigationTitle("Opened message")
+                .toolbar { Button("Close") { openedOnce=nil } }
+            }
+        }
         .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .top) {
             if room.kind == "group" {
-                NavigationLink("Polls and voting") {
-                    ItamarGroupPollsView(room: room.id)
+                HStack {
+                    NavigationLink("Group info and invites") { ItamarGroupInfoView(room:room) }
+                    Spacer(minLength:10)
+                    NavigationLink("Polls and voting") { ItamarGroupPollsView(room:room.id) }
                 }
-                .font(.subheadline.bold()).frame(maxWidth: .infinity).padding(6)
+                .font(.subheadline.bold()).padding(8)
                 .background(.thinMaterial)
             }
         }
@@ -534,13 +618,21 @@ private struct ItamarCloudThreadView: View {
             poll?.cancel()
             poll = Task {
                 while !Task.isCancelled {
-                    do { messages = try await cloud.messages(in: room.id) }
-                    catch { error = error.localizedDescription }
+                    await reloadThread()
                     try? await Task.sleep(for: .seconds(8))
                 }
             }
         }
         .onDisappear { poll?.cancel(); poll = nil }
+    }
+    private func reloadThread() async {
+        do {
+            let latest=try await cloud.messages(in:room.id)
+            messages=latest
+            // A conversation is 'read' only after it is actually opened.
+            try await cloud.acknowledge(room:room.id,opened:true)
+            receipts=(try? await cloud.receiptSummaries(for:latest)) ?? [:]
+        } catch { error=error.localizedDescription }
     }
 }
 
