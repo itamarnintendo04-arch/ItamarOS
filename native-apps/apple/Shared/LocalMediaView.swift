@@ -54,34 +54,12 @@ struct LocalMediaView: View {
                             .id(fileName)
                             .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 420)
                             .accessibilityLabel("Playing animated GIF")
-                    } else
-                    #endif
-                    if let stillImage {
-                        stillImage
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 420)
-                            .accessibilityLabel("Selected image")
-                    } else if let player, !isAudio {
-                        VideoPlayer(player: player)
-                            .frame(minHeight: 230)
-                    } else if let player, isAudio {
-                        VStack(spacing: 18) {
-                            Image(systemName: "waveform")
-                                .font(.system(size: 54))
-                            HStack {
-                                Button("Play") { player.play() }
-                                Button("Pause") { player.pause() }
-                                Button("Restart") {
-                                    player.seek(to: .zero)
-                                    player.play()
-                                }
-                            }
-                        }
-                        .padding()
                     } else {
-                        ContentUnavailableView("Choose a photo, video or audio file", systemImage: "photo.on.rectangle.angled")
+                        mediaDisplay
                     }
+                    #else
+                    mediaDisplay
+                    #endif
 
                     Text(fileName)
                         .foregroundStyle(.secondary)
@@ -142,6 +120,37 @@ struct LocalMediaView: View {
                 scopedURL = nil
             }
         }
+    }
+
+    @ViewBuilder
+    private var mediaDisplay: some View {
+        if let stillImage {
+            stillImage
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 420)
+                .accessibilityLabel("Selected image")
+        } else if let player, !isAudio {
+            VideoPlayer(player: player)
+                .frame(minHeight: 230)
+        } else if let player, isAudio {
+            VStack(spacing: 18) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 54))
+                HStack {
+                    Button("Play") { player.play() }
+                    Button("Pause") { player.pause() }
+                    Button("Restart") {
+                        player.seek(to: .zero)
+                        player.play()
+                    }
+                }
+            }
+            .padding()
+        } else {
+            ContentUnavailableView("Choose a photo, video or audio file", systemImage: "photo.on.rectangle.angled")
+        }
+
     }
 
     private func releasePrevious() {
