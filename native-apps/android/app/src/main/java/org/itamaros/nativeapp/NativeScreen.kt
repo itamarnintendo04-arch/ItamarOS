@@ -43,6 +43,8 @@ private fun country(): String {
 @Composable
 fun NativeAppScreen(
     isTv: Boolean,
+    groupInvite: String?,
+    contactUsername: String?,
     device: String,
     status: String,
     updateStatus: String,
@@ -65,6 +67,9 @@ fun NativeAppScreen(
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
+    LaunchedEffect(groupInvite, contactUsername) {
+        if (!isTv && (groupInvite != null || contactUsername != null)) current = "Connect"
+    }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
     Scaffold { padding ->
@@ -101,7 +106,7 @@ fun NativeAppScreen(
                         }
                     }
                     "Connect" -> if (!isTv) item {
-                        AndroidConnectScreen()
+                        AndroidConnectScreen(groupInvite = groupInvite, contactUsername = contactUsername)
                     }
                     "Games" -> item {
                         MobileGamesHub()
