@@ -7,6 +7,11 @@ on:
       - "native-apps/apple/**"
       - ".github/workflows/ios-unsigned-ipa.yml"
 
+# Only the newest source state needs a build; avoid dozens of obsolete IPAs.
+concurrency:
+  group: itamaros-ios-ipa-main
+  cancel-in-progress: true
+
 jobs:
   build-ios:
     runs-on: macos-15
