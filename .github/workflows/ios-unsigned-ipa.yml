@@ -1,0 +1,44 @@
+name: Build ItamarOS iOS unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "native-apps/apple/**"
+      - ".github/workflows/ios-unsigned-ipa.yml"
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Build iPhone device app without signing
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj \
+            -scheme ItamarOSiOS -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/ItamarOSBuild" \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          APP="$RUNNER_TEMP/ItamarOSBuild/Build/Products/Release-iphoneos/ItamarOSiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry "$GITHUB_WORKSPACE/output/ItamarOS-iOS-1.6-unsigned.ipa" Payload
+      - name: Upload unsigned IPA as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-iOS-1.6-unsigned-IPA
+          path: output/ItamarOS-iOS-1.6-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 90
