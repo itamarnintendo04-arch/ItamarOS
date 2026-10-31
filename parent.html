@@ -73,9 +73,10 @@
       // Best effort only: browsers may require a tap. Universal Links require an
       // Apple-app-site-association file and Apple developer team credentials.
       const isApplePhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isApplePhone && !sessionStorage.getItem('itamaros-parent-app-attempted')) {
+      const attemptKey = 'itamaros-parent-app-attempted-' + invite;
+      if (isApplePhone && !sessionStorage.getItem(attemptKey)) {
         try {
-          sessionStorage.setItem('itamaros-parent-app-attempted', 'yes');
+          sessionStorage.setItem(attemptKey, 'yes');
           window.location.assign(appLink);
         } catch {
           // Form remains available as a fallback.
