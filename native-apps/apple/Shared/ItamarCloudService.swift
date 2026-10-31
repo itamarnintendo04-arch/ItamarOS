@@ -29,6 +29,9 @@ struct ItamarCloudMessage: Codable, Identifiable {
     let sender_id: UUID
     let body: String
     let created_at: String
+    let attachment_path: String?
+    let attachment_name: String?
+    let attachment_mime: String?
 }
 
 struct ItamarCloudUpdate: Codable, Identifiable {
@@ -307,7 +310,7 @@ final class ItamarCloudService: ObservableObject {
     func messages(in roomID: UUID) async throws -> [ItamarCloudMessage] {
         let raw = try await request("/rest/v1/itamar_messages",
             query: [URLQueryItem(name: "room_id", value: "eq.\(roomID.uuidString.lowercased())"),
-                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at"),
+                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime"),
                     URLQueryItem(name: "order", value: "created_at.asc"),
                     URLQueryItem(name: "limit", value: "100")])
         return try JSONDecoder().decode([ItamarCloudMessage].self, from: raw)
@@ -332,5 +335,92 @@ final class ItamarCloudService: ObservableObject {
         _ = try await request("/rest/v1/rpc/itamar_redeem_parent_invite", method: "POST",
             data: ["p_code": code, "p_name": name, "p_relationship": relationship])
     }
+
+    private func mediaMime(for url: URL) -> String? {
+        switch url.pathExtension.lowercased() {
+        case "jpg","jpeg": return "image/jpeg"
+        case "png": return "image/png"
+        case "gif": return "image/gif"
+        case "webp": return "image/webp"
+        case "heic": return "image/heic"
+        case "mp4": return "video/mp4"
+        case "mov": return "video/quicktime"
+        case "mp3": return "audio/mpeg"
+        case "m4a": return "audio/mp4"
+        case "wav": return "audio/wav"
+        case "pdf": return "application/pdf"
+        case "txt": return "text/plain"
+        case "vcf": return "text/vcard"
+        case "ics": return "text/calendar"
+        default: return nil
+        }
+    }
+
+    func sendAttachment(_ file: URL, in roomID: UUID) async throws {
+        guard let userID, let session, ItamarCloudConfig.enabled,
+              let base = URL(string: ItamarCloudConfig.url) else {
+            throw ItamarCloudError.unauthenticated
+        }
+        let accessible = file.startAccessingSecurityScopedResource()
+        defer { if accessible { file.stopAccessingSecurityScopedResource() } }
+        guard let mime = mediaMime(for:file) else {
+            throw ItamarCloudError.badResponse("This file type is not supported. Choose an image, video, audio, PDF, text, contact or calendar file.")
+        }
+        let bytes = try Data(contentsOf:file)
+        guard bytes.count > 0 && bytes.count <= 20 * 1024 * 1024 else {
+            throw ItamarCloudError.badResponse("Attachments must be 1 byte to 20 MB.")
+        }
+        let name = String(file.lastPathComponent.prefix(90))
+        // Random path prevents collisions. The server verifies room membership.
+        let storageName = roomID.uuidString.lowercased() + "/" +
+            UUID().uuidString.lowercased() + "/" +
+            name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!.replacingOccurrences(of:"/",with:"_")
+        guard let endpoint = URL(string: "/storage/v1/object/itamar-connect-media/" + storageName,relativeTo:base) else {
+            throw ItamarCloudError.unavailable
+        }
+        var upload = URLRequest(url:endpoint)
+        upload.httpMethod = "POST"
+        upload.setValue(ItamarCloudConfig.publicKey,forHTTPHeaderField:"apikey")
+        upload.setValue("Bearer " + session.access,forHTTPHeaderField:"Authorization")
+        upload.setValue(mime,forHTTPHeaderField:"Content-Type")
+        upload.setValue("false",forHTTPHeaderField:"x-upsert")
+        let (_,response) = try await URLSession.shared.upload(for:upload,from:bytes)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw ItamarCloudError.badResponse("Media upload failed. Sign in again or check that this room permits uploading.")
+        }
+        _ = try await request("/rest/v1/itamar_messages",method:"POST",
+            data:["room_id":roomID.uuidString.lowercased(),
+                  "sender_id":userID.uuidString.lowercased(),
+                  "body":"📎 " + name,
+                  "attachment_path":storageName,
+                  "attachment_name":name,
+                  "attachment_mime":mime])
+        try await reload()
+    }
+
+    func downloadAttachment(_ message: ItamarCloudMessage) async throws -> URL {
+        guard let path = message.attachment_path,let session,
+              let base=URL(string:ItamarCloudConfig.url),
+              path.hasPrefix(message.room_id.uuidString.lowercased()+"/") else {
+            throw ItamarCloudError.unauthenticated
+        }
+        guard let endpoint=URL(string:"/storage/v1/object/authenticated/itamar-connect-media/"+path,
+                               relativeTo:base) else { throw ItamarCloudError.unavailable }
+        var req=URLRequest(url:endpoint)
+        req.setValue(ItamarCloudConfig.publicKey,forHTTPHeaderField:"apikey")
+        req.setValue("Bearer "+session.access,forHTTPHeaderField:"Authorization")
+        let (data,response)=try await URLSession.shared.data(for:req)
+        guard let http=response as? HTTPURLResponse,(200...299).contains(http.statusCode),
+              data.count <= 20*1024*1024 else {
+            throw ItamarCloudError.badResponse("Media download was denied or too large.")
+        }
+        let name=message.attachment_name ?? "attachment"
+        let safeName=name.replacingOccurrences(of:"/",with:"_").replacingOccurrences(of:"\\",with:"_")
+        let destination=FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString+"-"+safeName)
+        try data.write(to:destination,options:.atomic)
+        return destination
+    }
+
 }
 #endif
