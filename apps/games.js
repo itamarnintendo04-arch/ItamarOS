@@ -240,15 +240,50 @@ function renderMemory(){
 }
 const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function tictactoeResult(board){for(const line of lines){const [a,b,c]=line;if(board[a]&&board[a]===board[b]&&board[a]===board[c])return board[a]}return board.every(Boolean)?'tie':''}
-function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){effect('win');g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
+function ticReset(){ticToken++;const g=saveData.tictactoe;g.board=Array(9).fill('');g.turn='X';g.winner='';save();renderTicTacToe()}
+function ticMinimax(board,maximize,depth){
+ const outcome=tictactoeResult(board);if(outcome==='O')return 10-depth;if(outcome==='X')return depth-10;if(outcome==='tie')return 0;
+ const free=board.map((s,i)=>s?null:i).filter(i=>i!==null);
+ if(maximize)return Math.max(...free.map(i=>{const next=board.slice();next[i]='O';return ticMinimax(next,false,depth+1)}));
+ return Math.min(...free.map(i=>{const next=board.slice();next[i]='X';return ticMinimax(next,true,depth+1)}));
+}
+function ticBotPick(){
+ const g=saveData.tictactoe,m=matchFor('tictactoe');
+ const free=g.board.map((s,i)=>s?null:i).filter(i=>i!==null);
+ if(!free.length)return null;
+ if(m.difficulty==='easy')return free[Math.floor(Math.random()*free.length)];
+ if(m.difficulty==='medium'){
+  for(const p of ['O','X'])for(const i of free){const b=g.board.slice();b[i]=p;if(tictactoeResult(b)===p)return i}
+  return free[Math.floor(Math.random()*free.length)];
+ }
+ const scores=free.map(i=>{const b=g.board.slice();b[i]='O';return {i,score:ticMinimax(b,false,0)}});
+ const best=Math.max(...scores.map(x=>x.score));
+ const tied=scores.filter(x=>x.score===best);
+ return tied[Math.floor(Math.random()*tied.length)].i;
+}
+function ticMove(i,fromBot=false){
+ const g=saveData.tictactoe,m=matchFor('tictactoe');
+ if(g.winner||g.board[i]||(m.mode==='bot'&&g.turn==='O'&&!fromBot))return;
+ g.board[i]=g.turn;g.winner=tictactoeResult(g.board);
+ if(g.winner){effect('win');g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';
+ save();renderTicTacToe();
+ if(!g.winner&&m.mode==='bot'&&g.turn==='O'){
+  const token=ticToken;
+  flipTimeout=setTimeout(()=>{
+   if(token!==ticToken||current!=='tictactoe'||g.turn!=='O'||g.winner)return;
+   const move=ticBotPick();if(move!==null)ticMove(move,true);
+  },400);
+ }
+}
 function renderTicTacToe(){
  const a=$('itamar-game-area');if(!a||current!=='tictactoe')return;a.replaceChildren();const g=saveData.tictactoe;
- a.append(make('h3','Tic-Tac-Toe · 2 players'));artwork(a,'tictactoe');
- a.append(make('p',g.winner?(g.winner==='tie'?'Draw!':'Winner: '+g.winner):'Turn: '+g.turn));
+ a.append(make('h3','Tic-Tac-Toe'));artwork(a,'tictactoe');
+ const m=matchControls(a,'tictactoe',ticReset);
+ a.append(make('p',g.winner?(g.winner==='tie'?'Draw!':'Winner: '+(g.winner==='X'?'Player 1':m.mode==='bot'?'Bot':'Player 2')):'Turn: '+(g.turn==='X'?'Player 1':m.mode==='bot'?'Bot':'Player 2')));
  const board=make('div',undefined,'ios-board');board.style.gridTemplateColumns='repeat(3,1fr)';board.style.maxWidth='300px';
- g.board.forEach((v,i)=>{const b=button(v||'·',()=>ticMove(i));b.style.cssText='aspect-ratio:1;font-size:32px;min-height:70px';b.disabled=Boolean(v||g.winner);board.append(b)});a.append(board);
+ g.board.forEach((v,i)=>{const b=button(v||'·',()=>ticMove(i));b.style.cssText='aspect-ratio:1;font-size:32px;min-height:70px';b.disabled=Boolean(v||g.winner||(m.mode==='bot'&&g.turn==='O'));board.append(b)});a.append(board);
  a.append(make('p','X wins: '+g.wins.X+' · O wins: '+g.wins.O+' · Draws: '+g.wins.tie));
- a.append(button('Next round',()=>{g.board=Array(9).fill('');g.turn='X';g.winner='';save();renderTicTacToe()}));
+ a.append(button('Next round',ticReset));
 }
 
 const rand=(low,high)=>Math.floor(Math.random()*(high-low+1))+low;
