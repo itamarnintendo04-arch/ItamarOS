@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct ItamarOSApp: App {
     @StateObject private var releases = ReleaseMonitor()
+    @AppStorage("itamaros.settings.language") private var language = "system"
     #if os(iOS)
     @StateObject private var appleAccounts = LocalAppleAccountStore()
     @StateObject private var messages = ItamarMessagesStore()
@@ -45,6 +46,7 @@ struct ItamarOSApp: App {
     var body: some Scene {
         WindowGroup {
             home.tint(Color(red: 0.13, green: 0.61, blue: 0.94))
+                .environment(\.locale, language == "system" ? Locale.autoupdatingCurrent : Locale(identifier: language))
         }
     }
 }
