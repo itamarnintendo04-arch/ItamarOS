@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "channel": "development",
-  "version": "1.6.0",
-  "publishedAt": "2026-10-30",
+  "version": "1.6.1",
+  "publishedAt": "2026-10-31",
   "status": "source-and-debug-preview",
   "signedBinariesPublished": false,
   "source": "https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native-apps",
@@ -11,7 +11,7 @@
       "id": "itamaros-ios",
       "name": "ItamarOS for iPhone/iPad",
       "platform": "ios-ipados",
-      "version": "1.6.0",
+      "version": "1.6.1",
       "releaseStatus": "source-only",
       "package": null
     },
