@@ -213,7 +213,7 @@ final class ItamarCloudClient: ObservableObject {
     private func call(_ path: String, method: String = "GET",
                       body: [String: Any]? = nil, prefer: String? = nil) async throws -> Data {
         try await raw(path, method: method, body: body,
-                      bearer: currentAccess(), prefer: prefer)
+                      bearer: try await currentAccess(), prefer: prefer)
     }
 
     private func decodeArray<T: Decodable>(_ data: Data, as type: T.Type) throws -> [T] {
@@ -268,7 +268,7 @@ final class ItamarCloudClient: ObservableObject {
     func createRoom(kind: String, title: String, username: String? = nil) async throws {
         var body: [String: Any] = ["p_kind": kind, "p_title": title]
         if let username { body["p_username"] = username }
-        _ = try scalar(call("/rest/v1/rpc/itamar_create_room", method: "POST", body: body))
+        _ = try scalar(try await call("/rest/v1/rpc/itamar_create_room", method: "POST", body: body))
         try await loadRooms()
     }
 
@@ -307,7 +307,7 @@ final class ItamarCloudClient: ObservableObject {
     }
 
     func createParentInvite() async throws -> String {
-        try scalar(call("/rest/v1/rpc/itamar_create_parent_invite", method: "POST", body: [:]))
+        try scalar(try await call("/rest/v1/rpc/itamar_create_parent_invite", method: "POST", body: [:]))
     }
 
     func redeemParentInvite(code: String, name: String, relationship: String) async throws {
