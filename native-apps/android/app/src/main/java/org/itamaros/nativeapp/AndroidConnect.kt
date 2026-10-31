@@ -246,7 +246,7 @@ private fun PublicLinkQR(url:String){
 }
 
 @Composable
-fun AndroidConnectScreen(){
+fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     val api=remember{AndroidConnectApi()}
     val ctx=LocalContext.current
     val scope=rememberCoroutineScope()
@@ -277,6 +277,18 @@ fun AndroidConnectScreen(){
     var viewOnce by remember{mutableStateOf(false)}
     var openedSecret by remember{mutableStateOf("")}
     var receipts by remember{mutableStateOf(mapOf<String,Pair<Int,Int>>())}
+    LaunchedEffect(groupInvite) {
+        if(groupInvite?.matches(Regex("[a-f0-9]{48}"))==true) {
+            inviteToJoin=groupInvite
+            tab="Profile"
+        }
+    }
+    LaunchedEffect(contactUsername) {
+        if(contactUsername?.matches(Regex("[a-z0-9_.]{3,24}"))==true) {
+            other=contactUsername
+            tab="Contacts"
+        }
+    }
     var ownPhone by remember{mutableStateOf("")}
     var ownCode by remember{mutableStateOf("")}
     var searchable by remember{mutableStateOf(false)}
