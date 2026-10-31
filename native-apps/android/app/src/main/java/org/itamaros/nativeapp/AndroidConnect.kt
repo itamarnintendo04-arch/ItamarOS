@@ -161,6 +161,11 @@ private class AndroidConnectApi {
             .put("p_avatar",avatar ?: JSONObject.NULL))
     }
     fun avatarLink(path:String)=base+"/storage/v1/object/public/itamar-connect-avatars/"+path
+    suspend fun addGroupMember(room:String,username:String){
+        request("/rest/v1/rpc/itamar_group_manage","POST",JSONObject()
+            .put("p_room",room).put("p_operation","add")
+            .put("p_username",username).put("p_title",""))
+    }
     suspend fun makeInvite(room:String):String {
         val text=request("/rest/v1/rpc/itamar_make_group_invite","POST",
             JSONObject().put("p_room",room))
@@ -599,6 +604,11 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     PublicAvatar(roomAvatar)
                     Button(onClick={avatarTarget="group";chooseAvatar.launch("image/*")}){
                         Text("Choose group photo")
+                    }
+                    OutlinedTextField(other,{other=it},
+                        label={Text("Add member directly by @username")})
+                    Button(onClick={perform{api.addGroupMember(selectedRoom,other)}}){
+                        Text("Add member")
                     }
                     Button(onClick={perform{inviteToken=api.makeInvite(selectedRoom)}}){
                         Text("Create shareable invite (48 hours)")
