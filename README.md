@@ -28,6 +28,17 @@ These links are **version-specific GitHub release searches**, not direct IPA dow
 
 > **Installation:** Unsigned IPAs cannot be installed by simply opening them in Files. Building an IPA does not automatically sign, distribute or install it, and native iOS builds are independent of the browser demo.
 
+## Local multiplayer and bot opponents — iOS 1.6 and browser games
+
+The competitive **Memory Match**, **Tic-Tac-Toe**, **Rock Paper Scissors**, and **Connect Four** games offer two match modes:
+
+- **With a friend** — local pass-and-play on the same device (no online matchmaking).
+- **Against a bot** — offline bot with **Easy**, **Medium**, and **Hard** settings.
+
+Hard Tic-Tac-Toe uses minimax; Hard Connect Four looks ahead; the Memory Match bot only remembers cards that have been revealed (with reduced memory at easier levels). Rock Paper Scissors bots predict from previous rounds, not from the player's current hidden choice. Single-player games remain single-player.
+
+**Build notice:** Source changes require a fresh iOS IPA build via the [unsigned IPA workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml). The earlier downloaded IPA artifact does not automatically update itself. Unsigned builds still require valid signing and device testing.
+
 ## Editions
 
 | Edition | Package | Status | Purpose |
