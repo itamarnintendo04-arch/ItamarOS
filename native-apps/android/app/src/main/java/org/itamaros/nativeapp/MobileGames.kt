@@ -2,6 +2,15 @@ package org.itamaros.nativeapp
 
 import android.os.SystemClock
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.abs
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -145,14 +154,32 @@ private fun shift2048(board: List<Int>, direction: Int): Pair<List<Int>, Int> {
     var board by remember { mutableStateOf(new2048()) }
     var score by remember { mutableIntStateOf(0) }
     Text("Combine identical tiles to reach 2048.")
-    BoardGrid(4, board.map { if (it == 0) "·" else it.toString() }, {}, { true })
-    Text("Score: $score"); SavedBest("2048", score)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = { val (b, g) = shift2048(board, 2); board = b; score += g }) { Text("↑") }
-        Button(onClick = { val (b, g) = shift2048(board, 0); board = b; score += g }) { Text("←") }
-        Button(onClick = { val (b, g) = shift2048(board, 3); board = b; score += g }) { Text("↓") }
-        Button(onClick = { val (b, g) = shift2048(board, 1); board = b; score += g }) { Text("→") }
+    var dragX = 0f
+    var dragY = 0f
+    Box(modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
+        detectDragGestures(
+            onDragStart = { dragX = 0f; dragY = 0f },
+            onDragEnd = {
+                if (maxOf(abs(dragX), abs(dragY)) > 20f) {
+                    val direction = if (abs(dragX) > abs(dragY)) {
+                        if (dragX > 0) 1 else 0
+                    } else { if (dragY > 0) 3 else 2 }
+                    val (next, gained) = shift2048(board, direction)
+                    board = next
+                    score += gained
+                }
+            },
+            onDrag = { event, amount ->
+                event.consume()
+                dragX += amount.x
+                dragY += amount.y
+            }
+        )
+    }) {
+        BoardGrid(4, board.map { if (it == 0) "·" else it.toString() }, {}, { true })
     }
+    Text("Swipe or drag the tiles to move.")
+    Text("Score: $score"); SavedBest("2048", score)
     Button(onClick = { board = new2048(); score = 0 }) { Text("New game") }
 }
 
@@ -180,18 +207,63 @@ private fun newFood(snake: List<Pair<Int,Int>>): Pair<Int,Int> {
         }
     }
     Text("Snake · Score: $score ${if (over) "· Game over" else ""}"); SavedBest("snake", score)
-    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        (0..9).forEach { y ->
-            Text((0..9).joinToString(" ") { x ->
-                when (x to y) { snake.first() -> "🟩"; food -> "🍎"; else -> if ((x to y) in snake) "🟢" else "▫️" }
-            }, maxLines = 1)
+    var dragX = 0f
+    var dragY = 0f
+    Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(1f).pointerInput(Unit) {
+        detectDragGestures(
+            onDragStart = { dragX = 0f; dragY = 0f },
+            onDragEnd = {
+                if (maxOf(abs(dragX), abs(dragY)) > 18f) {
+                    val next = if (abs(dragX) > abs(dragY)) {
+                        if (dragX > 0) 1 to 0 else -1 to 0
+                    } else { if (dragY > 0) 0 to 1 else 0 to -1 }
+                    if (next != -heading.first to -heading.second) heading = next
+                }
+            },
+            onDrag = { event, amount ->
+                event.consume()
+                dragX += amount.x
+                dragY += amount.y
+            }
+        )
+    }) {
+        val cell = size.width / 10f
+        for (y in 0..9) for (x in 0..9) {
+            drawRoundRect(
+                color = if ((x+y)%2 == 0) Color(0xFF12334F) else Color(0xFF184866),
+                topLeft = Offset(x*cell, y*cell),
+                size = Size(cell,cell),
+                cornerRadius = CornerRadius(2f)
+            )
         }
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("↑" to (0 to -1), "←" to (-1 to 0), "↓" to (0 to 1), "→" to (1 to 0)).forEach { (symbol, dir) ->
-            Button(onClick = { if (dir.first != -heading.first || dir.second != -heading.second) heading = dir }) { Text(symbol) }
+        snake.asReversed().forEachIndexed { index, point ->
+            val head = point == snake.first()
+            drawRoundRect(
+                color = if (head) Color(0xFF7EE2A2) else Color(0xFF34B37F),
+                topLeft = Offset(point.first*cell+1, point.second*cell+1),
+                size = Size(cell-2, cell-2),
+                cornerRadius = CornerRadius(if (head) cell*.4f else cell*.25f)
+            )
+            if (head) {
+                for (side in listOf(-1f, 1f)) {
+                    val eye = Offset((point.first+.5f)*cell + side*cell*.20f, (point.second+.4f)*cell)
+                    drawCircle(Color.White, cell*.10f, eye)
+                    drawCircle(Color(0xFF183E32), cell*.05f, eye)
+                }
+                drawLine(Color(0xFFFF7A97),
+                    Offset((point.first+.45f)*cell,(point.second+.7f)*cell),
+                    Offset((point.first+.55f)*cell,(point.second+.8f)*cell),
+                    strokeWidth = cell*.055f)
+            }
         }
+        val fx=(food.first+.5f)*cell
+        val fy=(food.second+.55f)*cell
+        drawCircle(Color(0xFFF54964),cell*.23f,Offset(fx-cell*.13f,fy))
+        drawCircle(Color(0xFFFF6782),cell*.23f,Offset(fx+cell*.14f,fy))
+        drawLine(Color(0xFF5BD687),Offset(fx,fy-cell*.12f),
+            Offset(fx+cell*.20f,fy-cell*.49f),strokeWidth=cell*.08f)
     }
+    Text("Swipe or drag the cartoon snake to steer.")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = { if (!over) running = !running }) { Text(if (running) "Pause" else "Start") }
         Button(onClick = { snake = listOf(4 to 5, 3 to 5, 2 to 5); food = 7 to 5; heading = 1 to 0; score = 0; over = false; running = false }) { Text("Restart") }
