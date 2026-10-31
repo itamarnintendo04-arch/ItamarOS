@@ -18,6 +18,12 @@ The **Parent QR** page encodes a randomly generated opaque invitation token link
 
 A separate authenticated service with parental consent, secure account ownership, abuse controls, end-to-end encryption decisions, contact discovery safeguards, token expiration/revocation, permission enforcement, per-channel subscriptions, notification delivery and data deletion is required. No client-only token or form can securely establish a family relationship. Do not publish this preview as a live communication or supervision service.
 
+## ItamarOS Connect — connected chats and parent invites (iOS 1.6.2)
+
+See [messaging setup](../../../messaging/README.md). When a developer configures a Supabase project and applies its RLS migration, the native Messages tab supports email-authenticated profiles and unique usernames, device-to-device text chats, owner-posted channels, channel discovery, per-room muting and a foreground Updates feed. Contacts are requested only by an explicit action and names remain on device. A QR can generate a single-use, 15-minute parent/guardian invite to [parent.html](../../../parent.html), with the native `itamaros://parent` deep link for installed apps and browser fallback. This is a linked-account relationship, **not** verified guardianship or parental surveillance.
+
+A newly built app without the Supabase URL + public key still displays **local-only message drafts**. Background APNs push, end-to-end encryption, moderation, and public production distribution are not part of this preview; a successful CI build does not change those limits.
+
 ## Build on Mac
 
 1. Install a supported Xcode version and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
