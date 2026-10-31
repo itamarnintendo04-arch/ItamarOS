@@ -70,8 +70,13 @@ private class AndroidConnectApi {
         return if(result.length()>0)result.getJSONObject(0)else null
     }
     suspend fun createProfile(name:String,handle:String){
-        request("/rest/v1/itamar_profiles","POST",JSONObject()
-            .put("id",userID).put("username",handle).put("display_name",name).put("about",""))
+        val body=JSONObject().put("username",handle.lowercase()).put("display_name",name).put("about","")
+        if(profile()==null){
+            body.put("id",userID)
+            request("/rest/v1/itamar_profiles","POST",body)
+        }else{
+            request("/rest/v1/itamar_profiles?id=eq."+userID,"PATCH",body)
+        }
     }
     suspend fun rooms()=JSONArray(request("/rest/v1/rpc/itamar_my_rooms","POST",JSONObject()))
     suspend fun messages(room:String)=JSONArray(request("/rest/v1/itamar_messages?room_id=eq."+room+
@@ -106,6 +111,16 @@ private class AndroidConnectApi {
     suspend fun vote(poll:String,option:Int){
         request("/rest/v1/rpc/itamar_vote_poll","POST",
             JSONObject().put("p_poll",poll).put("p_option",option))
+    }
+    suspend fun setPhone(phone:String){
+        request("/auth/v1/user","PUT",JSONObject().put("phone",phone))
+    }
+    suspend fun verifyPhone(phone:String,code:String){
+        request("/auth/v1/verify","POST",JSONObject().put("phone",phone)
+            .put("token",code).put("type","phone_change"))
+    }
+    suspend fun phoneDiscovery(enabled:Boolean){
+        request("/rest/v1/rpc/itamar_set_phone_discovery","POST",JSONObject().put("p_enabled",enabled))
     }
     suspend fun newPoll(room:String,question:String,options:String){
         val choices=JSONArray()
@@ -155,6 +170,9 @@ fun AndroidConnectScreen(){
     var pollOptions by remember{mutableStateOf("Yes\nNo")}
     var lookupResult by remember{mutableStateOf("")}
     var notice by remember{mutableStateOf("")}
+    var ownPhone by remember{mutableStateOf("")}
+    var ownCode by remember{mutableStateOf("")}
+    var searchable by remember{mutableStateOf(false)}
 
     fun perform(action:suspend()->Unit){
         scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
@@ -205,7 +223,17 @@ fun AndroidConnectScreen(){
                     },"Share QR link"))
                 }){Text("Share contact QR")}
             }
-            Text("Your phone number is not published. Verification and discoverability are available in the iPhone client until Android SMS verification is added.")
+            Text("Optional verified phone. Only searchable if you opt in.")
+            OutlinedTextField(ownPhone,{ownPhone=it},label={Text("My phone (+international)")})
+            Button(onClick={perform{api.setPhone(ownPhone)}},enabled=ownPhone.startsWith("+")){Text("Send verification SMS")}
+            OutlinedTextField(ownCode,{ownCode=it},label={Text("SMS verification code")})
+            Button(onClick={perform{api.verifyPhone(ownPhone,ownCode)}},
+                enabled=ownCode.isNotBlank()){Text("Verify my phone")}
+            Row{
+                Checkbox(searchable,onCheckedChange={searchable=it})
+                Text("Allow finding me by verified phone")
+            }
+            Button(onClick={perform{api.phoneDiscovery(searchable)}}){Text("Save phone privacy")}
             Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
         }
         "Contacts"->{
