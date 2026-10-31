@@ -34,11 +34,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ipa/Payload" output
           cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
           cd "$RUNNER_TEMP/ipa"
-          zip -qry "$GITHUB_WORKSPACE/output/ItamarOS-iOS-1.6.2-unsigned.ipa" Payload
+          zip -qry "$GITHUB_WORKSPACE/output/ItamarOS-iOS-1.7.0-unsigned.ipa" Payload
       - name: Upload unsigned IPA as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ItamarOS-iOS-1.6.2-unsigned-IPA
-          path: output/ItamarOS-iOS-1.6.2-unsigned.ipa
+          name: ItamarOS-iOS-1.7.0-unsigned-IPA
+          path: output/ItamarOS-iOS-1.7.0-unsigned.ipa
           if-no-files-found: error
           retention-days: 90
