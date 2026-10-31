@@ -35,6 +35,20 @@ for(const x of ['Shared/ItamarOSApp.swift','Shared/NativeGameView.swift','Shared
 }
 const nativeMedia=read(appleRoot+'/Shared/LocalMediaView.swift');
 assert.match(nativeMedia,/PhotosPicker\(/,'iOS player must allow choosing media from Photos');
+const gifDecoder=read(appleRoot+'/Shared/AnimatedGIFImage.swift');
+assert.match(gifDecoder,/CGImageSourceCreateWithData/,'Native Apple GIF should animate frames using ImageIO');
+assert.match(gifDecoder,/UIImage\.animatedImage/,'Native iPhone GIF must animate, not show static first frame');
+assert.match(nativeMedia,/\.gif/,'Native player file chooser should include animated GIF files');
+assert.match(nativeMedia,/AnimatedGIFImage\(data: animatedGIFData\)/,'Native player must display animated GIFs');
+const gameArt=read(appleRoot+'/Shared/GameArtworkView.swift');
+assert.match(gameArt,/struct GameArtworkView/,'Native game chooser must display colorful game artwork');
+assert.match(gameArt,/CartoonSnakeCell/,'Native Snake should use illustrated snake and cherry graphics');
+const nativeGames=read(appleRoot+'/Shared/ExtraMobileGames.swift');
+assert.match(nativeGames,/DragGesture\(minimumDistance: 18\)/,'Native 2048 must support swipe without arrow buttons');
+assert.match(nativeGames,/DragGesture\(minimumDistance: 6\)/,'Native Snake must allow continuous steering by dragging');
+assert.match(nativeGames,/DragGesture\(minimumDistance: 0\)/,'Native Connect Four must allow placement by touch and drag');
+assert.match(read(appleRoot+'/Shared/NativeGameView.swift'),/GameArtworkView\(game: selectedGame\)/,'Selected native game should display colorful artwork');
+
 assert.match(nativeMedia,/\.image, \.movie, \.audio/,'Apple Files picker must allow image, video and audio');
 assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit');
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
