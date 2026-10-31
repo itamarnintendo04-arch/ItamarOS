@@ -217,7 +217,7 @@ private fun newFood(snake: List<Pair<Int,Int>>): Pair<Int,Int> {
                     val next = if (abs(dragX) > abs(dragY)) {
                         if (dragX > 0) 1 to 0 else -1 to 0
                     } else { if (dragY > 0) 0 to 1 else 0 to -1 }
-                    if (next != -heading.first to -heading.second) heading = next
+                    if (next != (-heading.first to -heading.second)) heading = next
                 }
             },
             onDrag = { event, amount ->
