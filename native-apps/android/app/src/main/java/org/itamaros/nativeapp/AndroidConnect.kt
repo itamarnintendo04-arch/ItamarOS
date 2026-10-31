@@ -269,6 +269,24 @@ private class AndroidConnectApi {
 }
 
 @Composable
+private fun PublicAvatar(path:String?){
+    var photo by remember(path){mutableStateOf<Bitmap?>(null)}
+    LaunchedEffect(path) {
+        photo=null
+        if(path!=null && path.matches(Regex("(profiles|groups)/[a-f0-9-]+/[a-f0-9-]+\\.jpg"))){
+            photo=withContext(Dispatchers.IO) {
+                runCatching {
+                    val base=BuildConfig.ITAMAR_SUPABASE_URL.trimEnd('/')
+                    URL(base+"/storage/v1/object/public/itamar-connect-avatars/"+path)
+                        .openStream().use{BitmapFactory.decodeStream(it)}
+                }.getOrNull()
+            }
+        }
+    }
+    if(photo!=null)Image(photo!!.asImageBitmap(),contentDescription="Profile or group image",
+       modifier=Modifier.size(96.dp))
+}
+@Composable
 private fun PublicContactQR(username:String){
     val url="https://itamaros-web-emulator.onrender.com/contact.html?username="+username
     PublicLinkQR(url)
@@ -405,7 +423,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
             OutlinedTextField(displayName,{displayName=it},label={Text("Name")})
             OutlinedTextField(handle,{handle=it},label={Text("Unique @username")})
             Button(onClick={perform{api.createProfile(displayName,handle)}}){Text("Create profile")}
-            if(!profileAvatar.isNullOrBlank()) Text("Profile photo saved")
+            PublicAvatar(profileAvatar)
             Button(onClick={avatarTarget="profile";chooseAvatar.launch("image/*")}){
                 Text("Choose profile photo")
             }
@@ -570,7 +588,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     Button(onClick={perform{api.groupDetails(selectedRoom,title,groupDescription,roomAvatar)}}){
                         Text("Save group name and description")
                     }
-                    if(!roomAvatar.isNullOrBlank())Text("Group photo saved")
+                    PublicAvatar(roomAvatar)
                     Button(onClick={avatarTarget="group";chooseAvatar.launch("image/*")}){
                         Text("Choose group photo")
                     }
