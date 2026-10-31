@@ -222,6 +222,9 @@ begin
   or length(btrim(coalesce(p_text,''))) not between 1 and 4000
   or not exists(select 1 from public.itamar_rooms r where r.id=p_room
       and (r.kind in ('chat','group') or r.owner_id=auth.uid()))
+  or exists(select 1 from public.itamar_members other
+       join public.itamar_blocks b on b.blocker_id=other.user_id
+       where other.room_id=p_room and b.blocked_id=auth.uid())
  then raise exception 'Cannot send one-time message'; end if;
  insert into public.itamar_messages(room_id,sender_id,body,is_view_once)
  values(p_room,auth.uid(),'View once · text',true) returning id into new_id;
@@ -268,3 +271,28 @@ grant execute on function public.itamar_open_once_text(uuid) to authenticated;
 
 -- No background retention or expiration guarantee for secret text is implied.
 -- Apply a separate retention policy and threat model before public distribution.
+
+-- New RPC avoids altering the existing return signature, preserving older clients.
+create or replace function public.itamar_my_rooms_v2()
+returns table(id uuid,title text,kind text,owner_id uuid,muted boolean,
+  latest_at timestamptz,description text,avatar_path text)
+language sql stable security definer set search_path=public,pg_temp as $$
+  select r.id,r.title,r.kind,r.owner_id,m.muted,
+    (select max(msg.created_at) from public.itamar_messages msg where msg.room_id=r.id),
+    r.description,r.avatar_path
+  from public.itamar_rooms r join public.itamar_members m on m.room_id=r.id
+  where m.user_id=auth.uid()
+  order by 6 desc nulls last,r.created_at desc;
+$$;
+revoke all on function public.itamar_my_rooms_v2() from public;
+grant execute on function public.itamar_my_rooms_v2() to authenticated;
+
+-- Do not show read acknowledgement to senders who themselves disabled receipts.
+drop policy if exists "senders see receipts on their messages" on public.itamar_message_receipts;
+create policy "senders see receipts on their messages" on public.itamar_message_receipts
+ for select to authenticated using(
+   exists(select 1 from public.itamar_messages m
+      where m.id=message_id and m.sender_id=auth.uid())
+   and exists(select 1 from public.itamar_profiles p where p.id=auth.uid()
+       and p.read_receipts_enabled=true)
+ );
