@@ -329,20 +329,36 @@ function renderReaction(){
 const rpsChoices=['Rock','Paper','Scissors'];
 function renderRPS(){
  const a=$('itamar-game-area');if(!a||current!=='rps')return;a.replaceChildren();
- const g=saveData.extras.rps;a.append(make('h3','Rock Paper Scissors'));artwork(a,'rps');
- message(a,'You vs the computer. No wagers, just fun.');
- message(a,'Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties);
- const result=message(a,'Choose your move');
+ const g=saveData.extras.rps;g.history??=[];g.pending??=null;
+ a.append(make('h3','Rock Paper Scissors'));artwork(a,'rps');
+ const m=matchControls(a,'rps',()=>{g.history=[];g.pending=null;g.last='';save();renderRPS()});
+ message(a,'Player 1 wins: '+g.wins+' · Losses: '+g.losses+' · Draws: '+g.ties);
+ message(a,g.pending===null?(m.mode==='bot'?'Choose your move.':'Player 1: choose secretly.'):'Pass the device to Player 2. Their turn!');
+ const result=message(a,g.last||'');
  const row=make('div',undefined,'ios-row');
  for(let i=0;i<3;i++)row.append(button(['✊ Rock','✋ Paper','✌️ Scissors'][i],()=>{
-   const cpu=rand(0,2);const outcome=(i-cpu+3)%3===0?'tie':(i-cpu+3)%3===1?'win':'loss';
-   g[outcome==='win'?'wins':outcome==='loss'?'losses':'ties']++;
-   effect(outcome==='win'?'win':outcome==='loss'?'error':'move');if(outcome==='win')saveData.scores.rps++;
-   save();result.textContent='Computer chose '+rpsChoices[cpu]+'. '+(outcome==='win'?'You won!':outcome==='loss'?'Computer won.':'Tie!');
-   const score=a.querySelector?.('[data-score]');if(score)score.textContent='Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties;
+  if(m.mode==='friend'&&g.pending===null){
+   g.pending=i;g.last='Player 1 locked in a choice.';save();renderRPS();return
+  }
+  const mine=g.pending===null?i:g.pending;
+  let other=i;
+  if(m.mode==='bot'){
+   other=rand(0,2);
+   if(m.difficulty!=='easy'&&g.history.length){
+    const counts=[0,1,2].map(n=>g.history.filter(x=>x===n).length);
+    const predicted=counts.indexOf(Math.max(...counts));
+    if(Math.random()<(m.difficulty==='hard'?.85:.45))other=(predicted+1)%3;
+   }
+  }
+  const outcome=(mine-other+3)%3===0?'tie':(mine-other+3)%3===1?'win':'loss';
+  g[outcome==='win'?'wins':outcome==='loss'?'losses':'ties']++;
+  if(outcome==='win')saveData.scores.rps++;
+  g.last='Player 1: '+rpsChoices[mine]+' · '+(m.mode==='bot'?'Bot':'Player 2')+': '+rpsChoices[other]+'. '+(outcome==='win'?'Player 1 wins!':outcome==='loss'?(m.mode==='bot'?'Bot':'Player 2')+' wins!':'Draw!');
+  g.history.push(mine);g.pending=null;
+  effect(outcome==='win'?'win':outcome==='loss'?'error':'move');save();renderRPS();
  }));
  a.append(row);
- const total=message(a,'Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties);total.dataset.score='1';
+ a.append(button('New match',()=>{g.pending=null;g.history=[];g.last='';save();renderRPS()}));
 }
 function nextMath(){
  const g=saveData.extras.math;
