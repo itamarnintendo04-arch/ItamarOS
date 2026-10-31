@@ -32,3 +32,46 @@ Do **not** place Supabase service role keys, Apple certificate passwords, Apple 
 - There is no silent iOS IPA auto-update. The app checks [native-apps.json](../updates/native-apps.json) and may show a published *signed* version; distribution remains through supported signed installation methods.
 
 The iOS build workflow uploads an **unsigned IPA artifact**, which must be appropriately signed for an authorized device before installation. The source build passing CI is not a substitute for testing the backend and iPhone app together.
+
+
+## Connect extension status — iOS source 1.6.2 / Android source 1.7.0
+
+To activate connected messaging on a dedicated Supabase project, run these three SQL files in order:
+
+1. [migration.sql](supabase/migration.sql): profiles, private chats, channels, parent QR and basic RLS
+2. [extended-features.sql](supabase/extended-features.sql): synced contacts, opt-in verified-phone search, groups, polls and private media storage
+3. [message-experience.sql](supabase/message-experience.sql): profile/group photos and description, time-limited group invites, message edit/delete, sent/delivered/read receipts and one-time text messages
+
+**These migrations have NOT been executed against a live ItamarOS database.** Staging tests of RLS, privacy, permissions, group invitations, phone lookup, attachments and message receipts are mandatory before opening the service. The unrelated inactive Supabase project in the user's account was not touched.
+
+### Native client coverage
+
+| Feature | iPhone | Android | Current limitation |
+| --- | --- | --- | --- |
+| Chats, channels and groups | Implemented in source | Implemented in source | Real cross-device use needs the server |
+| Synced saved contacts, @username QR | Implemented in source | Implemented in source | No automatic uploading of the phone address book |
+| Verified phone lookup | Implemented in source | Implemented in source | Own number must be confirmed by SMS and discoverability opted in; rate-limited |
+| Group invites: link, QR, message, direct admin add | Implemented in source | Implemented in source | Signed-in invitee must accept; 48-hour link expiry |
+| Profile and group photos, description | Implemented in source | Implemented in source | Photos are public; group description optional |
+| Message edit and delete | Implemented in source | Implemented in source | Edit within 15 minutes; delete is a database soft-delete |
+| One or two gray checks / blue read checks | Implemented in source | Implemented in source | Valid server receipts required; optional read-receipt privacy |
+| View-once content | Text only | Text only | One-time photo and video are NOT yet supported |
+| Media, documents, vCards | Private 20 MB upload/download source | Private 20 MB upload source | Restricted MIME and size; no large-file streaming |
+| Web links | Open HTTPS/HTTP links | Open HTTPS/HTTP links | No preview/scanning yet |
+| Group polls | Implemented in source | Implemented in source | Requires database migration |
+| Language selection | Partial translations | Partial translations | Device language by default |
+
+### Not WhatsApp feature parity
+
+End-to-end encryption, video/voice calls, recorded voice notes, reactions, replies, status stories, media view-once safeguards, message forwarding, disappearing messages, moderation/reporting flows, spam detection and production anti-abuse policies are not complete. Do not describe this as fully equivalent to WhatsApp or ready as a public chat service.
+
+One-time text is delivered through a server function, not a permanently readable chat body. It does **not** prevent screen captures, manual copying or preservation outside the app. One-time media must not be implemented by merely hiding a shared Storage URL.
+
+Group/contact invite websites must be served by the current ItamarOS host before links work. Native custom-scheme links are best effort. Reliable Universal Links/App Links require verified HTTPS domain association.
+
+### Preview builds
+
+- [Unsigned IPA workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml)
+- [Android native debug APK workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml)
+
+A GitHub workflow URL is not a finished binary: only a successful run has a downloadable artifact. A debug APK is not a signed Play Store release, and an unsigned IPA needs appropriate Apple signing. Neither package can connect users before the backend is deployed and tested.
