@@ -1,6 +1,12 @@
 package org.itamaros.nativeapp
 
 import android.media.MediaPlayer
+import android.graphics.Movie
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.os.SystemClock
+import android.view.View
 import android.net.Uri
 import android.widget.ImageView
 import android.widget.MediaController
@@ -20,6 +26,44 @@ fun NativeMediaPreview(uri: Uri) {
     val context = LocalContext.current
     val type = remember(uri) { context.contentResolver.getType(uri).orEmpty() }
     when {
+        type == "image/gif" || uri.lastPathSegment?.lowercase()?.endsWith(".gif") == true -> {
+            // Android ImageView.setImageURI shows only the first GIF frame; use Movie
+            // to play the animation while keeping the original file on-device.
+            val movie = remember(uri) {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { Movie.decodeStream(it) }
+                } catch (_: Exception) { null }
+            }
+            if (movie == null) {
+                Text("This GIF could not be decoded on this device.")
+            } else {
+                AndroidView(
+                    factory = { viewContext ->
+                        object : View(viewContext) {
+                            private val framePaint = Paint(Paint.FILTER_BITMAP_FLAG)
+                            private val started = SystemClock.uptimeMillis()
+                            override fun onDraw(canvas: Canvas) {
+                                super.onDraw(canvas)
+                                val duration = movie.duration().takeIf { it > 0 } ?: 1000
+                                movie.setTime(((SystemClock.uptimeMillis() - started) % duration).toInt())
+                                val sx = width.toFloat() / movie.width().coerceAtLeast(1)
+                                val sy = height.toFloat() / movie.height().coerceAtLeast(1)
+                                val scale = minOf(sx, sy)
+                                val x = (width - movie.width() * scale) / 2f
+                                val y = (height - movie.height() * scale) / 2f
+                                canvas.save()
+                                canvas.translate(x, y)
+                                canvas.scale(scale, scale)
+                                movie.draw(canvas, 0f, 0f, framePaint)
+                                canvas.restore()
+                                postInvalidateDelayed(33)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp)
+                )
+            }
+        }
         type.startsWith("image/") -> {
             AndroidView(
                 factory = { viewContext ->
