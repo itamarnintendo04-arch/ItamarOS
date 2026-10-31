@@ -72,7 +72,7 @@ fun NativeAppScreen(
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 tabs.forEach { tab ->
                     FilledTonalButton(onClick = { current = tab }, modifier = Modifier.weight(1f)) {
-                        Text(tab, maxLines = 1)
+                        Text(AndroidLanguage.tab(tab), maxLines = 1)
                     }
                 }
             }
