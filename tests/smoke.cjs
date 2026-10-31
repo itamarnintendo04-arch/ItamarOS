@@ -137,7 +137,7 @@ class Element{
  pause(){this.paused=true}
  play(){this.paused=false;return Promise.resolve()}
  load(){}
- getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+ getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){},createLinearGradient(){return {addColorStop(){}}},save(){},restore(){},translate(){},rotate(){},moveTo(){},quadraticCurveTo(){},stroke(){},ellipse(){},rect(){}}}
  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
  querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if((selector==='[data-game]'&&e.dataset.game)||(selector==='[data-mini]'&&e.dataset.mini))found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
