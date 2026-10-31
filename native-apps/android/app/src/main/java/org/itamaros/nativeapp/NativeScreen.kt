@@ -66,7 +66,7 @@ fun NativeAppScreen(
 ) {
     var current by remember { mutableStateOf("Home") }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
-        else listOf("Home", "Games", "Player", "Apps", "Settings")
+        else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
     Scaffold { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -91,7 +91,7 @@ fun NativeAppScreen(
                                 contentDescription = "ItamarOS logo",
                                 modifier = Modifier.size(126.dp)
                             )
-                            Text("ItamarOS 1.3", style = MaterialTheme.typography.headlineLarge)
+                            Text("ItamarOS 1.7", style = MaterialTheme.typography.headlineLarge)
                             Text("Native Android application • Not a WebView", color = MaterialTheme.colorScheme.secondary)
                             Text("Device: $device", modifier = Modifier.padding(top = 14.dp))
                             Text(if (isTv) "Android TV / Google TV" else "Android phone or tablet")
@@ -99,6 +99,9 @@ fun NativeAppScreen(
                                 modifier = Modifier.padding(top = 20.dp))
                             Text("Privacy: no GPS permission; local game score remains on this device.")
                         }
+                    }
+                    "Connect" -> if (!isTv) item {
+                        AndroidConnectScreen()
                     }
                     "Games" -> item {
                         MobileGamesHub()
@@ -141,6 +144,7 @@ fun NativeAppScreen(
                         TVServiceScreen(onLaunchService)
                     }
                     "Settings" -> item {
+                        if (!isTv) AndroidLanguageSettings()
                         NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
                             onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings)
                     }
