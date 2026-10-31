@@ -10,6 +10,7 @@ struct ItamarOSApp: App {
     @StateObject private var cloud = ItamarCloudService()
     @State private var parentRoute: ItamarParentRoute?
     @State private var contactRoute: ItamarContactRoute?
+    @State private var groupRoute: ItamarGroupRoute?
     #endif
 
     @ViewBuilder
@@ -32,6 +33,10 @@ struct ItamarOSApp: App {
                           (3...24).contains(username.count),
                           username.allSatisfy({ $0.isASCII && ($0.isLowercase || $0.isNumber || $0 == "_" || $0 == ".") }) {
                     contactRoute = ItamarContactRoute(username: username)
+                } else if url.host?.lowercased() == "group",
+                          let token = components?.queryItems?.first(where: { $0.name == "invite" })?.value,
+                          token.count == 48, token.allSatisfy({ $0.isHexDigit }) {
+                    groupRoute = ItamarGroupRoute(token: token)
                 }
             }
             .sheet(item: $contactRoute) { route in
@@ -43,6 +48,15 @@ struct ItamarOSApp: App {
                         ContentUnavailableView("Connect not configured", systemImage: "person.crop.circle",
                             description: Text("An online account is needed to save this contact."))
                     }
+                }
+            }
+            .sheet(item: $groupRoute) { route in
+                if ItamarCloudConfig.enabled {
+                    ItamarAcceptGroupInviteView(token:route.token)
+                        .environmentObject(cloud)
+                } else {
+                    ContentUnavailableView("Cloud unavailable",systemImage:"person.3",
+                        description:Text("An online account is needed to join a group."))
                 }
             }
             .sheet(item: $parentRoute) { route in
