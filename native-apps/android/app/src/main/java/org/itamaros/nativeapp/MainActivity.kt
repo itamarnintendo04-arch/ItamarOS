@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
     private var selectedApkName by mutableStateOf<String?>(null)
     private var bestScore by mutableIntStateOf(0)
     private var updateStatus by mutableStateOf("Not checked yet")
+    private var incomingGroupInvite by mutableStateOf<String?>(null)
+    private var incomingContact by mutableStateOf<String?>(null)
     private var isTv = false
     private val prefs by lazy { getSharedPreferences("itamaros_native", MODE_PRIVATE) }
 
@@ -117,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        processIncomingLink(intent)
         val uiMode = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         isTv = uiMode.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
             packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
@@ -126,6 +129,8 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 NativeAppScreen(
                     isTv = isTv,
+                    groupInvite = incomingGroupInvite,
+                    contactUsername = incomingContact,
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
@@ -151,6 +156,24 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        processIncomingLink(intent)
+    }
+
+    private fun processIncomingLink(incoming: Intent?) {
+        val uri = incoming?.data ?: return
+        if (uri.scheme != "itamaros") return
+        if (uri.host == "group") {
+            val code = uri.getQueryParameter("invite")
+            incomingGroupInvite = code?.takeIf { it.matches(Regex("[a-f0-9]{48}")) }
+        } else if (uri.host == "contact") {
+            val user = uri.getQueryParameter("username")
+            incomingContact = user?.takeIf { it.matches(Regex("[a-z0-9_.]{3,24}")) }
         }
     }
 
