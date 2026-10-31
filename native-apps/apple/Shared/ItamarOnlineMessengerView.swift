@@ -2,6 +2,7 @@
 import SwiftUI
 import CoreImage.CIFilterBuiltins
 import UserNotifications
+import PhotosUI
 import UniformTypeIdentifiers
 
 // The connected mode is enabled only after the project owner configures a
@@ -197,10 +198,36 @@ struct ItamarCloudProfileView: View {
     @State private var busy = false
     @State private var showFamily = false
     @State private var permissionText = ""
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var avatarPath: String?
+    @State private var readReceipts = true
 
     var body: some View {
         Form {
             Section("Public profile") {
+                if let url = cloud.publicAvatarURL(avatarPath) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: { ProgressView() }
+                    .frame(width:90,height:90).clipShape(Circle())
+                }
+                PhotosPicker(selection:$avatarItem,matching:.images) {
+                    Label("Choose profile photo",systemImage:"camera")
+                }
+                .onChange(of:avatarItem) { _,new in
+                    guard let new else { return }
+                    Task {
+                        do {
+                            guard let data=try await new.loadTransferable(type:Data.self),
+                                  let image=UIImage(data:data),
+                                  let jpeg=image.jpegData(compressionQuality:0.65) else {
+                                throw ItamarCloudError.badResponse("Unable to open photo")
+                            }
+                            avatarPath=try await cloud.uploadAvatarJPEG(jpeg)
+                            try await cloud.updateProfilePreferences(avatar:avatarPath,receipts:readReceipts)
+                        } catch { error=error.localizedDescription }
+                    }
+                }
                 TextField("Display name", text: $name)
                 TextField("Unique username", text: $username)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -220,6 +247,15 @@ struct ItamarCloudProfileView: View {
             }
             if !required {
                 Section("Chats and notifications") {
+                    Toggle("Send and receive read receipts",isOn:$readReceipts)
+                        .onChange(of:readReceipts) { _,enabled in
+                            Task {
+                                do { try await cloud.updateProfilePreferences(avatar:avatarPath,receipts:enabled) }
+                                catch { error=error.localizedDescription }
+                            }
+                        }
+                    Text("Turning off read receipts prevents others seeing your blue checks and prevents you seeing theirs.")
+                        .font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Synced contacts, usernames and phone invitations") { ItamarConnectContactsView() }
                     NavigationLink("My shareable QR code") { ItamarMyContactQRView() }
                     NavigationLink("Verify my phone and discovery privacy") { ItamarPhoneSettingsView() }
@@ -264,6 +300,8 @@ struct ItamarCloudProfileView: View {
             name = cloud.profile?.display_name ?? ""
             username = cloud.profile?.username ?? ""
             about = cloud.profile?.about ?? ""
+            avatarPath = cloud.profile?.avatar_path
+            readReceipts = cloud.profile?.read_receipts_enabled ?? true
         }
         .sheet(isPresented: $showFamily) {
             NavigationStack { ItamarCloudParentInviteView() }
