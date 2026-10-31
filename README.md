@@ -1,8 +1,32 @@
-# ◈ ItamarOS — Version 1.1
+# ◈ ItamarOS — Version 1.6
 
 **ItamarOS** is a personal operating-system project featuring a PC desktop edition, an installable desktop demonstration, and a responsive browser emulator.
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
+
+## iPhone/iPad downloads — version archive
+
+The current native iOS source version is **1.6.0**. The iOS 1.6 package is built as an **unsigned IPA** by GitHub Actions, not a signed release. **A workflow link is not a claim that the build succeeded or that an IPA is already downloadable.** To obtain it, open the workflow, select **Run workflow**, wait for a successful run, and download the **ItamarOS-iOS-1.6-unsigned-IPA** artifact from the run page (GitHub sign-in may be required). A successful build may still need validation and appropriate Apple-issued signing before installing on a device.
+
+- [Build/download iOS 1.6 unsigned IPA (GitHub Actions)](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml)
+- [iOS 1.6 SwiftUI source](native-apps/apple/) · [iOS app build instructions](native-apps/apple/README.md)
+- [All published GitHub Releases (including older builds where available)](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
+
+### Previous versions
+
+These links are **version-specific GitHub release searches**, not direct IPA downloads. A version remains listed even when no downloadable IPA has been published for it. Older releases are never deleted by this documentation change.
+
+| Version | Previous version / downloads | Availability note |
+| --- | --- | --- |
+| **1.6** | [Unsigned iOS build workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml) | Build on demand; not a signed release |
+| **1.5** | [Find 1.5 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.5) | IPA publication not verified |
+| **1.4** | [Find 1.4 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.4) | IPA publication not verified |
+| **1.3** | [Find 1.3 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.3) | Android debug preview is referenced in the [version manifest](updates/native-apps.json); iOS IPA not verified |
+| **1.2** | [Find 1.2 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.2) | IPA publication not verified |
+| **1.1** | [Windows demo v1.1](https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/v1.1-demo) · [Other 1.1 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.1) | Windows demo is not an iOS IPA |
+| **1.0** | [Find 1.0 releases](https://github.com/itamarnintendo04-arch/ItamarOS/releases?q=1.0) | IPA publication not verified |
+
+> **Installation:** Unsigned IPAs cannot be installed by simply opening them in Files. Building an IPA does not automatically sign, distribute or install it, and native iOS builds are independent of the browser demo.
 
 ## Editions
 
