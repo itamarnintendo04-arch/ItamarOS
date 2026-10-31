@@ -35,7 +35,10 @@ for(const x of ['Shared/ItamarOSApp.swift','Shared/NativeGameView.swift','Shared
 }
 const nativeMedia=read(appleRoot+'/Shared/LocalMediaView.swift');
 assert.match(nativeMedia,/PhotosPicker\(/,'iOS player must allow choosing media from Photos');
-assert.match(nativeMedia,/\.image, \.movie, \.audio/,'Apple Files picker must allow image, video and audio');
+assert.match(nativeMedia,/\.image, \.gif, \.movie, \.audio/,'Apple Files picker must allow animated GIFs, images, video and audio');
+assert.match(nativeMedia,/AnimatedGIFView\(data:/,'Native player must render animated GIF frames');
+assert.ok(exists(appleRoot+'/Shared/AnimatedGIFView.swift'),'Real native GIF frame player is included');
+assert.match(read(appleRoot+'/Shared/ExtraMobileGames.swift'),/DragGesture\(minimumDistance:/,'2048 and Snake must support finger dragging');
 assert.match(nativeMedia,/VideoPlayer\(/,'Apple video playback should use AVKit');
 const appleSignIn=read(appleRoot+'/Shared/AppleAccountSignInView.swift');
 assert.match(appleSignIn,/SignInWithAppleButton/,'Apple sign-in uses AuthenticationServices');
