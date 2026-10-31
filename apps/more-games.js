@@ -79,7 +79,27 @@ function connect(box){
  const grid=el('div');grid.style.cssText='display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:4px;max-width:440px;margin:12px auto;background:#2861aa;padding:6px;border-radius:10px';box.append(grid);
  const won=(board,color,x,y)=>[[1,0],[0,1],[1,1],[1,-1]].some(([dx,dy])=>{let n=1;for(const sign of [-1,1]){let px=x+dx*sign,py=y+dy*sign;while(px>=0&&px<7&&py>=0&&py<6&&board[py*7+px]===color){n++;px+=dx*sign;py+=dy*sign}}return n>=4});
  const draw=()=>{grid.replaceChildren();for(let row=0;row<6;row++)for(let column=0;column<7;column++){const token=g.board[row*7+column];const b=button(token===1?'🔴':token===2?'🟡':'⚪',()=>drop(column));b.style.cssText='padding:4px;min-width:0;font-size:clamp(18px,4vw,31px);background:#4479c3;color:#fff';b.setAttribute('aria-label','Column '+(column+1)+' row '+(row+1));grid.append(b)}status.textContent=g.winner===3?'Draw!':g.winner?'Winner: '+(g.winner===1?'Red':'Yellow'):'Turn: '+(g.turn===1?'Red':'Yellow')};
- function drop(column){if(g.winner)return;let row=-1;for(let y=5;y>=0;y--)if(!g.board[y*7+column]){row=y;break}if(row<0)return;g.board[row*7+column]=g.turn;if(won(g.board,g.turn,column,row)){g.winner=g.turn;data.stats??={};const key=g.turn===1?'connectRed':'connectYellow';data.stats[key]=(data.stats[key]||0)+1}else if(g.board.every(Boolean))g.winner=3;else g.turn=g.turn===1?2:1;save();draw()}
+ function drop(column){if(g.winner)return;let row=-1;for(let y=5;y>=0;y--)if(!g.board[y*7+column]){row=y;break}if(row<0)return;g.board[row*7+column]=g.turn;if(won(g.board,g.turn,column,row)){window.ItamarGameUX?.sound('win');g.winner=g.turn;data.stats??={};const key=g.turn===1?'connectRed':'connectYellow';data.stats[key]=(data.stats[key]||0)+1}else if(g.board.every(Boolean))g.winner=3;else g.turn=g.turn===1?2:1;save();draw()}
+ // A disk can be dragged across the board and released over a column.
+ let dragStart=null;
+ grid.style.touchAction='none';
+ grid.addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;
+  dragStart={x:event.clientX,y:event.clientY,id:event.pointerId};
+  try{grid.setPointerCapture(event.pointerId)}catch{}
+ });
+ grid.addEventListener('pointerup',event=>{
+  if(!dragStart||dragStart.id!==event.pointerId)return;
+  const moved=Math.hypot(event.clientX-dragStart.x,event.clientY-dragStart.y);
+  dragStart=null;
+  if(moved<12||g.winner)return;
+  const bounds=grid.getBoundingClientRect();
+  const column=Math.max(0,Math.min(6,Math.floor((event.clientX-bounds.left)/bounds.width*7)));
+  window.ItamarGameUX?.sound('move');
+  drop(column);
+ });
+ grid.addEventListener('pointercancel',()=>{dragStart=null});
+ box.append(section('Tap a slot or drag across the board to choose a column.'));
  draw();box.append(button('New round',()=>{data.connect={board:Array(42).fill(0),turn:1,winner:0};save();show('connect')}));
  box.append(section('Red wins: '+(data.stats?.connectRed||0)+' · Yellow wins: '+(data.stats?.connectYellow||0)))
 }
