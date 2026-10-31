@@ -35,7 +35,7 @@ assert.match(manifest.version,/^\d+\.\d+\.\d+$/);
 assert.deepEqual(manifest.components.map(x=>x.id),['itamaros-web','itamaros-player','itamaros-games']);
 assert.equal(manifest.installers.length,0,'Do not advertise non-existent native installers');
 assert.equal(pwa.display,'standalone');
-for(const file of ['apps/player.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
+for(const file of ['apps/player.js','apps/game-art.js','apps/game-audio.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/updates.js','sw.js','desktop-app/main.js','desktop/main.cjs','desktop/preload.cjs','desktop/prepare.cjs']){
  new vm.Script(load(file),{filename:file});
 }
 const inline=/<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/g;let count=0,m;
@@ -82,7 +82,7 @@ assert.ok(downloads.includes('id="ios-signing-service"'),'External signing tool 
 assert.ok(downloads.includes('https://sideloadly.io/'),'Signing tool link must use its official verified domain');
 assert.ok(downloads.includes('id="ios-ipa-picker"'),'User can select a local IPA without uploading to this site');
 assert.ok(downloads.includes('id="ios-share-file"'),'Share IPA only using a real device share action');
-assert.ok(downloads.includes('v1.5-ios-unsigned'),'Browser must verify a real unsigned iOS release');
+assert.ok(downloads.includes('v1.6-ios-unsigned'),'Browser must verify a real unsigned iOS release');
 assert.ok(downloads.includes('altstore-classic://source?url='),'Handoff must use the configured external signer source');
 assert.ok(downloads.includes('a.size>0'),'Browser must verify a nonempty IPA asset before linking');
 assert.ok(downloads.includes('only one may be selected'),'App profile selection must disclose one active slot');
@@ -137,7 +137,7 @@ function setup(){
  return {content,document,data,timers,context};
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
-const game=setup();vm.runInNewContext(load('apps/games.js'),game.context);
+const game=setup();vm.runInNewContext(load('apps/game-art.js'),game.context);vm.runInNewContext(load('apps/game-audio.js'),game.context);vm.runInNewContext(load('apps/games.js'),game.context);
 vm.runInNewContext(load('apps/more-games.js'),game.context);
 assert.equal(typeof game.context.window.ItamarGames.mount,'function');
 game.context.window.ItamarGames.mount();
@@ -145,8 +145,22 @@ assert.equal(all(game.content,e=>Boolean(e.dataset.mini)).length,6,'Expected six
 assert.equal(game.content.querySelectorAll('[data-mini]').length,6,'Extra game switcher accessible');
 let saved=JSON.parse(game.data.get('itamaros-games-v1'));
 assert.equal(saved.game2048.board.filter(Boolean).length,2);
+assert.ok(html.includes('/apps/game-art.js?v=1.6.0'),'Original vector game artwork must load on web');
+assert.ok(html.includes('/apps/game-audio.js?v=1.6.0'),'Licensed game audio module must load on web');
+assert.ok(load('apps/player.js').includes('image/*,.gif'),'Player picker must accept animated GIF and images');
+assert.ok(load('apps/player.js').includes('ios-media-image'),'Player must display images with native img animation rather than video element');
+assert.ok(load('apps/games.js').includes("addEventListener('pointerdown'"),'Games must support PointerEvent swipe and drag gestures');
+assert.ok(load('apps/games.js').includes("swipe(grid,play2048)"),'2048 board must support direct swipe play');
+assert.ok(load('apps/games.js').includes("swipe(c,d=>"),'Cartoon Snake must be steered by continuous finger dragging');
+assert.ok(load('apps/more-games.js').includes("addEventListener('pointerup'"),'Connect Four must permit dragged token placement');
+assert.ok(load('apps/game-art.js').includes("const cherry="),'Snake artwork needs a cartoon cherry, not a plain red circle');
+assert.ok(load('apps/game-audio.js').includes("/assets/sfx/"),'Real CC0 WAV audio must be used');
+assert.ok(load('.github/workflows/vendor-game-sfx.yml').includes('4596a49eaf5a533948d49a47467f606bcdea70ff'),'Kenney audio must be fetched from pinned CC0 source');
+assert.ok(load('desktop/prepare.cjs').includes('apps/game-art.js'),'Offline desktop must bundle original vector artwork');
+
 const tabs=all(game.content,e=>Boolean(e.dataset.game));tabs.find(e=>e.dataset.game==='snake').events.click();
 assert.ok(game.document.getElementById('snake-board'));
+assert.ok(all(game.content,e=>e.className==='ios-game-illustration').length>0,'Illustrated Snake banner should be rendered');
 const start=all(game.content,e=>e.textContent==='Start / Pause')[0];assert.ok(start);
 start.events.click();
 saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.snake.running,true);

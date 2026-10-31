@@ -6,7 +6,23 @@ let current='2048',root=null,timer=null,flipTimeout=null;
 const icons=['🍀','🌈','⭐','🎯','🎵','🚀','🐱','🌟'];
 const $=id=>document.getElementById(id);
 const make=(tag,txt,cls)=>{const node=document.createElement(tag);if(txt!==undefined)node.textContent=txt;if(cls)node.className=cls;return node};
-const button=(txt,fn)=>{const b=make('button',txt);b.type='button';b.addEventListener('click',fn);return b};
+const button=(txt,fn)=>{const b=make('button',txt);b.type='button';b.addEventListener('click',()=>{window.ItamarGameAudio?.play('tap');fn()});return b};
+const effect=kind=>window.ItamarGameAudio?.play(kind);
+const artwork=(area,game)=>window.ItamarGameArt?.decorate(area,game);
+// Pointer gestures work with touch, pen and mouse. Keyboard remains accessible.
+function swipe(element,onDirection,continuous=false){
+ let start=null,last=null;
+ const direction=(dx,dy)=>{
+  if(Math.max(Math.abs(dx),Math.abs(dy))<17)return false;
+  onDirection(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
+  return true;
+ };
+ element.style.touchAction='none';
+ element.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;start={x:e.clientX,y:e.clientY,id:e.pointerId};last={x:e.clientX,y:e.clientY};element.setPointerCapture?.(e.pointerId)});
+ element.addEventListener('pointermove',e=>{if(!start||start.id!==e.pointerId||!continuous)return;if(direction(e.clientX-last.x,e.clientY-last.y))last={x:e.clientX,y:e.clientY}});
+ element.addEventListener('pointerup',e=>{if(start&&start.id===e.pointerId){if(!continuous)direction(e.clientX-start.x,e.clientY-start.y);else direction(e.clientX-last.x,e.clientY-last.y)}start=null;last=null});
+ element.addEventListener('pointercancel',()=>{start=null;last=null});
+}
 const empty2048=()=>Array(16).fill(0);
 function defaults(){return {scores:{'2048':0,snake:0,memory:0,tictactoe:0,reaction:0,guess:0,rps:0,math:0,word:0,pattern:0},extras:{guess:{target:0,tries:0,last:''},rps:{wins:0,losses:0,ties:0},math:{correct:0,total:0,question:null},word:{completed:0,current:0},pattern:{wins:0,level:0,sequence:[]}},game2048:{board:empty2048(),score:0,over:false},snake:{body:[{x:5,y:7},{x:4,y:7},{x:3,y:7}],food:{x:10,y:7},dir:{x:1,y:0},next:{x:1,y:0},score:0,over:false,running:false},memory:{cards:[],matched:[],moves:0,finished:false},tictactoe:{board:Array(9).fill(''),turn:'X',winner:'',wins:{X:0,O:0,tie:0}}}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return defaults();const d=defaults();for(const k of Object.keys(d))if(k in s&&s[k]&&typeof s[k]==='object')d[k]={...d[k],...s[k]};if(!Array.isArray(d.game2048.board)||d.game2048.board.length!==16)d.game2048=defaults().game2048;if(!Array.isArray(d.tictactoe.board)||d.tictactoe.board.length!==9)d.tictactoe=defaults().tictactoe;if(!Array.isArray(d.snake.body)||!d.snake.body.length)d.snake=defaults().snake;return d}catch{return defaults()}}
@@ -18,7 +34,11 @@ function mount(){
  stopTimers();root=$('content');if(!root)return;root.replaceChildren();
  const wrapper=make('section',undefined,'ios-feature');wrapper.id='itamar-games';root.append(wrapper);
  wrapper.append(make('h2','🎮 ItamarOS Games'));
- wrapper.append(make('p','Play instantly. Your scores and progress are saved in this browser. No account or download required.','ios-caption'));
+ wrapper.append(make('p','Play instantly with colorful artwork, swipe controls and optional CC0 sound effects. Local scores stay saved on this device.','ios-caption'));
+ const sound=button('🔊 Sound: '+(window.ItamarGameAudio?.isEnabled()===false?'Off':'On'),()=>{
+  const on=window.ItamarGameAudio?.toggle();
+  sound.textContent='🔊 Sound: '+(on?'On':'Off');
+ });sound.setAttribute('aria-label','Toggle game sound effects');wrapper.append(sound);
  const bar=make('div',undefined,'ios-row');
  for(const [id,name] of [['2048','🔢 2048'],['snake','🐍 Snake'],['memory','🧠 Memory Match'],['tictactoe','⭕ Tic-Tac-Toe'],['guess','🎯 Guess'],['reaction','⚡ Reaction'],['rps','✂️ Rock Paper Scissors'],['math','🧠 Math Sprint'],['word','🔤 Word Mix'],['pattern','🎨 Pattern Memory']]){
   const b=button(name,()=>switchTo(id));b.dataset.game=id;bar.append(b)
@@ -51,21 +71,20 @@ function play2048(direction){
  if(before===g.board.join(','))return;
  spawn(g.board);saveData.scores['2048']=Math.max(saveData.scores['2048'],g.score);
  if(!g.board.includes(0)){g.over=!['up','down','left','right'].some(d=>canMove(g.board,d))}
- save();render2048();
+ effect('move');save();render2048();
 }
 function canMove(board){if(board.includes(0))return true;for(let i=0;i<16;i++){if(i%4<3&&board[i]===board[i+1])return true;if(i<12&&board[i]===board[i+4])return true}return false}
 function render2048(){
  const a=$('itamar-game-area');if(!a||current!=='2048')return;a.replaceChildren();
  const g=saveData.game2048;if(g.board.every(v=>v===0)){spawn(g.board);spawn(g.board);save()}
- a.append(make('h3','2048 · Merge matching tiles'));
+ a.append(make('h3','2048 · Merge matching tiles'));artwork(a,'2048');
  a.append(make('p','Score: '+g.score+' · Best: '+saveData.scores['2048']));
  const grid=make('div',undefined,'ios-board ios-2048');for(const n of g.board){const tile=make('div',n||'');if(n)tile.dataset.number=n;grid.append(tile)}a.append(grid);
- const controls=make('div',undefined,'ios-dpad');
- controls.append(make('span'),button('↑',()=>play2048('up')),make('span'),button('←',()=>play2048('left')),button('↓',()=>play2048('down')),button('→',()=>play2048('right')));
- a.append(controls);
+ swipe(grid,play2048);
+ a.append(make('p','Swipe the tile board in any direction, or use arrow keys on a computer.','ios-caption'));
  if(g.over)a.append(make('p','No moves left. Start a new game.','ios-danger'));
  a.append(button('New 2048 game',()=>{if(confirm('Start a new 2048 game? Your best score remains saved.'))reset2048()}));
- a.append(make('p','Use arrow keys or the on-screen arrows to slide tiles.','ios-caption'));
+ // No on-screen direction buttons; the grid itself is the gesture controller.
 }
 const SIDE=16;
 function randomFood(body){const occupied=new Set(body.map(p=>p.x+','+p.y)),spaces=[];for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++)if(!occupied.has(x+','+y))spaces.push({x,y});return spaces.length?spaces[Math.floor(Math.random()*spaces.length)]:null}
@@ -77,37 +96,57 @@ function snakeTick(){
  const eat=head.x===g.food?.x&&head.y===g.food?.y;
  const occupied=eat?g.body:g.body.slice(0,-1);
  if(head.x<0||head.y<0||head.x>=SIDE||head.y>=SIDE||occupied.some(p=>p.x===head.x&&p.y===head.y)){
-  g.over=true;g.running=false;stopTimers();save();drawSnake();updateSnakeText();return
+  g.over=true;g.running=false;stopTimers();effect('gameover');save();drawSnake();updateSnakeText();return
  }
  g.body.unshift(head);
- if(eat){g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);g.food=randomFood(g.body);if(!g.food){g.over=true;g.running=false;stopTimers()}}else g.body.pop();
+ if(eat){effect('collect');g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);g.food=randomFood(g.body);if(!g.food){g.over=true;g.running=false;stopTimers()}}else g.body.pop();
  save();drawSnake();updateSnakeText();
 }
 function startSnake(){const g=saveData.snake;if(g.over){snakeReset();return}g.running=!g.running;if(g.running){timer=setInterval(()=>{if(!$('snake-board')||!document.contains($('snake-board'))||$('window')?.classList.contains('hidden')){stopTimers();g.running=false;save();return}snakeTick()},140)}else stopTimers();save();renderSnake()}
 function updateSnakeText(){const p=$('snake-score');if(p){const g=saveData.snake;p.textContent='Score: '+g.score+' · Best: '+saveData.scores.snake+(g.over?' · Game over':'')}}
 function drawSnake(){
- const c=$('snake-board');if(!c)return;
- const ctx=c.getContext('2d');const cell=c.width/SIDE;
- ctx.fillStyle='#0c2541';ctx.fillRect(0,0,c.width,c.height);
- ctx.fillStyle='#a9c4e5';for(let k=1;k<SIDE;k++){ctx.fillRect(k*cell,0,1,c.height);ctx.fillRect(0,k*cell,c.width,1)}
- const g=saveData.snake;
- if(g.food){ctx.fillStyle='#f79970';ctx.beginPath();ctx.arc((g.food.x+.5)*cell,(g.food.y+.5)*cell,cell*.39,0,Math.PI*2);ctx.fill()}
- g.body.forEach((p,i)=>{ctx.fillStyle=i===0?'#b9f8b4':'#61d296';ctx.fillRect(p.x*cell+2,p.y*cell+2,cell-4,cell-4)});
+ const canvas=$('snake-board');if(!canvas)return;
+ const ctx=canvas.getContext('2d');const cell=canvas.width/SIDE;
+ const ball=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
+ for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++){
+  ctx.fillStyle=(x+y)%2?'#d2f7c5':'#e6ffdb';
+  ctx.fillRect(x*cell,y*cell,cell,cell);
+ }
+ const game=saveData.snake;
+ if(game.food){
+  const x=(game.food.x+.5)*cell,y=(game.food.y+.58)*cell;
+  ball(x-5,y,cell*.28,'#e53c62');ball(x+5,y,cell*.28,'#ff547a');
+  ball(x-8,y-5,cell*.08,'#ffd1dc');
+  ctx.fillStyle='#855833';ctx.fillRect(x-1,y-cell*.64,3,cell*.36);
+  ball(x+5,y-cell*.46,cell*.17,'#49b768');
+ }
+ game.body.slice().reverse().forEach((p,rev)=>{
+  const head=rev===game.body.length-1;
+  const x=(p.x+.5)*cell,y=(p.y+.5)*cell;
+  ball(x,y,cell*(head?.51:.43),head?'#158e6a':'#338f72');
+  ball(x,y-1,cell*(head?.46:.37),head?'#80e58b':'#71d997');
+  if(!head)ball(x-4,y-5,cell*.09,'#b9f8bd');
+ });
+ const head=game.body[0],hx=(head.x+.5)*cell,hy=(head.y+.5)*cell;
+ // Two oversized eyes and tiny pupils give the snake a cartoon face.
+ const dx=game.dir.x,dy=game.dir.y;
+ const ox=dy!==0?6:dx*3,oy=dx!==0?6:dy*3;
+ for(const sign of [-1,1]){
+  const ex=hx+(dx*3)+(dy!==0?sign*ox:0)+(dx!==0?0:0);
+  const ey=hy+(dy*3)+(dx!==0?sign*oy:0);
+  ball(ex,ey,cell*.145,'#ffffff');ball(ex+dx*2,ey+dy*2,cell*.075,'#263f4d');
+ }
+ ball(hx+dx*6,hy+dy*6,cell*.07,'#e76480');
 }
 function renderSnake(){
  const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
  const g=saveData.snake;
- a.append(make('h3','Snake'));
+ a.append(make('h3','Snake'));artwork(a,'snake');
  const score=make('p','', 'ios-caption');score.id='snake-score';a.append(score);
  const c=make('canvas',undefined,'ios-snake');c.id='snake-board';c.width=400;c.height=400;c.setAttribute('aria-label','Snake play board');a.append(c);drawSnake();updateSnakeText();
- const controls=make('div',undefined,'ios-dpad');
- controls.append(make('span'),button('↑',()=>snakeDirection(0,-1)),make('span'),button('←',()=>snakeDirection(-1,0)),button('↓',()=>snakeDirection(0,1)),button('→',()=>snakeDirection(1,0)));
- a.append(controls);
+ swipe(c,d=>{const v={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[d];snakeDirection(...v)},true);
  a.append(button(g.over?'Try again':'Start / Pause',startSnake),button('New game',()=>{if(confirm('Start a new Snake game?'))snakeReset()}));
- a.append(make('p','Arrow keys or touch controls; avoid the walls and your tail.','ios-caption'));
- // mobile swipe support
- let start=null;c.addEventListener('touchstart',e=>{if(e.touches.length===1)start={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
- c.addEventListener('touchend',e=>{if(!start||!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;start=null;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))snakeDirection(Math.sign(dx),0);else snakeDirection(0,Math.sign(dy))},{passive:true});
+ a.append(make('p','Drag your finger along the board to steer the cartoon snake. Keyboard arrows also work.','ios-caption'));
 }
 function randomize(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]]}return array}
 function memoryReset(){saveData.memory={cards:randomize(icons.flatMap(x=>[x,x])),matched:[],moves:0,finished:false};save();renderMemory()}
@@ -119,7 +158,7 @@ function memoryPick(i){
    g.moves++;
    if(g.cards[showing[0]]===g.cards[showing[1]]){
     g.matched.push(...showing);showing=[];
-    if(g.matched.length===g.cards.length){g.finished=true;saveData.scores.memory=saveData.scores.memory?Math.min(saveData.scores.memory,g.moves):g.moves}
+    effect('collect');if(g.matched.length===g.cards.length){effect('win');g.finished=true;saveData.scores.memory=saveData.scores.memory?Math.min(saveData.scores.memory,g.moves):g.moves}
     save();renderMemory()
    }else{save();flipTimeout=setTimeout(()=>{showing=[];renderMemory()},850)}
  }
@@ -127,7 +166,7 @@ function memoryPick(i){
 function renderMemory(){
  const a=$('itamar-game-area');if(!a||current!=='memory')return;a.replaceChildren();const g=saveData.memory;
  if(!g.cards.length){memoryReset();return}
- a.append(make('h3','Memory Match'));
+ a.append(make('h3','Memory Match'));artwork(a,'memory');
  a.append(make('p','Moves: '+g.moves+' · Best completion: '+(saveData.scores.memory||'—')+' moves'));
  const grid=make('div',undefined,'ios-board ios-memory');
  g.cards.forEach((symbol,i)=>{const flipped=g.matched.includes(i)||showing.includes(i);const b=button(flipped?symbol:'?',()=>memoryPick(i));b.setAttribute('aria-label','Memory card '+(i+1)+(flipped?', '+symbol:''));b.classList.toggle('found',g.matched.includes(i));if(g.matched.includes(i))b.disabled=true;grid.append(b)});
@@ -137,10 +176,10 @@ function renderMemory(){
 }
 const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function tictactoeResult(board){for(const line of lines){const [a,b,c]=line;if(board[a]&&board[a]===board[b]&&board[a]===board[c])return board[a]}return board.every(Boolean)?'tie':''}
-function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
+function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){effect('win');g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
 function renderTicTacToe(){
  const a=$('itamar-game-area');if(!a||current!=='tictactoe')return;a.replaceChildren();const g=saveData.tictactoe;
- a.append(make('h3','Tic-Tac-Toe · 2 players'));
+ a.append(make('h3','Tic-Tac-Toe · 2 players'));artwork(a,'tictactoe');
  a.append(make('p',g.winner?(g.winner==='tie'?'Draw!':'Winner: '+g.winner):'Turn: '+g.turn));
  const board=make('div',undefined,'ios-board');board.style.gridTemplateColumns='repeat(3,1fr)';board.style.maxWidth='300px';
  g.board.forEach((v,i)=>{const b=button(v||'·',()=>ticMove(i));b.style.cssText='aspect-ratio:1;font-size:32px;min-height:70px';b.disabled=Boolean(v||g.winner);board.append(b)});a.append(board);
@@ -153,13 +192,13 @@ function message(area,text){const p=make('p',text,'ios-caption');area.append(p);
 function renderGuess(){
  const a=$('itamar-game-area');if(!a||current!=='guess')return;
  const g=saveData.extras.guess;if(!g.target){g.target=rand(1,100);g.tries=0;g.last='';save()}
- a.replaceChildren();a.append(make('h3','Guess the number'));
+ a.replaceChildren();a.append(make('h3','Guess the number'));artwork(a,'guess');
  message(a,'A secret number from 1 to 100. Try to find it!');
  message(a,'Attempts: '+g.tries+' · Best (fewest): '+(saveData.scores.guess||'—'));
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='number';input.min='1';input.max='100';input.placeholder='1–100';input.setAttribute('aria-label','Your guess');row.append(input);
  const submit=()=>{
   const value=Number(input.value);if(!Number.isInteger(value)||value<1||value>100)return;
-  g.tries++;if(value===g.target){g.last='Correct! It took '+g.tries+' attempts.';if(!saveData.scores.guess||g.tries<saveData.scores.guess)saveData.scores.guess=g.tries;g.target=0}else g.last=value<g.target?'Too low!':'Too high!';
+  g.tries++;if(value===g.target){effect('win');g.last='Correct! It took '+g.tries+' attempts.';if(!saveData.scores.guess||g.tries<saveData.scores.guess)saveData.scores.guess=g.tries;g.target=0}else g.last=value<g.target?'Too low!':'Too high!';
   save();renderGuess()
  };
  row.append(button('Guess',submit));a.append(row);
@@ -169,7 +208,7 @@ function renderGuess(){
 let reactionReadyAt=0,reactionStart=0;
 function renderReaction(){
  const a=$('itamar-game-area');if(!a||current!=='reaction')return;
- a.replaceChildren();a.append(make('h3','Reaction timer'));
+ a.replaceChildren();a.append(make('h3','Reaction timer'));artwork(a,'reaction');
  message(a,'Press Start, then wait for the button to turn green. Do not press too early.');
  message(a,'Fastest time: '+(saveData.scores.reaction?saveData.scores.reaction+' ms':'—'));
  const result=message(a,'Ready?');
@@ -177,7 +216,7 @@ function renderReaction(){
   if(b.textContent==='Start'){
     clearTimeout(flipTimeout);b.textContent='Wait…';result.textContent='Wait for green!';
     reactionReadyAt=0;reactionStart=0;
-    flipTimeout=setTimeout(()=>{reactionReadyAt=Date.now();reactionStart=reactionReadyAt;b.textContent='GO!';b.style.background='#83da9f';result.textContent='Click now!'},rand(900,2700));
+    flipTimeout=setTimeout(()=>{reactionReadyAt=Date.now();reactionStart=reactionReadyAt;effect('collect');b.textContent='GO!';b.style.background='#83da9f';result.textContent='Click now!'},rand(900,2700));
   }else if(!reactionReadyAt){
     clearTimeout(flipTimeout);b.textContent='Start';result.textContent='Too early! Try again.';
   }else{
@@ -191,7 +230,7 @@ function renderReaction(){
 const rpsChoices=['Rock','Paper','Scissors'];
 function renderRPS(){
  const a=$('itamar-game-area');if(!a||current!=='rps')return;a.replaceChildren();
- const g=saveData.extras.rps;a.append(make('h3','Rock Paper Scissors'));
+ const g=saveData.extras.rps;a.append(make('h3','Rock Paper Scissors'));artwork(a,'rps');
  message(a,'You vs the computer. No wagers, just fun.');
  message(a,'Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties);
  const result=message(a,'Choose your move');
@@ -199,7 +238,7 @@ function renderRPS(){
  for(let i=0;i<3;i++)row.append(button(['✊ Rock','✋ Paper','✌️ Scissors'][i],()=>{
    const cpu=rand(0,2);const outcome=(i-cpu+3)%3===0?'tie':(i-cpu+3)%3===1?'win':'loss';
    g[outcome==='win'?'wins':outcome==='loss'?'losses':'ties']++;
-   if(outcome==='win')saveData.scores.rps++;
+   effect(outcome==='win'?'win':outcome==='loss'?'error':'move');if(outcome==='win')saveData.scores.rps++;
    save();result.textContent='Computer chose '+rpsChoices[cpu]+'. '+(outcome==='win'?'You won!':outcome==='loss'?'Computer won.':'Tie!');
    const score=a.querySelector?.('[data-score]');if(score)score.textContent='Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties;
  }));
@@ -216,13 +255,13 @@ function nextMath(){
 function renderMath(){
  const a=$('itamar-game-area');if(!a||current!=='math')return;a.replaceChildren();
  const g=saveData.extras.math;if(!g.question)nextMath();
- a.append(make('h3','Math Sprint'));message(a,'Correct: '+g.correct+' / '+g.total);
+ a.append(make('h3','Math Sprint'));artwork(a,'math');message(a,'Correct: '+g.correct+' / '+g.total);
  const q=g.question;message(a,q.a+' '+q.op+' '+q.b+' = ?');
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='number';input.placeholder='Answer';row.append(input);
  const result=message(a,'');
  row.append(button('Check',()=>{
    if(input.value.trim()===''||!Number.isFinite(Number(input.value)))return;
-   g.total++;const correct=Number(input.value)===q.answer;if(correct){g.correct++;saveData.scores.math=Math.max(g.correct,saveData.scores.math)}result.textContent=correct?'Correct!':'Answer: '+q.answer;
+   g.total++;const correct=Number(input.value)===q.answer;if(correct){effect('collect');g.correct++;saveData.scores.math=Math.max(g.correct,saveData.scores.math)}result.textContent=correct?'Correct!':'Answer: '+q.answer;
    nextMath();save();renderMath()
  }));a.append(row);
  a.append(button('Skip problem',()=>{nextMath();renderMath()}));
@@ -233,17 +272,17 @@ function renderWord(){
  const g=saveData.extras.word;
  const [word,hint]=wordBank[g.current%wordBank.length];
  const letters=word.toUpperCase().split(''),shuffled=letters.slice().sort(()=>Math.random()-.5).join(' ');
- a.append(make('h3','Word Mix'));
+ a.append(make('h3','Word Mix'));artwork(a,'word');
  message(a,'Solved: '+g.completed+' · Progress: '+((g.current%wordBank.length)+1)+' / '+wordBank.length);
  message(a,'Hint: '+hint);message(a,'Letters: '+shuffled);
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='text';input.placeholder='Unscramble the word';row.append(input);const output=message(a,'');
- row.append(button('Submit',()=>{if(input.value.trim().toLowerCase()===word){g.completed++;g.current++;saveData.scores.word=Math.max(saveData.scores.word,g.completed);save();renderWord()}else output.textContent='Try again!'}));a.append(row);
+ row.append(button('Submit',()=>{if(input.value.trim().toLowerCase()===word){effect('win');g.completed++;g.current++;saveData.scores.word=Math.max(saveData.scores.word,g.completed);save();renderWord()}else output.textContent='Try again!'}));a.append(row);
 }
 let patternShow=false,patternIndex=0;
 function renderPattern(){
  const a=$('itamar-game-area');if(!a||current!=='pattern')return;a.replaceChildren();
  const g=saveData.extras.pattern;if(!Array.isArray(g.sequence))g.sequence=[];
- a.append(make('h3','Pattern Memory'));
+ a.append(make('h3','Pattern Memory'));artwork(a,'pattern');
  message(a,'Remember the sequence of numbers, then repeat it.');
  message(a,'Level: '+g.level+' · Highest level: '+saveData.scores.pattern);
  const display=message(a,g.sequence.length?'Ready to view your sequence?':'Start a new round.');
@@ -256,9 +295,9 @@ function renderPattern(){
  const row=make('div',undefined,'ios-row');
  for(let n=1;n<=4;n++)row.append(button(String(n),()=>{
   if(patternShow||!g.sequence.length||display.textContent!=='Now repeat the pattern below')return;
-  if(g.sequence[patternIndex]!==n){display.textContent='Try again! Tap Show pattern.';patternIndex=0;return}
+  if(g.sequence[patternIndex]!==n){effect('error');display.textContent='Try again! Tap Show pattern.';patternIndex=0;return}
   patternIndex++;
-  if(patternIndex===g.sequence.length){g.wins++;g.level++;saveData.scores.pattern=Math.max(saveData.scores.pattern,g.level);g.sequence.push(rand(1,4));save();patternIndex=0;display.textContent='Correct! Next level ready.';start.textContent='Show pattern'}
+  if(patternIndex===g.sequence.length){effect('win');g.wins++;g.level++;saveData.scores.pattern=Math.max(saveData.scores.pattern,g.level);g.sequence.push(rand(1,4));save();patternIndex=0;display.textContent='Correct! Next level ready.';start.textContent='Show pattern'}
  }));
  a.append(row);a.append(button('Restart',()=>{g.sequence=[];g.level=0;save();patternIndex=0;renderPattern()}));
 }

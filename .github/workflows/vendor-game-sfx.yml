@@ -1,0 +1,75 @@
+name: Vendor Kenney CC0 Game Sounds
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/game-audio.js"
+      - ".github/workflows/vendor-game-sfx.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/game-audio.js"
+      - ".github/workflows/vendor-game-sfx.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  vendor-cc0-sound-pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: site
+      - name: Checkout pinned Kenney CC0 source
+        uses: actions/checkout@v4
+        with:
+          repository: Calinou/kenney-interface-sounds
+          ref: 4596a49eaf5a533948d49a47467f606bcdea70ff
+          path: kenney
+          persist-credentials: false
+      - name: Copy six licensed WAV game effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p site/assets/sfx
+          for name in click_002 click_005 drop_001 confirmation_001 error_004 bong_001; do
+            test -s "kenney/addons/kenney_interface_sounds/$name.wav"
+            cp "kenney/addons/kenney_interface_sounds/$name.wav" "site/assets/sfx/$name.wav"
+          done
+          cp kenney/addons/kenney_interface_sounds/LICENSE.txt site/assets/sfx/LICENSE-Kenney-CC0.txt
+          cat > site/assets/sfx/README.md <<'EOF'
+          Original sound effects: Kenney Interface Sounds, public domain (CC0 1.0).
+          Publisher: https://kenney.nl/assets/interface-sounds
+          Source mirror: https://github.com/Calinou/kenney-interface-sounds
+          Pinned source revision: 4596a49eaf5a533948d49a47467f606bcdea70ff
+          Files: click_002, click_005, drop_001, confirmation_001, error_004, bong_001 (WAV).
+          See LICENSE-Kenney-CC0.txt. All are bundled for offline games use.
+          EOF
+          python3 - <<'PY'
+          import pathlib, wave
+          sounds = pathlib.Path("site/assets/sfx")
+          for file in sounds.glob("*.wav"):
+              with wave.open(str(file), "rb") as wav:
+                  assert wav.getnframes() > 0 and wav.getframerate() > 0, file
+              print(file.name, file.stat().st_size)
+          assert len(list(sounds.glob("*.wav"))) == 6
+          PY
+      - name: Upload sound-pack artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: itamaros-kenney-cc0-game-sounds
+          path: site/assets/sfx/
+          retention-days: 14
+      - name: Publish bundled effects into ItamarOS sources
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'github-actions[bot]'
+          git add assets/sfx/
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Bundle six Kenney CC0 interface/game effects [skip ci]'
+          git push origin HEAD:main

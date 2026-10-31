@@ -4,8 +4,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "1.5.0"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.6.0"
+    CURRENT_PROJECT_VERSION: "6"
     SWIFT_VERSION: "5.9"
 targets:
   ItamarOSiOS:
@@ -30,6 +30,10 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared
+        excludes:
+          - NativeGameView.swift
+          - ExtraMobileGames.swift
+          - GameArtworkView.swift
       - path: tvOS/Assets.xcassets
     settings:
       base:

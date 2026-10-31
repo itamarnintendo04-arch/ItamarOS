@@ -1,4 +1,4 @@
-# ItamarOS 1.5 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.6 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
@@ -43,7 +43,7 @@ The iPhone/iPad Home screen includes native **Sign in with Apple** and a **local
 
 **Important:** Sign in with Apple is an identity authentication feature and does not sign IPA files. The profile count is an ItamarOS interface limit, **not** a way to raise Apple's free Personal Team limits (three installed developer apps per device, seven-day provisioning). Signed installation still requires a separate valid Apple-issued signing/provisioning mechanism. The Sign in with Apple entitlement must be enabled for the actual developer team's App ID before the feature can work on a signed device build; an unsigned development IPA cannot use it.
 
-## In-app IPA signing workspace (iOS 1.5 development preview)
+## In-app IPA signing workspace (iOS 1.6 development preview)
 
 The **IPA → Open IPA Signer** control presents `EmbeddedIPASignerView.swift`, a dedicated native SwiftUI panel with a `WKWebView`. It loads the **first-party** `https://itamaros-web-emulator.onrender.com/signer/` WebAssembly zsign signer over HTTPS. This is a web-based signing engine shown inside the otherwise native app; it is **not** native iOS code signing or an offline signing library.
 
