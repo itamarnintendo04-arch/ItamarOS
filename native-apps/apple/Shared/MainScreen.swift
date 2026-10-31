@@ -11,6 +11,10 @@ struct MainScreen: View {
             TVStreamingView()
                 .tabItem { Label("Streaming", systemImage: "play.tv.fill") }
             #else
+            #if os(iOS)
+            ItamarMessengerView()
+                .tabItem { Label("Messages", systemImage: "message.fill") }
+            #endif
             NativeGameView()
                 .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
             LocalMediaView()
