@@ -5,6 +5,7 @@ struct NativeSettingsView: View {
     @AppStorage("itamaros.settings.accent") private var accent = "blue"
     @AppStorage("itamaros.settings.sounds") private var sounds = true
     @AppStorage("itamaros.settings.largeText") private var largeText = false
+    @AppStorage("itamaros.settings.language") private var selectedLanguage = "system"
     @EnvironmentObject private var updates: ReleaseMonitor
 
     var body: some View {
@@ -18,6 +19,27 @@ struct NativeSettingsView: View {
                     }
                     Toggle("Larger text in games", isOn: $largeText)
                     Toggle("Game sounds preference", isOn: $sounds)
+                }
+                Section("App language") {
+                    Picker("Language", selection: $selectedLanguage) {
+                        Text("System default").tag("system")
+                        Text("English").tag("en")
+                        Text("עברית").tag("he")
+                        Text("العربية").tag("ar")
+                        Text("Español").tag("es")
+                        Text("Français").tag("fr")
+                        Text("Deutsch").tag("de")
+                        Text("Português").tag("pt")
+                        Text("Русский").tag("ru")
+                        Text("日本語").tag("ja")
+                        Text("简体中文").tag("zh-Hans")
+                        Text("Italiano").tag("it")
+                        Text("हिन्दी").tag("hi")
+                        Text("Türkçe").tag("tr")
+                        Text("한국어").tag("ko")
+                    }
+                    Text("Starts in your device language. Translations are being expanded; untranslated labels remain in English.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Device") {
                     #if os(tvOS)
