@@ -32,6 +32,9 @@ struct LocalMediaView: View {
     @State private var scopedURL: URL?
     @State private var temporaryVideoURL: URL?
     @State private var stillImage: Image?
+    #if os(iOS)
+    @State private var animatedGIFData: Data?
+    #endif
     @State private var isAudio = false
     @State private var errorMessage: String?
     #if os(iOS)
@@ -45,6 +48,14 @@ struct LocalMediaView: View {
                     Label("ItamarOS Player", systemImage: "play.rectangle.fill")
                         .font(.title.bold())
 
+                    #if os(iOS)
+                    if let animatedGIFData {
+                        AnimatedGIFImage(data: animatedGIFData)
+                            .id(fileName)
+                            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 420)
+                            .accessibilityLabel("Playing animated GIF")
+                    } else
+                    #endif
                     if let stillImage {
                         stillImage
                             .resizable()
@@ -96,7 +107,7 @@ struct LocalMediaView: View {
                             .font(.footnote)
                             .foregroundStyle(.red)
                     }
-                    Text("Images are displayed locally. Audio and video use Apple's AVKit. Supported formats depend on the device and codecs.")
+                    Text("Images and animated GIFs are displayed locally. Audio and video use Apple's AVKit. Supported formats depend on the device and codecs.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -107,7 +118,7 @@ struct LocalMediaView: View {
             .navigationTitle("Player")
             .fileImporter(
                 isPresented: $selectingFile,
-                allowedContentTypes: [.image, .movie, .audio, .mpeg4Movie],
+                allowedContentTypes: [.image, .gif, .movie, .audio, .mpeg4Movie],
                 allowsMultipleSelection: false
             ) { result in
                 switch result {
@@ -137,6 +148,9 @@ struct LocalMediaView: View {
         player?.pause()
         player = nil
         stillImage = nil
+        #if os(iOS)
+        animatedGIFData = nil
+        #endif
         isAudio = false
         errorMessage = nil
         scopedURL?.stopAccessingSecurityScopedResource()
@@ -161,6 +175,13 @@ struct LocalMediaView: View {
             return
         }
         stillImage = Image(uiImage: picture)
+        #endif
+        #if os(iOS)
+        if data.count >= 6,
+           let signature = String(data: data.prefix(6), encoding: .ascii),
+           signature == "GIF87a" || signature == "GIF89a" {
+            animatedGIFData = data
+        }
         #endif
         fileName = name
     }
