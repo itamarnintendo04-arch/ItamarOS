@@ -219,7 +219,10 @@ struct ItamarCloudProfileView: View {
             }
             if !required {
                 Section("Chats and notifications") {
-                    NavigationLink("Device contacts (optional)") { ItamarOnlineContactsView() }
+                    NavigationLink("Synced contacts, usernames and phone invitations") { ItamarConnectContactsView() }
+                    NavigationLink("My shareable QR code") { ItamarMyContactQRView() }
+                    NavigationLink("Verify my phone and discovery privacy") { ItamarPhoneSettingsView() }
+                    NavigationLink("Device address book (optional)") { ItamarOnlineContactsView() }
                     Button("Allow message notifications") {
                         Task {
                             do {
