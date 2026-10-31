@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>ItamarOS · Join group</title>
+<style>body{font:16px system-ui;background:#ebf3fc;color:#172d52;margin:0;padding:30px}
+main{max-width:490px;background:white;margin:40px auto;padding:28px;border-radius:18px;box-shadow:0 12px 45px #1233}
+a{display:block;background:#2564da;color:white;padding:15px;margin-top:15px;text-align:center;border-radius:12px;text-decoration:none}
+p{line-height:1.5;color:#43526a}</style></head>
+<body><main><h1>Join an ItamarOS group</h1><p>Someone shared a group invitation with you. You must sign in and explicitly accept it; scanning a QR code will not automatically add you.</p>
+<p id="error" role="alert"></p>
+<a id="open" href="/downloads.html">Open invitation in the ItamarOS app</a>
+<a href="/downloads.html">Get ItamarOS</a>
+<p>Invitations expire after 48 hours. Group members can see your public username and messages, not your private phone number or contact list.</p>
+</main><script>(()=>{'use strict';const code=new URLSearchParams(location.search).get('invite')||'';
+const okay=/^[a-f0-9]{48}$/.test(code);
+document.getElementById('error').textContent=okay?'':'Invitation link is missing or invalid.';
+const link=document.getElementById('open');link.hidden=!okay;
+if(okay)link.href='itamaros://group?invite='+encodeURIComponent(code);
+})();</script></body></html>
