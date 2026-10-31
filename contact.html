@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ItamarOS Connect · Add contact</title>
+<style>body{font:16px system-ui;background:#edf3fc;color:#19345a;margin:0;padding:32px}
+main{max-width:480px;margin:5vh auto;background:white;border-radius:22px;padding:30px;box-shadow:0 12px 50px #17417a24}
+h1{margin:0}p{line-height:1.5}a{display:block;background:#246ce6;color:white;text-align:center;padding:14px;border-radius:12px;text-decoration:none;margin:12px 0}
+small{display:block;margin-top:20px;color:#56697f}</style></head>
+<body><main><h1>ItamarOS Connect</h1><h2 id="handle">Add a contact</h2>
+<p>Open this person's public profile in ItamarOS. The QR link contains only their public username.</p>
+<a id="open" href="/downloads.html">Open in ItamarOS app</a>
+<a href="/downloads.html">Get ItamarOS</a>
+<small id="notice"></small></main>
+<script>
+(()=>{'use strict';
+const handle=new URLSearchParams(location.search).get('username')||'';
+const valid=/^[a-z0-9_.]{3,24}$/.test(handle);
+document.querySelector('#handle').textContent=valid?'@'+handle:'Invalid contact link';
+document.querySelector('#open').hidden=!valid;
+if(valid)document.querySelector('#open').href='itamaros://contact?username='+encodeURIComponent(handle);
+document.querySelector('#notice').textContent='Adding a contact requires signing in. The other person\'s number is never disclosed. If the app cannot open automatically, use the button above.';
+})();
+</script></body></html>
