@@ -296,3 +296,27 @@ create policy "senders see receipts on their messages" on public.itamar_message_
    and exists(select 1 from public.itamar_profiles p where p.id=auth.uid()
        and p.read_receipts_enabled=true)
  );
+
+
+-- Inbox acknowledgement happens on refresh, not only when a chat is opened.
+-- Limited to recent messages to keep foreground polling bounded.
+create or replace function public.itamar_ack_inbox()
+returns integer language plpgsql security definer set search_path=public,pg_temp as $$
+declare affected integer;
+begin
+ if auth.uid() is null then raise exception 'Sign in required'; end if;
+ insert into public.itamar_message_receipts(message_id,recipient_id,delivered_at)
+  select msg.id,auth.uid(),now() from (
+    select m.id
+    from public.itamar_messages m join public.itamar_members member
+      on member.room_id=m.room_id and member.user_id=auth.uid()
+    where m.sender_id<>auth.uid()
+    order by m.created_at desc limit 200
+  ) msg
+  on conflict(message_id,recipient_id) do update
+   set delivered_at=coalesce(public.itamar_message_receipts.delivered_at,excluded.delivered_at);
+ get diagnostics affected=row_count;
+ return affected;
+end $$;
+revoke all on function public.itamar_ack_inbox() from public;
+grant execute on function public.itamar_ack_inbox() to authenticated;
