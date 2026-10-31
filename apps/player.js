@@ -9,7 +9,7 @@ const fmt=s=>Number.isFinite(s)?Math.floor(s/3600)>0?Math.floor(s/3600)+':'+Stri
 function preference(){try{return JSON.parse(localStorage.getItem('itamaros-player-prefs')||'{}')}catch{return {}}}
 function persist(){if(!state)return;const m=state.media;localStorage.setItem('itamaros-player-prefs',JSON.stringify({volume:m.volume,rate:m.playbackRate,loop:state.loop,shuffle:state.shuffle,brightness:state.brightness,contrast:state.contrast,saturation:state.saturation,eqGains:state.eqGains,aspect:state.aspect,rotation:state.rotation,mirror:state.mirror,zoom:state.zoom}))}
 function status(text){const e=$('player-message');if(e)e.textContent=text}
-function release(){if(!state)return;const s=state;if(s.audioContext)s.audioContext.close().catch(()=>{});if(s.media){s.media.pause();s.media.removeAttribute('src');s.media.load()}for(const url of s.urls)URL.revokeObjectURL(url);state=null}
+function release(){if(!state)return;const s=state;if(s.audioContext)s.audioContext.close().catch(()=>{});if(s.media){s.media.pause();s.media.removeAttribute('src');s.media.load()}if(s.image)s.image.removeAttribute('src')for(const url of s.urls)URL.revokeObjectURL(url);state=null}
 function cleanupDetached(){if(state&&!document.contains(state.media))release()}
 function mount(){
  cleanupDetached();release();
@@ -17,13 +17,15 @@ function mount(){
  c.replaceChildren();
  const root=make('section',undefined,'ios-feature');root.id='itamar-player';c.append(root);
  root.append(make('h2','▶ ItamarOS Player'));
- root.append(make('p','Local audio/video and direct media URLs. Playback formats depend on your browser and device.','ios-caption'));
+ root.append(make('p','Local audio, video, images (including animated GIFs), and direct media URLs. Supported formats depend on your browser and device.','ios-caption'));
  const chooser=make('div',undefined,'ios-drop');chooser.textContent='Drop media here, or choose files below.';root.append(chooser);
- const row=make('div',undefined,'ios-row');const picker=make('input');picker.type='file';picker.multiple=true;picker.accept='audio/*,video/*,.mp3,.wav,.ogg,.opus,.flac,.m4a,.mp4,.webm,.mov,.mkv';picker.setAttribute('aria-label','Add audio and video files');row.append(picker);
- row.append(btn('Clear playlist',()=>{if(!state)return;state.media.pause();state.queue=[];state.index=-1;state.media.removeAttribute('src');state.media.load();for(const u of state.urls)URL.revokeObjectURL(u);state.urls.clear();renderList();status('Playlist cleared.')}));
+ const row=make('div',undefined,'ios-row');const picker=make('input');picker.type='file';picker.multiple=true;picker.accept='audio/*,video/*,image/*,.gif,.png,.jpg,.jpeg,.webp,.mp3,.wav,.ogg,.opus,.flac,.m4a,.mp4,.webm,.mov,.mkv';picker.setAttribute('aria-label','Add audio, video, image and animated GIF files');row.append(picker);
+ row.append(btn('Clear playlist',()=>{if(!state)return;state.media.pause();state.queue=[];state.index=-1;state.media.removeAttribute('src');state.media.load();state.image.hidden=true;state.image.removeAttribute('src');state.media.hidden=false;for(const u of state.urls)URL.revokeObjectURL(u);state.urls.clear();renderList();status('Playlist cleared.')}));
  root.append(row);
  const urlrow=make('div',undefined,'ios-row');const url=make('input');url.type='url';url.placeholder='https://example.com/video.mp4';url.setAttribute('aria-label','Direct media URL');url.style.flex='1';urlrow.append(url,btn('Add URL',()=>{try{const u=new URL(url.value.trim());if(!['http:','https:'].includes(u.protocol))throw Error();addTrack({name:u.pathname.split('/').pop()||u.hostname,url:u.href,local:false});url.value='';status('Added direct media URL. Playback may be blocked by the server or codec.')}catch{status('Enter a valid HTTP(S) URL pointing directly to media.')}}));root.append(urlrow);
- const screen=make('video');screen.controls=true;screen.playsInline=true;screen.preload='metadata';screen.setAttribute('aria-label','Media playback');root.append(screen);
+ const viewer=make('div',undefined,'ios-media-viewer');root.append(viewer);
+ const screen=make('video');screen.controls=true;screen.playsInline=true;screen.preload='metadata';screen.setAttribute('aria-label','Audio or video playback');viewer.append(screen);
+ const image=make('img',undefined,'ios-media-image');image.alt='Selected image or animated GIF';image.hidden=true;image.setAttribute('decoding','async');viewer.append(image);
  const transport=make('div',undefined,'ios-row');
  transport.append(btn('⏮ Previous',()=>move(-1)),btn('⏯ Play / Pause',()=>state.media.paused?play():state.media.pause()),btn('⏭ Next',()=>move(1)),btn('−10s',()=>seek(-10)),btn('+10s',()=>seek(10)));
  const time=make('span','00:00 / 00:00','ios-caption');time.id='player-time';transport.append(time);root.append(transport);
@@ -86,7 +88,7 @@ function mount(){
  const list=make('ul',undefined,'ios-list');list.id='player-playlist';root.append(list);
  const message=make('p','','ios-caption');message.id='player-message';message.setAttribute('role','status');root.append(message);
  root.append(make('p','Browser limitations: no guaranteed MKV/AVI/HEVC support; no native DVD/Blu-ray discs, casting, device capture, transcoding, chapter navigation, multi-audio-track selection, or VLC plug-ins.','ios-caption'));
- state={media:screen,queue:[],index:-1,urls:new Set(),loop:loop.checked,shuffle:shuffle.checked,pointA:null,pointB:null,recording:null,parts:[],audioContext:null,filters:null,eqGains:{...(preference().eqGains||{})},brightness:Number(preference().brightness??100),contrast:Number(preference().contrast??100),saturation:Number(preference().saturation??100),aspect:preference().aspect||'auto',rotation:Number(preference().rotation||0),mirror:Boolean(preference().mirror),zoom:Number(preference().zoom||1)};
+ state={media:screen,image,queue:[],index:-1,urls:new Set(),loop:loop.checked,shuffle:shuffle.checked,pointA:null,pointB:null,recording:null,parts:[],audioContext:null,filters:null,eqGains:{...(preference().eqGains||{})},brightness:Number(preference().brightness??100),contrast:Number(preference().contrast??100),saturation:Number(preference().saturation??100),aspect:preference().aspect||'auto',rotation:Number(preference().rotation||0),mirror:Boolean(preference().mirror),zoom:Number(preference().zoom||1)};
  screen.volume=Number(volume.value);screen.playbackRate=Number(rate.value);updateFilter();
  volume.oninput=()=>{screen.volume=Number(volume.value);persist()};rate.onchange=()=>{screen.playbackRate=Number(rate.value);persist()};
  loop.onchange=()=>{state.loop=loop.checked;persist()};shuffle.onchange=()=>{state.shuffle=shuffle.checked;persist()};
@@ -100,20 +102,24 @@ function mount(){
  chooser.ondragleave=()=>chooser.classList.remove('dragging');chooser.ondrop=drop;
  fileSubs.onchange=async()=>{const f=fileSubs.files?.[0];if(!f)return;try{let text=await f.text();if(/\.srt$/i.test(f.name))text='WEBVTT\n\n'+text.replace(/(\d\d:\d\d:\d\d),(\d\d\d)/g,'$1.$2');if(!text.trimStart().startsWith('WEBVTT'))throw Error('Subtitles must be valid .srt or .vtt text');for(const old of screen.querySelectorAll('track'))old.remove();const subURL=URL.createObjectURL(new Blob([text],{type:'text/vtt'}));state.urls.add(subURL);const track=make('track');track.kind='subtitles';track.label=f.name;track.srclang='en';track.src=subURL;track.default=true;screen.append(track);track.addEventListener('load',()=>{track.track.mode='showing'});status('Subtitles loaded. Choose CC in the player controls if needed.')}catch(e){status('Unable to load subtitles: '+e.message)}};
  document.onkeydown=function(event){if(!state||!document.contains(screen)||$('window')?.classList.contains('hidden'))return;if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement?.tagName))return;if(event.code==='Space'){event.preventDefault();screen.paused?play():screen.pause()}else if(event.code==='ArrowRight'){event.preventDefault();seek(5)}else if(event.code==='ArrowLeft'){event.preventDefault();seek(-5)}};
- status('Choose audio or video files to get started. Playlist is kept for this session.');
+ status('Choose audio, video, images or animated GIFs to get started. Playlist is kept for this session.');
 }
 function updateFilter(){if(!state)return;
  const m=state.media;m.style.filter='brightness('+state.brightness+'%) contrast('+state.contrast+'%) saturate('+state.saturation+'%)';
  m.style.aspectRatio=state.aspect;m.style.objectFit='contain';
- m.style.transform='rotate('+state.rotation+'deg) scaleX('+(state.mirror?-1:1)+') scale('+state.zoom+')';
+ m.style.transform='rotate('+state.rotation+'deg) scaleX('+(state.mirror?-1:1)+') scale('+state.zoom+')';if(state.image){state.image.style.filter=m.style.filter;state.image.style.aspectRatio=state.aspect;state.image.style.objectFit='contain';state.image.style.transform=m.style.transform}
 }
-function addFile(file){if(!state)return;const object=URL.createObjectURL(file);state.urls.add(object);addTrack({name:file.name,url:object,local:true})}
+function isImage(track){return /\.(gif|png|jpe?g|webp|bmp|avif|svg)(?:$|[?#])/i.test(track.name||'') || /^image\//i.test(track.type||'')}
+function addFile(file){if(!state)return;const object=URL.createObjectURL(file);state.urls.add(object);addTrack({name:file.name,url:object,local:true,type:file.type})}
 function addTrack(track){if(!state)return;state.queue.push(track);renderList();if(state.index<0)select(0)}
 function renderList(){if(!state)return;const root=$('player-playlist');if(!root)return;root.replaceChildren();state.queue.forEach((item,i)=>{const li=make('li');const b=btn((i===state.index?'▶ ':'')+item.name,()=>select(i,true));li.append(b,btn('↑',()=>reorder(i,-1)),btn('↓',()=>reorder(i,1)),btn('×',()=>remove(i)));root.append(li)});if(!state.queue.length)root.append(make('li','No media selected.'))}
 function reorder(i,d){if(!state)return;const j=i+d;if(j<0||j>=state.queue.length)return;[state.queue[i],state.queue[j]]=[state.queue[j],state.queue[i]];if(state.index===i)state.index=j;else if(state.index===j)state.index=i;renderList()}
-function remove(i){if(!state)return;const old=state.queue.splice(i,1)[0];if(old?.local){URL.revokeObjectURL(old.url);state.urls.delete(old.url)}if(state.index===i){state.index=-1;state.media.pause();state.media.removeAttribute('src');state.media.load();if(state.queue.length)select(Math.min(i,state.queue.length-1))}else if(i<state.index)state.index--;renderList()}
-function select(i,auto=false){if(!state||i<0||i>=state.queue.length)return;const s=state;s.pointA=null;s.pointB=null;s.index=i;s.media.src=s.queue[i].url;s.media.load();renderList();status('Selected: '+s.queue[i].name);if(auto)play()}
-function play(){if(!state||state.index<0)return;state.media.play().catch(e=>status('Unable to play: '+(e.message||'Unsupported format')))}
+function remove(i){if(!state)return;const old=state.queue.splice(i,1)[0];if(old?.local){URL.revokeObjectURL(old.url);state.urls.delete(old.url)}if(state.index===i){state.index=-1;state.media.pause();state.media.removeAttribute('src');state.media.load();state.image.hidden=true;state.image.removeAttribute('src');state.media.hidden=false;if(state.queue.length)select(Math.min(i,state.queue.length-1))}else if(i<state.index)state.index--;renderList()}
+function select(i,auto=false){if(!state||i<0||i>=state.queue.length)return;const s=state;s.pointA=null;s.pointB=null;s.index=i;const track=s.queue[i];
+ if(isImage(track)){s.media.pause();s.media.removeAttribute('src');s.media.load();s.media.hidden=true;s.image.hidden=false;s.image.src=track.url;status('Showing '+track.name+( /\.gif$/i.test(track.name)?' — animated GIF':' — image')+'.');}
+ else{s.image.removeAttribute('src');s.image.hidden=true;s.media.hidden=false;s.media.src=track.url;s.media.load();status('Selected: '+track.name);if(auto)play();}
+ renderList()}
+function play(){if(!state||state.index<0)return;if(isImage(state.queue[state.index])){status('Images are displayed directly. Animated GIFs animate automatically.');return}state.media.play().catch(e=>status('Unable to play: '+(e.message||'Unsupported format')))}
 function move(delta,automatic=false){if(!state||!state.queue.length)return;let n=state.index+delta;if(state.shuffle&&state.queue.length>1){do{n=Math.floor(Math.random()*state.queue.length)}while(n===state.index)}else if(n>=state.queue.length){if(!state.loop){if(automatic){state.media.pause();return}n=0}else n=0}else if(n<0)n=state.loop?state.queue.length-1:0;select(n,true)}
 function seek(offset){if(state&&Number.isFinite(state.media.duration))state.media.currentTime=Math.max(0,Math.min(state.media.duration,state.media.currentTime+offset))}
 function enableEQ(){
@@ -138,7 +144,7 @@ function shiftSubtitles(delta){
  try{for(const cue of cues){cue.startTime=Math.max(0,cue.startTime+delta);cue.endTime=Math.max(cue.startTime+.05,cue.endTime+delta)}status('Subtitle timing shifted by '+delta+' seconds.')}catch{status('Subtitle adjustment is not supported by this browser.')}
 }
 function toggleSubtitles(){if(!state||!state.media.textTracks?.length){status('Load subtitles first.');return}const t=state.media.textTracks[0];t.mode=t.mode==='showing'?'hidden':'showing';status('Subtitles '+(t.mode==='showing'?'enabled.':'disabled.'))}
-function mediaInfo(){if(!state||state.index<0){status('Select a media item first.');return}const m=state.media,track=state.queue[state.index];status('Media: '+track.name+' · Duration: '+fmt(m.duration)+(m.videoWidth?' · '+m.videoWidth+'×'+m.videoHeight:'')+' · Speed: '+m.playbackRate+'×')}
+function mediaInfo(){if(!state||state.index<0){status('Select a media item first.');return}const m=state.media,track=state.queue[state.index];if(isImage(track)){status('Image: '+track.name+(state.image?.naturalWidth?' · '+state.image.naturalWidth+'×'+state.image.naturalHeight:'')+(/\.gif$/i.test(track.name)?' · animated GIF':''));return}status('Media: '+track.name+' · Duration: '+fmt(m.duration)+(m.videoWidth?' · '+m.videoWidth+'×'+m.videoHeight:'')+' · Speed: '+m.playbackRate+'×')}
 function capture(){if(!state)return;const media=state.media;if(!media.videoWidth||!media.videoHeight){status('A video frame is needed for screenshots.');return}try{const canvas=document.createElement('canvas');canvas.width=media.videoWidth;canvas.height=media.videoHeight;canvas.getContext('2d').drawImage(media,0,0);canvas.toBlob(blob=>{if(!blob){status('Screenshot failed');return}const u=URL.createObjectURL(blob),a=make('a');a.href=u;a.download='ItamarOS-screenshot.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),3000)},'image/png')}catch{status('Screenshot blocked, possibly because media comes from another website.')} }
 function record(){
  if(!state)return;const s=state;if(s.recording&&s.recording.state!=='inactive'){s.recording.stop();status('Recording stopped. Download should begin.');return}
