@@ -105,13 +105,38 @@ function snakeTick(){
 function startSnake(){const g=saveData.snake;if(g.over){snakeReset();return}g.running=!g.running;if(g.running){timer=setInterval(()=>{if(!$('snake-board')||!document.contains($('snake-board'))||$('window')?.classList.contains('hidden')){stopTimers();g.running=false;save();return}snakeTick()},140)}else stopTimers();save();renderSnake()}
 function updateSnakeText(){const p=$('snake-score');if(p){const g=saveData.snake;p.textContent='Score: '+g.score+' · Best: '+saveData.scores.snake+(g.over?' · Game over':'')}}
 function drawSnake(){
- const c=$('snake-board');if(!c)return;
- const ctx=c.getContext('2d');const cell=c.width/SIDE;
- ctx.fillStyle='#0c2541';ctx.fillRect(0,0,c.width,c.height);
- ctx.fillStyle='#a9c4e5';for(let k=1;k<SIDE;k++){ctx.fillRect(k*cell,0,1,c.height);ctx.fillRect(0,k*cell,c.width,1)}
- const g=saveData.snake;
- if(g.food){ctx.fillStyle='#f79970';ctx.beginPath();ctx.arc((g.food.x+.5)*cell,(g.food.y+.5)*cell,cell*.39,0,Math.PI*2);ctx.fill()}
- g.body.forEach((p,i)=>{ctx.fillStyle=i===0?'#b9f8b4':'#61d296';ctx.fillRect(p.x*cell+2,p.y*cell+2,cell-4,cell-4)});
+ const canvas=$('snake-board');if(!canvas)return;
+ const ctx=canvas.getContext('2d');const cell=canvas.width/SIDE;
+ const ball=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
+ for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++){
+  ctx.fillStyle=(x+y)%2?'#d2f7c5':'#e6ffdb';
+  ctx.fillRect(x*cell,y*cell,cell,cell);
+ }
+ const game=saveData.snake;
+ if(game.food){
+  const x=(game.food.x+.5)*cell,y=(game.food.y+.58)*cell;
+  ball(x-5,y,cell*.28,'#e53c62');ball(x+5,y,cell*.28,'#ff547a');
+  ball(x-8,y-5,cell*.08,'#ffd1dc');
+  ctx.fillStyle='#855833';ctx.fillRect(x-1,y-cell*.64,3,cell*.36);
+  ball(x+5,y-cell*.46,cell*.17,'#49b768');
+ }
+ game.body.slice().reverse().forEach((p,rev)=>{
+  const head=rev===game.body.length-1;
+  const x=(p.x+.5)*cell,y=(p.y+.5)*cell;
+  ball(x,y,cell*(head?.51:.43),head?'#158e6a':'#338f72');
+  ball(x,y-1,cell*(head?.46:.37),head?'#80e58b':'#71d997');
+  if(!head)ball(x-4,y-5,cell*.09,'#b9f8bd');
+ });
+ const head=game.body[0],hx=(head.x+.5)*cell,hy=(head.y+.5)*cell;
+ // Two oversized eyes and tiny pupils give the snake a cartoon face.
+ const dx=game.dir.x,dy=game.dir.y;
+ const ox=dy!==0?6:dx*3,oy=dx!==0?6:dy*3;
+ for(const sign of [-1,1]){
+  const ex=hx+(dx*3)+(dy!==0?sign*ox:0)+(dx!==0?0:0);
+  const ey=hy+(dy*3)+(dx!==0?sign*oy:0);
+  ball(ex,ey,cell*.145,'#ffffff');ball(ex+dx*2,ey+dy*2,cell*.075,'#263f4d');
+ }
+ ball(hx+dx*6,hy+dy*6,cell*.07,'#e76480');
 }
 function renderSnake(){
  const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
