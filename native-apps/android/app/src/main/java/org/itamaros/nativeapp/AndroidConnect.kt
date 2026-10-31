@@ -430,8 +430,8 @@ fun AndroidConnectScreen(){
                             receipts=receipts+(id to res)
                         }}){
                             val current=receipts[id]
-                            Text(if(current?.second?:0>0)"✓✓ Read"
-                                 else if(current?.first?:0>0)"✓✓ Delivered" else "✓ Sent")
+                            Text(if((current?.second ?: 0)>0)"✓✓ Read"
+                                 else if((current?.first ?: 0)>0)"✓✓ Delivered" else "✓ Sent")
                         }
                         Row {
                             Button(onClick={editingID=id;message=entry.optString("body")}){Text("Edit")}
