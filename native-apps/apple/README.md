@@ -1,4 +1,4 @@
-# ItamarOS 1.6 — real SwiftUI iPhone/iPad and Apple TV apps
+# ItamarOS 1.6.1 — real SwiftUI iPhone/iPad and Apple TV apps
 
 These are **native app sources**; no WebView, Electron, or hosted-site wrapper is used. The interface is built with SwiftUI. iPhone/iPad player uses native AVKit, games store local progress, settings use AppStorage, and release checks use URLSession.
 
@@ -7,6 +7,16 @@ These are **native app sources**; no WebView, Electron, or hosted-site wrapper i
 ## Local two-player games and bot difficulty (iOS 1.6)
 
 Memory Match, Tic-Tac-Toe, Rock Paper Scissors, and Connect Four now let you select **With a friend** (two people sharing one device) or **Against a bot**, with **Easy / Medium / Hard** difficulty. Memory Match scores pairs separately, switches turns after misses, and the bot learns only cards that were revealed. Tic-Tac-Toe uses minimax on Hard; Connect Four uses look-ahead; Rock Paper Scissors predicts only from earlier rounds. Other mini-games stay single-player. Native iOS builds must be regenerated after these source changes; the original unsigned IPA artifact is not automatically replaced.
+
+## Messages, profiles, updates and parent setup — iOS 1.6.1
+
+The new **Messages** tab on iPhone/iPad has locally saved chats, channels, and a filtered Updates feed. Users can create threads, write local messages/posts, delete threads, and mute or unmute each thread. Profile setup saves a display name, local username, and about text. Contacts names are read *only after explicit system permission*; they are used to name private draft conversations and never uploaded. Notification permission is requested only when tapped; push delivery is **not** implemented and remote events cannot be received.
+
+The **Parent QR** page encodes a randomly generated opaque invitation token linking to [parent.html](../../parent.html). The site opens the custom `itamaros://parent?invite=...` route on iOS on a best-effort basis, or displays a browser fallback. Both flows save a **local preview of the parent details** only; there is no account authorization, child/parent verification, remote linking, or parental controls yet. A reliable automatic app opening experience requires a verified developer Team ID, Apple Associated Domains signing and the matching hosted `apple-app-site-association` resource.
+
+### Before enabling production messaging and family linking
+
+A separate authenticated service with parental consent, secure account ownership, abuse controls, end-to-end encryption decisions, contact discovery safeguards, token expiration/revocation, permission enforcement, per-channel subscriptions, notification delivery and data deletion is required. No client-only token or form can securely establish a family relationship. Do not publish this preview as a live communication or supervision service.
 
 ## Build on Mac
 
