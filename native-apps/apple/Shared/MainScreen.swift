@@ -12,7 +12,13 @@ struct MainScreen: View {
                 .tabItem { Label("Streaming", systemImage: "play.tv.fill") }
             #else
             #if os(iOS)
-            ItamarMessengerView()
+            Group {
+                if ItamarCloudConfig.enabled {
+                    ItamarOnlineMessengerView()
+                } else {
+                    ItamarMessengerView()
+                }
+            }
                 .tabItem { Label("Messages", systemImage: "message.fill") }
             #endif
             NativeGameView()
@@ -43,7 +49,7 @@ struct DashboardView: View {
                         .frame(width: 125, height: 125)
                     Text("ItamarOS")
                         .font(.largeTitle.bold())
-                    Text("Native app • Version 1.6.1")
+                    Text("Native app • Version 1.6.2")
                         .foregroundStyle(.secondary)
                     #if os(tvOS)
                     Label("Native Apple TV app with remote support", systemImage: "play.tv")
@@ -69,7 +75,7 @@ struct DashboardView: View {
                         .font(.footnote)
                         .multilineTextAlignment(.center)
                     #if os(iOS)
-                    Text("Messages, channels, updates and profiles are currently saved on this iPhone only.")
+                    Text(ItamarCloudConfig.enabled ? "ItamarOS Connect: cloud messaging is configured." : "Messages are local drafts until a secure messaging backend is configured.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
