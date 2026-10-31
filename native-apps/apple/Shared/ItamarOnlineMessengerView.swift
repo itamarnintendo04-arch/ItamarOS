@@ -2,6 +2,7 @@
 import SwiftUI
 import CoreImage.CIFilterBuiltins
 import UserNotifications
+import UniformTypeIdentifiers
 
 // The connected mode is enabled only after the project owner configures a
 // Supabase URL + public publishable key and applies the RLS SQL migration.
@@ -344,6 +345,11 @@ private struct ItamarCloudExploreView: View {
     }
 }
 
+private struct SharedAttachmentFile: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
 private struct ItamarCloudThreadView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     let room: ItamarCloudRoom
@@ -352,6 +358,8 @@ private struct ItamarCloudThreadView: View {
     @State private var muted = false
     @State private var error = ""
     @State private var poll: Task<Void, Never>?
+    @State private var showFilePicker = false
+    @State private var sharedFile: URL?
 
     private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
@@ -367,6 +375,17 @@ private struct ItamarCloudThreadView: View {
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(message.body)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                    if message.attachment_path != nil {
+                                        Button {
+                                            Task {
+                                                do { sharedFile = try await cloud.downloadAttachment(message) }
+                                                catch { error = error.localizedDescription }
+                                            }
+                                        } label: {
+                                            Label("Open attached file", systemImage: "paperclip")
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
                                     Text(String(message.created_at.prefix(16)).replacingOccurrences(of: "T", with: " "))
                                         .font(.caption2).foregroundStyle(.secondary)
                                 }
@@ -404,11 +423,44 @@ private struct ItamarCloudThreadView: View {
                         }
                     } label: { Image(systemName: "arrow.up.circle.fill").font(.title2) }
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button { showFilePicker = true } label: {
+                        Image(systemName: "paperclip").font(.title2)
+                    }
+                    .accessibilityLabel("Attach photo, video, audio, PDF, file or contact card")
                 }
                 .padding().background(.regularMaterial)
             } else {
                 Text("Only the channel owner can publish updates.")
                     .font(.caption).foregroundStyle(.secondary).padding()
+            }
+        }
+        .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
+            switch result {
+            case .success(let urls):
+                guard let file = urls.first else { return }
+                Task {
+                    do { try await cloud.sendAttachment(file, in: room.id)
+                        messages = try await cloud.messages(in: room.id)
+                    } catch { error = error.localizedDescription }
+                }
+            case .failure(let issue): error = issue.localizedDescription
+            }
+        }
+        .sheet(item: Binding(
+            get: { sharedFile.map { SharedAttachmentFile(url: $0) } },
+            set: { if $0 == nil { sharedFile = nil } }
+        )) { file in
+            NavigationStack {
+                VStack(spacing: 18) {
+                    Image(systemName: "doc.fill").font(.system(size: 65))
+                    Text(file.url.lastPathComponent)
+                    ShareLink(item: file.url) {
+                        Label("Share or save file", systemImage: "square.and.arrow.up")
+                    }
+                }
+                .padding()
+                .navigationTitle("Attachment")
+                .toolbar { Button("Done") { sharedFile = nil } }
             }
         }
         .navigationTitle(room.title)
