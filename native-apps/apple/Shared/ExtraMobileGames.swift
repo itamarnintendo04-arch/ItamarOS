@@ -129,7 +129,7 @@ private struct SnakeView: View {
                             let pos = row * 10 + col
                             CartoonSnakeCell(head: pos == snake.first,
                                              food: pos == food,
-                                             body: snake.contains(pos))
+                                             segment: snake.contains(pos))
                                 .frame(maxWidth: .infinity)
                         }
                     }
