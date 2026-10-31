@@ -14,6 +14,8 @@ private func itamarQR(_ value: String) -> UIImage? {
 }
 
 struct ItamarConnectContactsView: View {
+    let initialUsername: String?
+    init(initialUsername: String? = nil) { self.initialUsername = initialUsername }
     @EnvironmentObject private var cloud: ItamarCloudService
     @State private var saved = [ItamarSavedContact]()
     @State private var username = ""
@@ -81,7 +83,10 @@ struct ItamarConnectContactsView: View {
             if !error.isEmpty { Text(error).foregroundStyle(.red).font(.caption) }
         }
         .navigationTitle("Contacts")
-        .task { await reload() }
+        .task {
+            if let initialUsername { username = initialUsername }
+            await reload()
+        }
         .refreshable { await reload() }
     }
 
@@ -99,6 +104,11 @@ struct ItamarConnectContactsView: View {
             await reload()
         } catch { error = error.localizedDescription }
     }
+}
+
+struct ItamarContactRoute: Identifiable {
+    let username: String
+    var id: String { username }
 }
 
 struct ItamarMyContactQRView: View {
