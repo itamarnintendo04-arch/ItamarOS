@@ -5,6 +5,8 @@ struct ItamarOSApp: App {
     @StateObject private var releases = ReleaseMonitor()
     #if os(iOS)
     @StateObject private var appleAccounts = LocalAppleAccountStore()
+    @StateObject private var messages = ItamarMessagesStore()
+    @State private var parentRoute: ItamarParentRoute?
     #endif
 
     @ViewBuilder
@@ -13,6 +15,20 @@ struct ItamarOSApp: App {
         MainScreen()
             .environmentObject(releases)
             .environmentObject(appleAccounts)
+            .environmentObject(messages)
+            .onOpenURL { url in
+                guard url.scheme?.lowercased() == "itamaros",
+                      url.host?.lowercased() == "parent",
+                      let code = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                          .queryItems?.first(where: { $0.name == "invite" })?.value,
+                      code.count == 32,
+                      code.allSatisfy({ $0.isHexDigit }) else { return }
+                parentRoute = ItamarParentRoute(inviteCode: code)
+            }
+            .sheet(item: $parentRoute) { route in
+                ItamarParentRegistrationView(inviteCode: route.inviteCode)
+                    .environmentObject(messages)
+            }
         #else
         MainScreen()
             .environmentObject(releases)
