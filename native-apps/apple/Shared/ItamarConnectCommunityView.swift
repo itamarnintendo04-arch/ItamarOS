@@ -2,6 +2,7 @@
 import SwiftUI
 import UIKit
 import CoreImage.CIFilterBuiltins
+import PhotosUI
 
 private func itamarQR(_ value: String) -> UIImage? {
     let filter = CIFilter.qrCodeGenerator()
@@ -298,4 +299,157 @@ struct ItamarGroupPollsView: View {
         } catch { error = error.localizedDescription }
     }
 }
+
+struct ItamarGroupInfoView: View {
+    @EnvironmentObject private var cloud: ItamarCloudService
+    let room: ItamarCloudRoom
+    @State private var title = ""
+    @State private var details = ""
+    @State private var photoPath: String?
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var inviteToken: String?
+    @State private var memberHandle = ""
+    @State private var message = ""
+
+    private var mine: Bool { cloud.userID == room.owner_id }
+    private var shareURL: URL? {
+        guard let inviteToken else { return nil }
+        return URL(string:"https://itamaros-web-emulator.onrender.com/join.html?invite=\(inviteToken)")
+    }
+
+    var body: some View {
+        Form {
+            Section("Group identity") {
+                if let photoURL=cloud.publicAvatarURL(photoPath) {
+                    AsyncImage(url:photoURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: { ProgressView() }
+                    .frame(width:96,height:96).clipShape(Circle())
+                } else {
+                    Image(systemName:"person.3.fill")
+                        .font(.largeTitle).foregroundStyle(.blue)
+                }
+                TextField("Group name (required)",text:$title)
+                    .disabled(!mine)
+                TextField("Description (optional)",text:$details,axis:.vertical)
+                    .lineLimit(2...5).disabled(!mine)
+                if mine {
+                    PhotosPicker(selection:$selectedPhoto,matching:.images) {
+                        Label("Choose group photo",systemImage:"camera")
+                    }
+                    .onChange(of:selectedPhoto) { _,photo in
+                        guard let photo else { return }
+                        Task {
+                            do {
+                                guard let data=try await photo.loadTransferable(type:Data.self),
+                                      let image=UIImage(data:data),
+                                      let jpeg=image.jpegData(compressionQuality:0.65) else {
+                                    throw ItamarCloudError.badResponse("Unable to open image")
+                                }
+                                photoPath=try await cloud.uploadAvatarJPEG(jpeg,group:room.id)
+                                try await cloud.updateGroupDetails(room:room.id,name:title,
+                                                                   description:details,avatar:photoPath)
+                            } catch { message=error.localizedDescription }
+                        }
+                    }
+                    Button("Save group name and description") {
+                        Task {
+                            do {
+                                try await cloud.updateGroupDetails(room:room.id,name:title,
+                                                                   description:details,avatar:photoPath)
+                                message="Group details saved"
+                            } catch { message=error.localizedDescription }
+                        }
+                    }.disabled(title.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                }
+            }
+            if mine {
+                Section("Add members directly") {
+                    TextField("Username",text:$memberHandle)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    Button("Add member") {
+                        Task {
+                            do {
+                                try await cloud.manageGroup(room:room.id,operation:"add",username:memberHandle)
+                                memberHandle=""
+                                message="Member added"
+                            } catch { message=error.localizedDescription }
+                        }
+                    }.disabled(memberHandle.isEmpty)
+                }
+                Section("Invite by message, link or QR") {
+                    Button("Create 48-hour invitation") {
+                        Task {
+                            do {
+                                inviteToken=try await cloud.groupInvite(room:room.id)
+                                message="Invite link generated. Anyone with this link can request to join."
+                            } catch { message=error.localizedDescription }
+                        }
+                    }
+                    if let shareURL {
+                        if let qr=itamarQR(shareURL.absoluteString) {
+                            Image(uiImage:qr).interpolation(.none).resizable().scaledToFit()
+                                .frame(width:210,height:210)
+                        }
+                        ShareLink(item:shareURL) {
+                            Label("Share invitation by Messages, WhatsApp or other app",
+                                  systemImage:"square.and.arrow.up")
+                        }
+                        Text("Expires after 48 hours. People join only after accepting the invitation.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            if !message.isEmpty { Text(message).font(.caption) }
+        }
+        .navigationTitle("Group info")
+        .onAppear {
+            let current=cloud.rooms.first(where:{$0.id==room.id}) ?? room
+            title=current.title
+            details=current.description ?? ""
+            photoPath=current.avatar_path
+        }
+    }
+}
+
+struct ItamarAcceptGroupInviteView: View {
+    @EnvironmentObject private var cloud: ItamarCloudService
+    @Environment(\.dismiss) private var dismiss
+    let token: String
+    @State private var error = ""
+    @State private var joined = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Group invitation") {
+                    Text("Joining will share your public profile with the group's members.")
+                    Text("You can decline. An invite link does not give anyone access to your phone number or private chats.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    if !cloud.isSignedIn {
+                        Text("Sign in to ItamarOS Connect before accepting.")
+                        ItamarCloudLoginView()
+                    } else {
+                        Button("Accept and join group") {
+                            Task {
+                                do {
+                                    try await cloud.acceptGroupInvite(code:token)
+                                    joined=true
+                                } catch { error=error.localizedDescription }
+                            }
+                        }.disabled(joined)
+                        if joined {
+                            Label("Joined group successfully",systemImage:"checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
+                    }
+                }
+                if !error.isEmpty { Text(error).foregroundStyle(.red) }
+            }
+            .navigationTitle("Join group")
+            .toolbar { ToolbarItem(placement:.confirmationAction) {Button("Done"){dismiss()}} }
+        }
+    }
+}
+
 #endif
