@@ -92,11 +92,18 @@ struct NativeGameView: View {
             Text("Number Guess").font(.title2.bold())
             Text(result)
             Text("Guess: \(guess)").font(.title2)
+            #if os(tvOS)
+            HStack {
+                Button("Lower") { guess = max(1, guess - 1) }
+                Button("Higher") { guess = min(100, guess + 1) }
+            }
+            #else
             Slider(value: Binding(
                 get: { Double(guess) },
                 set: { guess = min(100, max(1, Int($0.rounded()))) }
             ), in: 1...100, step: 1)
                 .accessibilityLabel("Slide to choose a number")
+            #endif
             Button("Submit guess") { submitGuess() }.buttonStyle(.borderedProminent)
             Text("Streak: \(streak) · Best: \(best)").foregroundStyle(.secondary)
         }
