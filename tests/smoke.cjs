@@ -119,7 +119,7 @@ class Element{
  pause(){this.paused=true}
  play(){this.paused=false;return Promise.resolve()}
  load(){}
- getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+ getContext(){return {fillRect(){},beginPath(){},arc(){},ellipse(){},roundRect(){},fill(){},stroke(){},moveTo(){},lineTo(){},quadraticCurveTo(){},createLinearGradient(){return {addColorStop(){}}}}}
  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
  querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if((selector==='[data-game]'&&e.dataset.game)||(selector==='[data-mini]'&&e.dataset.mini))found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
@@ -137,6 +137,17 @@ function setup(){
  return {content,document,data,timers,context};
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
+assert.ok(html.includes('/apps/game-ux.js?v=1.1.0'), 'Game artwork/sound runtime must load before games');
+assert.ok(load('sw.js').includes('/apps/game-ux.js?v=1.1.0'),'Offline cache includes the game art/gesture runtime');
+new vm.Script(load('apps/game-ux.js'),{filename:'apps/game-ux.js'});
+const uxSource=load('apps/game-ux.js');
+assert.ok(uxSource.includes('pointerdown') && uxSource.includes('pointerup'),'Game UX implements touch and mouse dragging');
+assert.ok(uxSource.includes('/assets/sfx/'),'Games must use locally imported CC0 sound assets');
+assert.ok(load('apps/games.js').includes('window.ItamarGameUX?.swipe(grid'),'2048 swipe input must be supported');
+assert.ok(load('apps/games.js').includes('window.ItamarGameUX?.swipe(c'),'Snake swipe input must be supported');
+assert.ok(load('apps/player.js').includes("image.hidden=false"),'GIF and images must display in browser player');
+assert.ok(load('native-apps/apple/Shared/LocalMediaView.swift').includes('AnimatedGIFView'),'Native Apple player must show GIF animation');
+assert.ok(load('native-apps/android/app/src/main/java/org/itamaros/nativeapp/NativeMediaPreview.kt').includes('Movie.decodeStream'),'Android player must animate GIFs');
 const game=setup();vm.runInNewContext(load('apps/games.js'),game.context);
 vm.runInNewContext(load('apps/more-games.js'),game.context);
 assert.equal(typeof game.context.window.ItamarGames.mount,'function');
