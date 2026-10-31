@@ -95,8 +95,6 @@ create policy "see joined rooms and public channels" on public.itamar_rooms
   using (public.itamar_is_member(id) or kind = 'channel');
 create policy "members see participants" on public.itamar_members
   for select to authenticated using (public.itamar_is_member(room_id));
-create policy "change my mute setting" on public.itamar_members
-  for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy "read only room messages" on public.itamar_messages
   for select to authenticated using (public.itamar_is_member(room_id));
 create policy "send authorized messages" on public.itamar_messages
@@ -178,6 +176,17 @@ begin
   return found;
 end $$;
 
+
+create or replace function public.itamar_set_mute(p_room uuid, p_muted boolean)
+returns boolean language plpgsql security definer set search_path = public, pg_temp as $
+begin
+  if auth.uid() is null then raise exception 'Sign in required'; end if;
+  update public.itamar_members set muted = p_muted
+  where room_id = p_room and user_id = auth.uid();
+  if not found then raise exception 'Not a member'; end if;
+  return true;
+end $;
+
 create or replace function public.itamar_my_rooms()
 returns table(id uuid, title text, kind text, owner_id uuid, muted boolean, latest_at timestamptz)
 language sql stable security definer set search_path = public, pg_temp as $$
@@ -239,6 +248,7 @@ revoke all on function public.itamar_is_member(uuid) from public;
 revoke all on function public.itamar_create_room(text,text,text) from public;
 revoke all on function public.itamar_join_channel(uuid) from public;
 revoke all on function public.itamar_leave_room(uuid) from public;
+revoke all on function public.itamar_set_mute(uuid,boolean) from public;
 revoke all on function public.itamar_my_rooms() from public;
 revoke all on function public.itamar_my_updates() from public;
 revoke all on function public.itamar_create_parent_invite() from public;
@@ -247,6 +257,7 @@ grant execute on function public.itamar_is_member(uuid) to authenticated;
 grant execute on function public.itamar_create_room(text,text,text) to authenticated;
 grant execute on function public.itamar_join_channel(uuid) to authenticated;
 grant execute on function public.itamar_leave_room(uuid) to authenticated;
+grant execute on function public.itamar_set_mute(uuid,boolean) to authenticated;
 grant execute on function public.itamar_my_rooms() to authenticated;
 grant execute on function public.itamar_my_updates() to authenticated;
 grant execute on function public.itamar_create_parent_invite() to authenticated;
@@ -254,3 +265,13 @@ grant execute on function public.itamar_redeem_parent_invite(text,text,text) to 
 
 -- Access to base tables remains restricted by RLS. No service-role secret
 -- or private Apple signing credential belongs in web or mobile clients.
+
+-- Table-level grants still use the row-specific RLS policies above.
+revoke all on public.itamar_profiles,public.itamar_rooms,public.itamar_members,
+ public.itamar_messages,public.itamar_blocks,public.itamar_parent_invites,
+ public.itamar_parent_links from anon;
+grant select,insert,update on public.itamar_profiles to authenticated;
+grant select on public.itamar_rooms,public.itamar_members,
+ public.itamar_parent_invites,public.itamar_parent_links to authenticated;
+grant select,insert on public.itamar_messages to authenticated;
+grant select,insert,delete on public.itamar_blocks to authenticated;
