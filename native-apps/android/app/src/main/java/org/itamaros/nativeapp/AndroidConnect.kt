@@ -533,6 +533,14 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     Text((if(own)"You: " else "Member: ")+
                         (if(deleted)"Message deleted" else entry.optString("body"))+
                         (if(!entry.isNull("edited_at"))" (edited)" else ""))
+                    if(!deleted && !entry.optBoolean("is_view_once",false)){
+                        val sharedURL=Regex("https?://[^\\s]+").find(entry.optString("body"))?.value
+                        if(sharedURL!=null){
+                            Button(onClick={
+                                ctx.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(sharedURL)))
+                            }){Text("Open shared link")}
+                        }
+                    }
                     if(own && !deleted){
                         Button(onClick={perform{
                             val res=api.receipt(id)
