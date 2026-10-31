@@ -197,43 +197,102 @@ private struct MemoryMatchView: View {
     @State private var cards = [String]()
     @State private var visible = [Int]()
     @State private var matched = Set<Int>()
+    @State private var known = [Int: String]()
+    @State private var scores = [0, 0]
     @State private var moves = 0
+    @State private var turn = 0
+    @State private var roundID = UUID()
+    @State private var opponent: GameOpponent = .friend
+    @State private var difficulty: GameDifficulty = .medium
+
+    private var finished: Bool { matched.count == cards.count && !cards.isEmpty }
+    private var playerLabel: String {
+        turn == 0 ? "Player 1" : (opponent == .bot ? "Bot" : "Player 2")
+    }
 
     var body: some View {
         VStack(spacing: 12) {
             Text("Memory Match").font(.title2.bold())
-            Text("Moves: \(moves) · Best completed: \(best == 0 ? "—" : String(best))")
-            if matched.count == 16 { Text("All pairs found!") }
+            GameMatchOptions(opponent: $opponent, difficulty: $difficulty)
+                .onChange(of: opponent) { _, _ in reset() }
+                .onChange(of: difficulty) { _, _ in reset() }
+            Text("Pairs: Player 1 \(scores[0]) · \(opponent == .bot ? "Bot" : "Player 2") \(scores[1])")
+            Text(finished ? (scores[0] == scores[1] ? "It's a draw!" :
+                 (scores[0] > scores[1] ? "Player 1 wins!" : "\(opponent == .bot ? "Bot" : "Player 2") wins!")) :
+                 "\(playerLabel)'s turn · Moves: \(moves)")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 6) {
                 ForEach(0..<cards.count, id: \.self) { i in
-                    Button(matched.contains(i) || visible.contains(i) ? cards[i] : "❔") { select(i) }
-                        .frame(minHeight: 56)
-                        .buttonStyle(.bordered)
-                        .disabled(matched.contains(i) || visible.count >= 2)
+                    Button(matched.contains(i) || visible.contains(i) ? cards[i] : "❔") { humanPick(i) }
+                        .frame(minHeight: 56).buttonStyle(.bordered)
+                        .disabled(finished || matched.contains(i) || visible.count >= 2 ||
+                                  (opponent == .bot && turn == 1))
                 }
             }
+            Text("Total moves: \(moves) · Best: \(best == 0 ? "—" : String(best))")
+                .font(.caption).foregroundStyle(.secondary)
             Button("New cards") { reset() }
         }
         .onAppear { if cards.isEmpty { reset() } }
     }
 
     private func reset() {
-        cards = (symbols + symbols).shuffled(); matched = []; visible = []; moves = 0
+        roundID = UUID()
+        cards = (symbols + symbols).shuffled()
+        matched = []
+        visible = []
+        known = [:]
+        scores = [0, 0]
+        moves = 0
+        turn = 0
     }
 
-    private func select(_ index: Int) {
-        guard !matched.contains(index), !visible.contains(index), visible.count < 2 else { return }
+    private func humanPick(_ index: Int) {
+        guard !(opponent == .bot && turn == 1) else { return }
+        reveal(index)
+    }
+
+    private func reveal(_ index: Int) {
+        guard !matched.contains(index), !visible.contains(index), visible.count < 2, !finished else { return }
         visible.append(index)
+        if opponent == .bot {
+            if difficulty == .hard || (difficulty == .medium && Bool.random()) {
+                known[index] = cards[index]
+            }
+        }
         if visible.count == 2 {
             moves += 1
-            let a = visible[0], b = visible[1], snapshot = cards
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                guard snapshot == cards else { return }
+            let a = visible[0], b = visible[1], token = roundID
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+                guard token == roundID else { return }
                 if cards[a] == cards[b] {
-                    matched.insert(a); matched.insert(b)
-                    if matched.count == 16 && (best == 0 || moves < best) { best = moves }
-                }
+                    matched.insert(a); matched.insert(b); scores[turn] += 1
+                    if finished && (best == 0 || moves < best) { best = moves }
+                } else { turn = 1 - turn }
                 visible = []
+                if !finished && opponent == .bot && turn == 1 { scheduleBotTurn() }
+            }
+        }
+    }
+
+    private func scheduleBotTurn() {
+        let token = roundID
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard token == roundID, turn == 1, visible.isEmpty, !finished, opponent == .bot else { return }
+            let available = cards.indices.filter { !matched.contains($0) }
+            guard let randomFirst = available.randomElement() else { return }
+            let knownIndices = available.filter { known[$0] != nil }
+            let pair = knownIndices.first { a in
+                knownIndices.contains { $0 != a && known[$0] == known[a] }
+            }
+            let first = difficulty == .easy ? randomFirst : (pair ?? randomFirst)
+            reveal(first)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                guard token == roundID, turn == 1, visible == [first] else { return }
+                let rest = cards.indices.filter { !matched.contains($0) && $0 != first }
+                let learned = rest.first { known[$0] == cards[first] }
+                if let second = (difficulty == .easy ? nil : learned) ?? rest.randomElement() {
+                    reveal(second)
+                }
             }
         }
     }
