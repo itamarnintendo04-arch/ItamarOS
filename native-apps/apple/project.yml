@@ -4,8 +4,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "1.6.0"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "1.6.1"
+    CURRENT_PROJECT_VERSION: "7"
     SWIFT_VERSION: "5.9"
 targets:
   ItamarOSiOS:
@@ -15,6 +15,15 @@ targets:
     sources:
       - path: Shared
       - path: iOS/Assets.xcassets
+    info:
+      path: iOS/Info.plist
+      properties:
+        NSContactsUsageDescription: "Contacts are used only when you explicitly choose names for private local message drafts. They are never uploaded."
+        CFBundleURLTypes:
+          - CFBundleURLName: org.itamaros.mobile
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes:
+              - itamaros
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.mobile
