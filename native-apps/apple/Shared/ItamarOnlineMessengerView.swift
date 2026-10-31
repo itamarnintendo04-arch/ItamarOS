@@ -28,6 +28,7 @@ struct ItamarOnlineMessengerView: View {
                             Text("Chats").tag(0)
                             Text("Channels").tag(1)
                             Text("Updates").tag(2)
+                            Text("Groups").tag(3)
                         }
                         .pickerStyle(.segmented)
                         .padding()
@@ -56,17 +57,17 @@ struct ItamarOnlineMessengerView: View {
                                     }
                                 }
                             } else {
-                                let kind = selected == 0 ? "chat" : "channel"
+                                let kind = selected == 0 ? "chat" : (selected == 3 ? "group" : "channel")
                                 ForEach(cloud.rooms.filter { $0.kind == kind }) { room in
                                     NavigationLink {
                                         ItamarCloudThreadView(room: room)
                                     } label: {
                                         HStack {
-                                            Image(systemName: kind == "chat" ? "bubble.left.and.bubble.right.fill" : "megaphone.fill")
+                                            Image(systemName: kind == "chat" ? "bubble.left.and.bubble.right.fill" : (kind == "group" ? "person.3.fill" : "megaphone.fill"))
                                                 .foregroundStyle(.blue)
                                             VStack(alignment: .leading) {
                                                 Text(room.title).font(.headline)
-                                                Text(kind == "chat" ? "Private conversation" : "Broadcast channel")
+                                                Text(kind == "chat" ? "Private conversation" : (kind == "group" ? "Group chat" : "Broadcast channel"))
                                                     .font(.caption).foregroundStyle(.secondary)
                                             }
                                             Spacer()
@@ -78,8 +79,8 @@ struct ItamarOnlineMessengerView: View {
                                 }
                                 if cloud.rooms.allSatisfy({ $0.kind != kind }) {
                                     ContentUnavailableView(
-                                        "Nothing here yet", systemImage: kind == "chat" ? "bubble.left" : "megaphone",
-                                        description: Text(kind == "chat" ? "Start a chat by username." : "Create or follow a channel.")
+                                        "Nothing here yet", systemImage: kind == "chat" ? "bubble.left" : (kind == "group" ? "person.3" : "megaphone"),
+                                        description: Text(kind == "chat" ? "Start a chat by username." : (kind == "group" ? "Create a group." : "Create or follow a channel."))
                                     )
                                 }
                             }
@@ -114,7 +115,8 @@ struct ItamarOnlineMessengerView: View {
                 NavigationStack { ItamarCloudProfileView(required: false) }
             }
             .sheet(isPresented: $showNew) {
-                NavigationStack { ItamarCloudNewRoomView(kind: selected == 1 ? "channel" : "chat") }
+                NavigationStack { if selected == 3 { ItamarCreateGroupView() }
+                else { ItamarCloudNewRoomView(kind: selected == 1 ? "channel" : "chat") } }
             }
             .sheet(isPresented: $showChannels) {
                 NavigationStack { ItamarCloudExploreView() }
@@ -348,7 +350,7 @@ private struct ItamarCloudThreadView: View {
     @State private var error = ""
     @State private var poll: Task<Void, Never>?
 
-    private var canPost: Bool { room.kind == "chat" || room.owner_id == cloud.userID }
+    private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -408,6 +410,15 @@ private struct ItamarCloudThreadView: View {
         }
         .navigationTitle(room.title)
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .top) {
+            if room.kind == "group" {
+                NavigationLink("Polls and voting") {
+                    ItamarGroupPollsView(room: room.id)
+                }
+                .font(.subheadline.bold()).frame(maxWidth: .infinity).padding(6)
+                .background(.thinMaterial)
+            }
+        }
         .toolbar {
             Button {
                 Task {
