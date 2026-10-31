@@ -333,29 +333,71 @@ private struct ReactionTestView: View {
 private struct RockPaperScissorsView: View {
     @AppStorage("itamaros.games.rpsbest") private var best = 0
     @State private var wins = 0
+    @State private var opponent: GameOpponent = .friend
+    @State private var difficulty: GameDifficulty = .medium
+    @State private var firstMove: Int?
+    @State private var history = [Int]()
     @State private var result = "Choose a move."
-    private let choices = ["Rock","Paper","Scissors"]
+    private let choices = ["Rock", "Paper", "Scissors"]
+    private let pictures = ["✊", "✋", "✌️"]
 
     var body: some View {
         VStack(spacing: 14) {
             Text("Rock Paper Scissors").font(.title2.bold())
+            GameMatchOptions(opponent: $opponent, difficulty: $difficulty)
+                .onChange(of: opponent) { _, _ in reset() }
+                .onChange(of: difficulty) { _, _ in reset() }
+            Text(firstMove == nil ? (opponent == .bot ? "Choose your move" : "Player 1: choose secretly") :
+                 "Pass the device to Player 2. Pick without seeing the first move.")
+                .font(.subheadline.bold())
             HStack {
                 ForEach(choices.indices, id: \.self) { index in
-                    Button(choices[index]) { play(index) }.buttonStyle(.borderedProminent)
+                    Button("\(pictures[index]) \(choices[index])") { play(index) }
+                        .buttonStyle(.borderedProminent)
                 }
             }
             Text(result)
-            Text("Wins: \(wins) · Best: \(best)")
+            Text("Player 1 wins: \(wins) · Best: \(best)")
+            Button("New match") { reset() }
         }
     }
 
-    private func play(_ mine: Int) {
-        let other = Int.random(in: 0...2)
-        if mine == other { result = "Draw! The device chose \(choices[other])." }
-        else if (mine - other + 3) % 3 == 1 {
-            wins += 1; best = max(best, wins)
-            result = "You win! The device chose \(choices[other])."
-        } else { result = "The device wins with \(choices[other])." }
+    private func reset() {
+        firstMove = nil
+        wins = 0
+        history = []
+        result = "Choose a move."
+    }
+
+    private func botChoice() -> Int {
+        if difficulty == .easy || history.isEmpty { return Int.random(in: 0...2) }
+        let counts = (0...2).map { n in history.filter { $0 == n }.count }
+        let predicted = counts.indices.max(by: { counts[$0] < counts[$1] }) ?? 0
+        let predict = Int.random(in: 0..<100) < (difficulty == .hard ? 85 : 45)
+        return predict ? (predicted + 1) % 3 : Int.random(in: 0...2)
+    }
+
+    private func play(_ picked: Int) {
+        if opponent == .friend && firstMove == nil {
+            firstMove = picked
+            result = "Player 1 locked in a choice. Player 2, it's your turn."
+            return
+        }
+        let mine = firstMove ?? picked
+        // Fair play: predict from earlier rounds, never inspect the current move.
+        let other = opponent == .bot ? botChoice() : picked
+        let outcome = (mine - other + 3) % 3
+        if outcome == 0 {
+            result = "Draw! Both picked \(choices[mine])."
+        } else if outcome == 1 {
+            wins += 1
+            best = max(best, wins)
+            result = "Player 1 wins! \(choices[mine]) beats \(choices[other])."
+        } else {
+            result = "\(opponent == .bot ? "Bot" : "Player 2") wins! \(choices[other]) beats \(choices[mine])."
+        }
+        history.append(mine)
+        firstMove = nil
     }
 }
 
