@@ -1,4 +1,4 @@
-# ◈ ItamarOS — Version 1.6
+# ◈ ItamarOS — Version 1.6.1
 
 **ItamarOS** is a personal operating-system project featuring a PC desktop edition, an installable desktop demonstration, and a responsive browser emulator.
 
@@ -6,7 +6,7 @@
 
 ## iPhone/iPad downloads — version archive
 
-The current native iOS source version is **1.6.0**. The iOS 1.6 package is built as an **unsigned IPA** by GitHub Actions, not a signed release. **A workflow link is not a claim that the build succeeded or that an IPA is already downloadable.** To obtain it, open the workflow, select **Run workflow**, wait for a successful run, and download the **ItamarOS-iOS-1.6-unsigned-IPA** artifact from the run page (GitHub sign-in may be required). A successful build may still need validation and appropriate Apple-issued signing before installing on a device.
+The current native iOS source version is **1.6.1**. The iOS 1.6 package is built as an **unsigned IPA** by GitHub Actions, not a signed release. **A workflow link is not a claim that the build succeeded or that an IPA is already downloadable.** To obtain it, open the workflow, select **Run workflow**, wait for a successful run, and download the **ItamarOS-iOS-1.6.1-unsigned-IPA** artifact from the run page (GitHub sign-in may be required). A successful build may still need validation and appropriate Apple-issued signing before installing on a device.
 
 - [Build/download iOS 1.6 unsigned IPA (GitHub Actions)](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml)
 - [iOS 1.6 SwiftUI source](native-apps/apple/) · [iOS app build instructions](native-apps/apple/README.md)
@@ -38,6 +38,14 @@ The competitive **Memory Match**, **Tic-Tac-Toe**, **Rock Paper Scissors**, and 
 Hard Tic-Tac-Toe uses minimax; Hard Connect Four looks ahead; the Memory Match bot only remembers cards that have been revealed (with reduced memory at easier levels). Rock Paper Scissors bots predict from previous rounds, not from the player's current hidden choice. Single-player games remain single-player.
 
 **Build notice:** Source changes require a fresh iOS IPA build via the [unsigned IPA workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml). The earlier downloaded IPA artifact does not automatically update itself. Unsigned builds still require valid signing and device testing.
+
+## iOS 1.6.1 — Messages and family setup (development preview)
+
+The iOS/iPadOS SwiftUI application now includes **Messages → Chats / Channels / Updates**, local profile editing, chat/channel mute, a private local activity feed, on-demand Contacts permission (names read on device only) and an opt-in request for notification permission. A channel is a local posting space, not a publicly accessible broadcast service. The app also offers a parent QR invitation pointing to the [parent setup landing page](parent.html), with a best-effort in-app deep link (`itamaros://parent?invite=...`) when the iOS app is installed.
+
+**What is not implemented:** There is no authenticated internet messaging service, backend account directory, cross-device parent approval, real-time delivery, push notification service, verified username uniqueness or active parental supervision. The parent web form stores a temporary browser-only preview, and the iOS enrollment saves a local preview on the scanning device; neither connects to the inviting phone. Automatic iOS Universal Links need a verified Apple developer Team ID, a correctly hosted Apple App Site Association file and a signed Associated Domains entitlement. Until those are configured, the custom URL scheme is a best-effort app-open attempt and browsers may require tapping Open App.
+
+No contact names or messages are uploaded; the source must be reviewed, signed and tested before distribution. **Do not enter passwords, identification documents, or sensitive information in the parent preview.** [Apple source and privacy notes](native-apps/apple/README.md).
 
 ## Editions
 
