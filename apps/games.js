@@ -6,7 +6,8 @@ let current='2048',root=null,timer=null,flipTimeout=null;
 const icons=['🍀','🌈','⭐','🎯','🎵','🚀','🐱','🌟'];
 const $=id=>document.getElementById(id);
 const make=(tag,txt,cls)=>{const node=document.createElement(tag);if(txt!==undefined)node.textContent=txt;if(cls)node.className=cls;return node};
-const button=(txt,fn)=>{const b=make('button',txt);b.type='button';b.addEventListener('click',fn);return b};
+const button=(txt,fn)=>{const b=make('button',txt);b.type='button';b.addEventListener('click',()=>{window.ItamarGameUX?.sound('tap');fn()});return b};
+const heading=(text)=>{const h=make('h3',text,'itamar-game-heading');const art=window.ItamarGameUX?.illustration(current);if(art)h.prepend(art);return h};
 const empty2048=()=>Array(16).fill(0);
 function defaults(){return {scores:{'2048':0,snake:0,memory:0,tictactoe:0,reaction:0,guess:0,rps:0,math:0,word:0,pattern:0},extras:{guess:{target:0,tries:0,last:''},rps:{wins:0,losses:0,ties:0},math:{correct:0,total:0,question:null},word:{completed:0,current:0},pattern:{wins:0,level:0,sequence:[]}},game2048:{board:empty2048(),score:0,over:false},snake:{body:[{x:5,y:7},{x:4,y:7},{x:3,y:7}],food:{x:10,y:7},dir:{x:1,y:0},next:{x:1,y:0},score:0,over:false,running:false},memory:{cards:[],matched:[],moves:0,finished:false},tictactoe:{board:Array(9).fill(''),turn:'X',winner:'',wins:{X:0,O:0,tie:0}}}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return defaults();const d=defaults();for(const k of Object.keys(d))if(k in s&&s[k]&&typeof s[k]==='object')d[k]={...d[k],...s[k]};if(!Array.isArray(d.game2048.board)||d.game2048.board.length!==16)d.game2048=defaults().game2048;if(!Array.isArray(d.tictactoe.board)||d.tictactoe.board.length!==9)d.tictactoe=defaults().tictactoe;if(!Array.isArray(d.snake.body)||!d.snake.body.length)d.snake=defaults().snake;return d}catch{return defaults()}}
@@ -19,6 +20,7 @@ function mount(){
  const wrapper=make('section',undefined,'ios-feature');wrapper.id='itamar-games';root.append(wrapper);
  wrapper.append(make('h2','🎮 ItamarOS Games'));
  wrapper.append(make('p','Play instantly. Your scores and progress are saved in this browser. No account or download required.','ios-caption'));
+ const sounds=button('Sound effects',()=>{const on=window.ItamarGameUX?.toggleSound();sounds.textContent=on?'🔊 Sound on':'🔇 Sound off'});sounds.textContent=window.ItamarGameUX?.soundOn?'🔊 Sound on':'🔇 Sound off';wrapper.append(sounds);
  const bar=make('div',undefined,'ios-row');
  for(const [id,name] of [['2048','🔢 2048'],['snake','🐍 Snake'],['memory','🧠 Memory Match'],['tictactoe','⭕ Tic-Tac-Toe'],['guess','🎯 Guess'],['reaction','⚡ Reaction'],['rps','✂️ Rock Paper Scissors'],['math','🧠 Math Sprint'],['word','🔤 Word Mix'],['pattern','🎨 Pattern Memory']]){
   const b=button(name,()=>switchTo(id));b.dataset.game=id;bar.append(b)
@@ -48,7 +50,7 @@ function play2048(direction){
   const merged=[];for(let i=0;i<vals.length;i++){if(i+1<vals.length&&vals[i]===vals[i+1]){merged.push(vals[i]*2);g.score+=vals[i]*2;i++}else merged.push(vals[i])}
   while(merged.length<4)merged.push(0);for(let k=0;k<4;k++)g.board[indices[k]]=merged[k]
  }
- if(before===g.board.join(','))return;
+ if(before===g.board.join(','))return;window.ItamarGameUX?.sound('move');
  spawn(g.board);saveData.scores['2048']=Math.max(saveData.scores['2048'],g.score);
  if(!g.board.includes(0)){g.over=!['up','down','left','right'].some(d=>canMove(g.board,d))}
  save();render2048();
@@ -57,15 +59,15 @@ function canMove(board){if(board.includes(0))return true;for(let i=0;i<16;i++){i
 function render2048(){
  const a=$('itamar-game-area');if(!a||current!=='2048')return;a.replaceChildren();
  const g=saveData.game2048;if(g.board.every(v=>v===0)){spawn(g.board);spawn(g.board);save()}
- a.append(make('h3','2048 · Merge matching tiles'));
+ a.append(heading('2048 · Merge matching tiles'));
  a.append(make('p','Score: '+g.score+' · Best: '+saveData.scores['2048']));
  const grid=make('div',undefined,'ios-board ios-2048');for(const n of g.board){const tile=make('div',n||'');if(n)tile.dataset.number=n;grid.append(tile)}a.append(grid);
  const controls=make('div',undefined,'ios-dpad');
  controls.append(make('span'),button('↑',()=>play2048('up')),make('span'),button('←',()=>play2048('left')),button('↓',()=>play2048('down')),button('→',()=>play2048('right')));
- a.append(controls);
+ window.ItamarGameUX?.swipe(grid,direction=>play2048(direction));
  if(g.over)a.append(make('p','No moves left. Start a new game.','ios-danger'));
  a.append(button('New 2048 game',()=>{if(confirm('Start a new 2048 game? Your best score remains saved.'))reset2048()}));
- a.append(make('p','Use arrow keys or the on-screen arrows to slide tiles.','ios-caption'));
+ a.append(make('p','Drag or swipe the board to slide tiles. Keyboard arrows also work.','ios-caption'));
 }
 const SIDE=16;
 function randomFood(body){const occupied=new Set(body.map(p=>p.x+','+p.y)),spaces=[];for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++)if(!occupied.has(x+','+y))spaces.push({x,y});return spaces.length?spaces[Math.floor(Math.random()*spaces.length)]:null}
@@ -80,34 +82,55 @@ function snakeTick(){
   g.over=true;g.running=false;stopTimers();save();drawSnake();updateSnakeText();return
  }
  g.body.unshift(head);
- if(eat){g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);g.food=randomFood(g.body);if(!g.food){g.over=true;g.running=false;stopTimers()}}else g.body.pop();
+ if(eat){window.ItamarGameUX?.sound('collect');g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);g.food=randomFood(g.body);if(!g.food){g.over=true;g.running=false;stopTimers()}}else g.body.pop();
  save();drawSnake();updateSnakeText();
 }
 function startSnake(){const g=saveData.snake;if(g.over){snakeReset();return}g.running=!g.running;if(g.running){timer=setInterval(()=>{if(!$('snake-board')||!document.contains($('snake-board'))||$('window')?.classList.contains('hidden')){stopTimers();g.running=false;save();return}snakeTick()},140)}else stopTimers();save();renderSnake()}
 function updateSnakeText(){const p=$('snake-score');if(p){const g=saveData.snake;p.textContent='Score: '+g.score+' · Best: '+saveData.scores.snake+(g.over?' · Game over':'')}}
 function drawSnake(){
  const c=$('snake-board');if(!c)return;
- const ctx=c.getContext('2d');const cell=c.width/SIDE;
- ctx.fillStyle='#0c2541';ctx.fillRect(0,0,c.width,c.height);
- ctx.fillStyle='#a9c4e5';for(let k=1;k<SIDE;k++){ctx.fillRect(k*cell,0,1,c.height);ctx.fillRect(0,k*cell,c.width,1)}
- const g=saveData.snake;
- if(g.food){ctx.fillStyle='#f79970';ctx.beginPath();ctx.arc((g.food.x+.5)*cell,(g.food.y+.5)*cell,cell*.39,0,Math.PI*2);ctx.fill()}
- g.body.forEach((p,i)=>{ctx.fillStyle=i===0?'#b9f8b4':'#61d296';ctx.fillRect(p.x*cell+2,p.y*cell+2,cell-4,cell-4)});
+ const ctx=c.getContext('2d'),cell=c.width/SIDE,g=saveData.snake;
+ const gradient=ctx.createLinearGradient(0,0,c.width,c.height);
+ gradient.addColorStop(0,'#163b5d');gradient.addColorStop(1,'#0c253f');
+ ctx.fillStyle=gradient;ctx.fillRect(0,0,c.width,c.height);
+ for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++){
+  ctx.fillStyle=(x+y)%2?'#ffffff09':'#7cdbb00a';ctx.fillRect(x*cell,y*cell,cell,cell);
+ }
+ if(g.food){
+  const x=(g.food.x+.5)*cell,y=(g.food.y+.54)*cell;
+  ctx.fillStyle='#f04e68';ctx.beginPath();ctx.ellipse(x-cell*.16,y,cell*.25,cell*.28,-.12,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ff6676';ctx.beginPath();ctx.ellipse(x+cell*.16,y,cell*.25,cell*.28,.15,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#4ccb85';ctx.lineWidth=cell*.07;ctx.beginPath();ctx.moveTo(x,y-cell*.2);ctx.quadraticCurveTo(x+cell*.1,y-cell*.56,x+cell*.31,y-cell*.5);ctx.stroke();
+  ctx.fillStyle='#65db84';ctx.beginPath();ctx.ellipse(x+cell*.28,y-cell*.5,cell*.18,cell*.08,-.2,0,Math.PI*2);ctx.fill();
+ }
+ for(let i=g.body.length-1;i>=0;i--){
+  const p=g.body[i],x=(p.x+.5)*cell,y=(p.y+.5)*cell,head=i===0;
+  ctx.fillStyle=head?'#7be2a5':i%2?'#32b77c':'#2ea970';
+  ctx.beginPath();ctx.roundRect(p.x*cell+1,p.y*cell+1,cell-2,cell-2,head?cell*.4:cell*.29);ctx.fill();
+  ctx.fillStyle='#b2f3cd';ctx.beginPath();ctx.ellipse(x,y+cell*.12,cell*.29,cell*.12,0,0,Math.PI*2);ctx.fill();
+  if(head){
+   const nx=g.dir.x,ny=g.dir.y;
+   for(const side of [-1,1]){
+    const ex=x+nx*cell*.14+ny*side*cell*.2,ey=y+ny*cell*.14-nx*side*cell*.2;
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(ex,ey,cell*.11,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#153e32';ctx.beginPath();ctx.arc(ex+nx*cell*.025,ey+ny*cell*.025,cell*.05,0,Math.PI*2);ctx.fill();
+   }
+   ctx.strokeStyle='#fc8396';ctx.lineWidth=cell*.06;ctx.beginPath();ctx.moveTo(x+nx*cell*.28,y+ny*cell*.28);ctx.lineTo(x+nx*cell*.43,y+ny*cell*.43);ctx.stroke();
+  }
+ }
 }
 function renderSnake(){
  const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
  const g=saveData.snake;
- a.append(make('h3','Snake'));
+ a.append(heading('Snake'));
  const score=make('p','', 'ios-caption');score.id='snake-score';a.append(score);
  const c=make('canvas',undefined,'ios-snake');c.id='snake-board';c.width=400;c.height=400;c.setAttribute('aria-label','Snake play board');a.append(c);drawSnake();updateSnakeText();
  const controls=make('div',undefined,'ios-dpad');
  controls.append(make('span'),button('↑',()=>snakeDirection(0,-1)),make('span'),button('←',()=>snakeDirection(-1,0)),button('↓',()=>snakeDirection(0,1)),button('→',()=>snakeDirection(1,0)));
- a.append(controls);
+ // Drag/swipe steering instead of direction arrows.
  a.append(button(g.over?'Try again':'Start / Pause',startSnake),button('New game',()=>{if(confirm('Start a new Snake game?'))snakeReset()}));
- a.append(make('p','Arrow keys or touch controls; avoid the walls and your tail.','ios-caption'));
- // mobile swipe support
- let start=null;c.addEventListener('touchstart',e=>{if(e.touches.length===1)start={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
- c.addEventListener('touchend',e=>{if(!start||!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;start=null;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))snakeDirection(Math.sign(dx),0);else snakeDirection(0,Math.sign(dy))},{passive:true});
+ a.append(make('p','Drag or swipe across the board to steer. Arrow keys also work.','ios-caption'));
+ window.ItamarGameUX?.swipe(c,dir=>{const v={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]}[dir];snakeDirection(...v)});
 }
 function randomize(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]]}return array}
 function memoryReset(){saveData.memory={cards:randomize(icons.flatMap(x=>[x,x])),matched:[],moves:0,finished:false};save();renderMemory()}
@@ -127,7 +150,7 @@ function memoryPick(i){
 function renderMemory(){
  const a=$('itamar-game-area');if(!a||current!=='memory')return;a.replaceChildren();const g=saveData.memory;
  if(!g.cards.length){memoryReset();return}
- a.append(make('h3','Memory Match'));
+ a.append(heading('Memory Match'));
  a.append(make('p','Moves: '+g.moves+' · Best completion: '+(saveData.scores.memory||'—')+' moves'));
  const grid=make('div',undefined,'ios-board ios-memory');
  g.cards.forEach((symbol,i)=>{const flipped=g.matched.includes(i)||showing.includes(i);const b=button(flipped?symbol:'?',()=>memoryPick(i));b.setAttribute('aria-label','Memory card '+(i+1)+(flipped?', '+symbol:''));b.classList.toggle('found',g.matched.includes(i));if(g.matched.includes(i))b.disabled=true;grid.append(b)});
@@ -137,10 +160,10 @@ function renderMemory(){
 }
 const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 function tictactoeResult(board){for(const line of lines){const [a,b,c]=line;if(board[a]&&board[a]===board[b]&&board[a]===board[c])return board[a]}return board.every(Boolean)?'tie':''}
-function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
+function ticMove(i){const g=saveData.tictactoe;if(g.winner||g.board[i])return;g.board[i]=g.turn;g.winner=tictactoeResult(g.board);if(g.winner){window.ItamarGameUX?.sound('win');g.wins[g.winner]=(g.wins[g.winner]||0)+1}else g.turn=g.turn==='X'?'O':'X';save();renderTicTacToe()}
 function renderTicTacToe(){
  const a=$('itamar-game-area');if(!a||current!=='tictactoe')return;a.replaceChildren();const g=saveData.tictactoe;
- a.append(make('h3','Tic-Tac-Toe · 2 players'));
+ a.append(heading('Tic-Tac-Toe · 2 players'));
  a.append(make('p',g.winner?(g.winner==='tie'?'Draw!':'Winner: '+g.winner):'Turn: '+g.turn));
  const board=make('div',undefined,'ios-board');board.style.gridTemplateColumns='repeat(3,1fr)';board.style.maxWidth='300px';
  g.board.forEach((v,i)=>{const b=button(v||'·',()=>ticMove(i));b.style.cssText='aspect-ratio:1;font-size:32px;min-height:70px';b.disabled=Boolean(v||g.winner);board.append(b)});a.append(board);
@@ -153,7 +176,7 @@ function message(area,text){const p=make('p',text,'ios-caption');area.append(p);
 function renderGuess(){
  const a=$('itamar-game-area');if(!a||current!=='guess')return;
  const g=saveData.extras.guess;if(!g.target){g.target=rand(1,100);g.tries=0;g.last='';save()}
- a.replaceChildren();a.append(make('h3','Guess the number'));
+ a.replaceChildren();a.append(heading('Guess the number'));
  message(a,'A secret number from 1 to 100. Try to find it!');
  message(a,'Attempts: '+g.tries+' · Best (fewest): '+(saveData.scores.guess||'—'));
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='number';input.min='1';input.max='100';input.placeholder='1–100';input.setAttribute('aria-label','Your guess');row.append(input);
@@ -169,7 +192,7 @@ function renderGuess(){
 let reactionReadyAt=0,reactionStart=0;
 function renderReaction(){
  const a=$('itamar-game-area');if(!a||current!=='reaction')return;
- a.replaceChildren();a.append(make('h3','Reaction timer'));
+ a.replaceChildren();a.append(heading('Reaction timer'));
  message(a,'Press Start, then wait for the button to turn green. Do not press too early.');
  message(a,'Fastest time: '+(saveData.scores.reaction?saveData.scores.reaction+' ms':'—'));
  const result=message(a,'Ready?');
@@ -191,7 +214,7 @@ function renderReaction(){
 const rpsChoices=['Rock','Paper','Scissors'];
 function renderRPS(){
  const a=$('itamar-game-area');if(!a||current!=='rps')return;a.replaceChildren();
- const g=saveData.extras.rps;a.append(make('h3','Rock Paper Scissors'));
+ const g=saveData.extras.rps;a.append(heading('Rock Paper Scissors'));
  message(a,'You vs the computer. No wagers, just fun.');
  message(a,'Wins: '+g.wins+' · Losses: '+g.losses+' · Ties: '+g.ties);
  const result=message(a,'Choose your move');
@@ -216,7 +239,7 @@ function nextMath(){
 function renderMath(){
  const a=$('itamar-game-area');if(!a||current!=='math')return;a.replaceChildren();
  const g=saveData.extras.math;if(!g.question)nextMath();
- a.append(make('h3','Math Sprint'));message(a,'Correct: '+g.correct+' / '+g.total);
+ a.append(heading('Math Sprint'));message(a,'Correct: '+g.correct+' / '+g.total);
  const q=g.question;message(a,q.a+' '+q.op+' '+q.b+' = ?');
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='number';input.placeholder='Answer';row.append(input);
  const result=message(a,'');
@@ -233,7 +256,7 @@ function renderWord(){
  const g=saveData.extras.word;
  const [word,hint]=wordBank[g.current%wordBank.length];
  const letters=word.toUpperCase().split(''),shuffled=letters.slice().sort(()=>Math.random()-.5).join(' ');
- a.append(make('h3','Word Mix'));
+ a.append(heading('Word Mix'));
  message(a,'Solved: '+g.completed+' · Progress: '+((g.current%wordBank.length)+1)+' / '+wordBank.length);
  message(a,'Hint: '+hint);message(a,'Letters: '+shuffled);
  const row=make('div',undefined,'ios-row'),input=make('input');input.type='text';input.placeholder='Unscramble the word';row.append(input);const output=message(a,'');
@@ -243,7 +266,7 @@ let patternShow=false,patternIndex=0;
 function renderPattern(){
  const a=$('itamar-game-area');if(!a||current!=='pattern')return;a.replaceChildren();
  const g=saveData.extras.pattern;if(!Array.isArray(g.sequence))g.sequence=[];
- a.append(make('h3','Pattern Memory'));
+ a.append(heading('Pattern Memory'));
  message(a,'Remember the sequence of numbers, then repeat it.');
  message(a,'Level: '+g.level+' · Highest level: '+saveData.scores.pattern);
  const display=message(a,g.sequence.length?'Ready to view your sequence?':'Start a new round.');

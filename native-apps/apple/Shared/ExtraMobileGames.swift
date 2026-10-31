@@ -21,6 +21,45 @@ struct ExtraMobileGames: View {
     }
 }
 
+private struct CartoonSnakeTile: View {
+    let isHead: Bool
+    let isTail: Bool
+    let isCherry: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color(hue: 0.55, saturation: 0.28, brightness: 0.28).opacity(0.18))
+            if isCherry {
+                HStack(spacing: -3) {
+                    Circle().fill(Color(red: 0.97, green: 0.24, blue: 0.35))
+                    Circle().fill(Color(red: 1, green: 0.37, blue: 0.42))
+                }
+                .frame(width: 19, height: 12).offset(y: 4)
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.green)
+                    .offset(x: 4, y: -7)
+            } else if isHead || isTail {
+                RoundedRectangle(cornerRadius: isHead ? 12 : 7)
+                    .fill(isHead ? Color(red: 0.38, green: 0.87, blue: 0.59) : Color(red: 0.14, green: 0.69, blue: 0.48))
+                    .padding(1)
+                if isHead {
+                    HStack(spacing: 7) {
+                        Circle().fill(.white).overlay(Circle().fill(.black).padding(3))
+                        Circle().fill(.white).overlay(Circle().fill(.black).padding(3))
+                    }
+                    .frame(width: 18, height: 8).offset(y: -4)
+                    Capsule().fill(.pink).frame(width: 9, height: 2).offset(y: 6)
+                } else {
+                    Circle().fill(Color.green.opacity(0.42)).frame(width: 6, height: 6)
+                }
+            }
+        }
+        .accessibilityLabel(isCherry ? "Cherry" : isHead ? "Snake head" : isTail ? "Snake body" : "Empty")
+    }
+}
+
 private struct Game2048View: View {
     @AppStorage("itamaros.games.2048best") private var best = 0
     @State private var board = [Int](repeating: 0, count: 16)
@@ -35,14 +74,17 @@ private struct Game2048View: View {
                     Text(board[i] == 0 ? "·" : String(board[i]))
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 58)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 9))
+                        .background(board[i] == 0 ? Color.indigo.opacity(0.13) : Color(hue: Double((board[i] % 13)) / 13.0, saturation: 0.55, brightness: 0.94), in: RoundedRectangle(cornerRadius: 9))
                 }
             }
-            HStack {
-                ForEach(["↑","←","↓","→"], id: \.self) { direction in
-                    Button(direction) { move(direction) }.buttonStyle(.borderedProminent)
-                }
-            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 18).onEnded { gesture in
+                let dx = gesture.translation.width, dy = gesture.translation.height
+                if abs(dx) > abs(dy) { move(dx > 0 ? "→" : "←") }
+                else { move(dy > 0 ? "↓" : "↑") }
+            })
+            Text("Swipe or drag the board to slide tiles. Keyboard users can still use accessibility controls.")
+                .font(.caption).foregroundStyle(.secondary)
             Button("New game") { reset() }
         }
         .onAppear { if board.allSatisfy({ $0 == 0 }) { reset() } }
@@ -115,21 +157,22 @@ private struct SnakeView: View {
                     HStack(spacing: 1) {
                         ForEach(0..<10, id: \.self) { col in
                             let pos = row * 10 + col
-                            Text(pos == snake.first ? "🟩" : pos == food ? "🍎" : snake.contains(pos) ? "🟢" : "▫️")
-                                .font(.system(size: 15))
-                                .frame(maxWidth: .infinity)
+                            CartoonSnakeTile(isHead: pos == snake.first,
+                                              isTail: snake.contains(pos) && pos != snake.first,
+                                              isCherry: pos == food)
+                                .frame(maxWidth: .infinity, minHeight: 27)
                         }
                     }
                 }
             }
-            HStack {
-                ForEach(0..<4, id: \.self) { i in
-                    let symbols = ["↑", "←", "↓", "→"]
-                    let deltas = [-10, -1, 10, 1]
-                    Button(symbols[i]) { if deltas[i] != -direction { direction = deltas[i] } }
-                        .buttonStyle(.bordered)
-                }
-            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 15).onEnded { gesture in
+                let dx = gesture.translation.width, dy = gesture.translation.height
+                let next = abs(dx) > abs(dy) ? (dx > 0 ? 1 : -1) : (dy > 0 ? 10 : -10)
+                if next != -direction { direction = next }
+            })
+            Text("Drag or swipe across the snake board to steer.")
+                .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button(running ? "Pause" : "Start") { if !finished { running.toggle() } }
                 Button("Restart") { reset() }
@@ -381,25 +424,37 @@ private struct ConnectFourView: View {
         VStack(spacing: 12) {
             Text("Connect Four · 2 players").font(.title2.bold())
             Text(winner.isEmpty ? "Player \(player)'s turn" : winner)
-            HStack(spacing: 2) {
-                ForEach(0..<7, id: \.self) { col in
-                    Button("↓") { drop(col) }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
-                        .disabled(!winner.isEmpty || board[col] != 0)
-                }
-            }
-            VStack(spacing: 0) {
-                ForEach(0..<6, id: \.self) { row in
-                    HStack(spacing: 0) {
-                        ForEach(0..<7, id: \.self) { col in
-                            Text(board[row*7+col] == 1 ? "🔴" : board[row*7+col] == 2 ? "🟡" : "⚪")
-                                .font(.system(size: 18))
-                                .frame(maxWidth: .infinity)
+            Text("Tap a column or drag across the board to drop a disk.")
+                .font(.caption).foregroundStyle(.secondary)
+            GeometryReader { geometry in
+                VStack(spacing: 4) {
+                    ForEach(0..<6, id: \.self) { row in
+                        HStack(spacing: 4) {
+                            ForEach(0..<7, id: \.self) { col in
+                                Button { drop(col) } label: {
+                                    Circle()
+                                        .fill(board[row*7+col] == 1 ? Color.red : board[row*7+col] == 2 ? Color.yellow : Color.white)
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
+                                        .padding(3)
+                                        .frame(maxWidth: .infinity)
+                                        .aspectRatio(1, contentMode: .fit)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(!winner.isEmpty)
+                            }
                         }
                     }
                 }
+                .padding(6)
+                .background(Color(red: 0.13, green: 0.41, blue: 0.8), in: RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 14).onEnded { gesture in
+                    let x = min(max(gesture.location.x, 0), geometry.size.width - 1)
+                    let col = Int(x / max(1, geometry.size.width / 7))
+                    drop(min(6, max(0, col)))
+                })
             }
+            .frame(height: 255)
             Button("New round") { board = Array(repeating: 0, count: 42); player = 1; winner = "" }
         }
     }

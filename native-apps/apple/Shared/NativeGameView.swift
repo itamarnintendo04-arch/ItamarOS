@@ -61,9 +61,21 @@ struct NativeGameView: View {
                                     selectedGame = name
                                 } label: {
                                     VStack(spacing: 13) {
-                                        Image(systemName: gameSymbols[name] ?? "gamecontroller.fill")
-                                            .font(.system(size: 33, weight: .semibold))
-                                            .frame(height: 44)
+                                        ZStack {
+                                            Circle()
+                                                .fill(LinearGradient(colors: [
+                                                    Color(hue: Double(games.firstIndex(of: name) ?? 0) / 11.0,
+                                                          saturation: 0.78, brightness: 0.98),
+                                                    Color(hue: Double(games.firstIndex(of: name) ?? 0) / 11.0,
+                                                          saturation: 0.63, brightness: 0.65)
+                                                ], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                .frame(width: 72, height: 72)
+                                            Image(systemName: gameSymbols[name] ?? "gamecontroller.fill")
+                                                .font(.system(size: 33, weight: .bold))
+                                                .symbolRenderingMode(.palette)
+                                                .foregroundStyle(.white, .yellow)
+                                        }
+                                        .accessibilityHidden(true)
                                         Text(name)
                                             .font(.subheadline.bold())
                                             .multilineTextAlignment(.center)

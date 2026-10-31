@@ -62,7 +62,7 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card" id="linux-download" aria-live="polite"><span class="badge">Desktop application · demo</span><h2>ItamarOS Demo (AppImage)</h2><p>A separately packaged AppImage demo runs as an ordinary desktop app on compatible computers. It is <strong>not</strong> a system installer. Offline assets are bundled in supported builds.</p><div id="linuxdemoasset"><p>Checking GitHub for a Linux desktop demo…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/desktop" target="_blank" rel="noopener noreferrer">View desktop demo source</a></section>
 <section class="card" id="iphone-download">
 <span class="badge">iPhone · iPad · Personal signing only</span>
-<h2>📱 ItamarOS iOS 1.5 — developer IPA</h2>
+<h2>📱 ItamarOS iOS 1.6 — developer IPA</h2>
 <p>Up to five local Apple account profiles may be remembered in the iPhone app, but only one may be selected at a time. These profiles do not authenticate a developer signing session.</p>
 <p><strong>Sign right here on ItamarOS:</strong> our local WebAssembly signer accepts an IPA, your own .p12 certificate, and an Apple provisioning profile. The signing process runs on your device in the browser and downloads a signed IPA. No ItamarOS server receives your private key, IPA, certificate password or Apple ID credentials. An Apple ID alone does not create a valid certificate or guarantee installation.</p>
 <a class="btn" href="/signer/" id="ios-browser-signer">🔏 Sign IPA on ItamarOS (in your browser)</a>
@@ -179,8 +179,8 @@ function label(element,text){element.replaceChildren();const p=document.createEl
 
 (async()=>{
  const status=document.getElementById('ios-release-status');
- const tag='v1.5-ios-unsigned';
- const expected='ItamarOS-1.5.0-iOS-UNSIGNED.ipa';
+ const tag='v1.6-ios-unsigned';
+ const expected='ItamarOS-1.6.0-iOS-UNSIGNED.ipa';
  const base='https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/'+tag+'/';
  try{
   const res=await fetch('https://api.github.com/repos/itamarnintendo04-arch/ItamarOS/releases/tags/'+tag,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});

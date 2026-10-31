@@ -1,0 +1,52 @@
+name: Import Creative Commons CC0 game sounds
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/game-sound-assets.yml"
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout ItamarOS
+        uses: actions/checkout@v4
+      - name: Download verified Kenney UI Audio sound effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, urllib.request, wave
+          commit='8c3d81b9159d058c444f89d12d518276b0b09345'
+          root='https://raw.githubusercontent.com/Calinou/kenney-ui-audio/'+commit+'/addons/kenney_ui_audio/'
+          out=pathlib.Path('assets/sfx')
+          out.mkdir(parents=True,exist_ok=True)
+          files=['click1.wav','click3.wav','switch5.wav','switch8.wav','switch14.wav','switch17.wav']
+          for name in files:
+              url=root+name
+              payload=urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'ItamarOS-audio-import'}),timeout=20).read()
+              assert 1000<len(payload)<200000 and payload[:4]==b'RIFF' and payload[8:12]==b'WAVE',name
+              (out/name).write_bytes(payload)
+              with wave.open(str(out/name),'rb') as wav:
+                  assert wav.getnchannels() in [1,2] and wav.getnframes()>0,name
+          (out/'README.md').write_text(
+              'Game sound effects are Kenney UI Audio, Creative Commons CC0 1.0.\n'
+              'Source: https://kenney.nl/assets/ui-audio\n'
+              'Pinned mirror: https://github.com/Calinou/kenney-ui-audio/commit/'+commit+'\n'
+              'License: https://creativecommons.org/publicdomain/zero/1.0/\n'
+              'Files: '+', '.join(files)+'\n'
+              'Downloaded as real WAV assets (not remote playback dependencies).\n')
+          PY
+      - name: Commit imported CC0 WAV files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/sfx
+          if git diff --cached --quiet; then echo 'No audio asset changes.'; exit 0; fi
+          git commit -m "Import Kenney CC0 game sound effects [skip ci]"
+          git push origin HEAD:main

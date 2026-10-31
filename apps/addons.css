@@ -129,3 +129,16 @@ body[data-contrast="high"]{filter:contrast(1.25)}
 /* Only apps designed for TV remote and screen are shown on TV. */
 body[data-device="tv"] main.desktop .app:not([data-tv-compatible="true"]){display:none!important}
 header .site-repo-link[href="/feedback.html"]{display:inline-flex;align-items:center;border:1px solid #5b93d175;background:#0b366d70;border-radius:8px;padding:7px 12px}
+
+/* Original vector art and touch-first game UI */
+#itamar-games .itamar-game-heading,#ios-mini-area .itamar-game-heading{display:flex;align-items:center;gap:16px;margin:12px 0 18px;font-size:clamp(22px,4vw,31px);font-weight:850}
+#itamar-games .itamar-art,#ios-mini-area .itamar-art{width:80px;height:80px;flex:none;filter:drop-shadow(0 5px 11px rgba(19,57,92,.3));background:linear-gradient(145deg,#f6f9ff,#dcecff);border-radius:18px;padding:6px}
+#itamar-games .ios-board,#ios-mini-area .ios-board{touch-action:none;user-select:none;-webkit-user-select:none}
+#itamar-games .ios-2048{padding:10px;border-radius:16px;background:linear-gradient(145deg,#27487c,#5474a3);box-shadow:inset 0 2px 8px #0004,0 8px 20px #09294a3d}
+#itamar-games .ios-2048>div{border-radius:10px;box-shadow:0 3px 0 #09264f2d;font-weight:900;color:#192842;background:#e5eafd;display:grid;place-items:center;min-height:60px}
+#itamar-games .ios-2048>div[data-number="2"]{background:#ffe2a0}#itamar-games .ios-2048>div[data-number="4"]{background:#ffc38c}#itamar-games .ios-2048>div[data-number="8"]{background:#f78ba0}#itamar-games .ios-2048>div[data-number="16"]{background:#c79afa}#itamar-games .ios-2048>div[data-number="32"]{background:#89bff5}#itamar-games .ios-2048>div[data-number="64"]{background:#91e5c9}
+#itamar-games .ios-memory button{border-radius:12px;background:linear-gradient(150deg,#ac97fc,#5e8fe2);color:#fff;box-shadow:0 4px 0 #344e9c44}
+#itamar-games .ios-memory button.found{background:linear-gradient(160deg,#72e1b6,#36a78c);color:#103d34}
+#itamar-games .ios-snake{border:5px solid #53b8ba;border-radius:18px;box-shadow:0 10px 25px #061b3540}
+#player-image{display:block;max-width:100%;border-radius:14px;background:#06182e;box-shadow:0 10px 25px #0003}#player-image[hidden]{display:none!important}
+@media(max-width:550px){#itamar-games .itamar-art,#ios-mini-area .itamar-art{width:56px;height:56px}#itamar-games .ios-2048>div{min-height:52px}}
