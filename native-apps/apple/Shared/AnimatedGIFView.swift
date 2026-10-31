@@ -18,8 +18,8 @@ private enum GIFFrames {
 
     static func decode(_ data: Data) -> (images: [CGImage], duration: TimeInterval)? {
         guard data.count <= maxBytes,
-              let source = CGImageSourceCreateWithData(data as CFData, nil),
-              CGImageSourceGetType(source) == UTType.gif.identifier as CFString else { return nil }
+              data.starts(with: Data("GIF87a".utf8)) || data.starts(with: Data("GIF89a".utf8)),
+              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let frameCount = CGImageSourceGetCount(source)
         guard frameCount > 0, frameCount <= maxFrames else { return nil }
         var images = [CGImage]()
