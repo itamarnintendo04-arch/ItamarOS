@@ -508,17 +508,25 @@ private struct ConnectFourView: View {
     @State private var board = [Int](repeating: 0, count: 42)
     @State private var player = 1
     @State private var winner = ""
+    @State private var opponent: GameOpponent = .friend
+    @State private var difficulty: GameDifficulty = .medium
+    @State private var roundID = UUID()
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Connect Four · 2 players").font(.title2.bold())
-            Text(winner.isEmpty ? "Player \(player)'s turn" : winner)
-            Text("Drag a disc to a column or tap the board to drop it.")
+            Text("Connect Four").font(.title2.bold())
+            GameMatchOptions(opponent: $opponent, difficulty: $difficulty)
+                .onChange(of: opponent) { _, _ in reset() }
+                .onChange(of: difficulty) { _, _ in reset() }
+            Text(winner.isEmpty ? (player == 2 && opponent == .bot ? "Bot is thinking…" :
+                "\(player == 1 ? "Player 1" : "Player 2")'s turn") : winner)
+            Text("Drag to a column or tap the board to drop a disc.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Circle().fill(player == 1 ? Color.red.gradient : Color.yellow.gradient)
                     .frame(width: 36, height: 36)
-                Text("Player \(player) disc").font(.subheadline.bold())
+                Text(player == 1 ? "Player 1 (red)" : "\(opponent == .bot ? "Bot" : "Player 2") (yellow)")
+                    .font(.subheadline.bold())
             }
             GeometryReader { geometry in
                 VStack(spacing: 3) {
@@ -541,29 +549,139 @@ private struct ConnectFourView: View {
                 .gesture(DragGesture(minimumDistance: 0).onEnded { value in
                     let width = max(1, geometry.size.width)
                     let column = min(6, max(0, Int(value.location.x / width * 7)))
-                    drop(column)
+                    humanDrop(column)
                 })
             }
             .frame(height: 220)
-            Button("New round") { board = Array(repeating: 0, count: 42); player = 1; winner = "" }
+            Button("New round") { reset() }
         }
     }
 
-    private func drop(_ col: Int) {
-        guard winner.isEmpty else { return }
-        guard let row = (0..<6).reversed().first(where: { board[$0*7+col] == 0 }) else { return }
-        board[row*7+col] = player
+    private func reset() {
+        roundID = UUID()
+        board = Array(repeating: 0, count: 42)
+        player = 1
+        winner = ""
+    }
+
+    private func legalColumns(_ state: [Int]) -> [Int] {
+        (0..<7).filter { state[$0] == 0 }
+    }
+
+    private func placing(_ disc: Int, in column: Int, on state: [Int]) -> [Int]? {
+        guard (0..<7).contains(column),
+              let row = (0..<6).reversed().first(where: { state[$0*7+column] == 0 }) else { return nil }
+        var next = state
+        next[row*7+column] = disc
+        return next
+    }
+
+    private func hasWon(_ state: [Int], disc: Int) -> Bool {
         for r in 0..<6 {
-            for c in 0..<7 where board[r*7+c] == player {
-                for (dc,dr) in [(1,0),(0,1),(1,1),(-1,1)] {
+            for c in 0..<7 where state[r*7+c] == disc {
+                for (dc, dr) in [(1,0), (0,1), (1,1), (-1,1)] {
                     if (0..<4).allSatisfy({ t in
                         let x = c + dc*t, y = r + dr*t
-                        return x >= 0 && x < 7 && y >= 0 && y < 6 && board[y*7+x] == player
-                    }) { winner = "Player \(player) wins!" }
+                        return x >= 0 && x < 7 && y >= 0 && y < 6 && state[y*7+x] == disc
+                    }) { return true }
                 }
             }
         }
-        if winner.isEmpty { winner = board.allSatisfy { $0 != 0 } ? "Draw" : "" }
-        if winner.isEmpty { player = 3-player }
+        return false
+    }
+
+    private func humanDrop(_ col: Int) {
+        guard !(opponent == .bot && player == 2) else { return }
+        applyDrop(col)
+    }
+
+    private func applyDrop(_ col: Int) {
+        guard winner.isEmpty, let next = placing(player, in: col, on: board) else { return }
+        board = next
+        if hasWon(next, disc: player) {
+            winner = "\(player == 1 ? "Player 1" : (opponent == .bot ? "Bot" : "Player 2")) wins!"
+        } else if legalColumns(next).isEmpty {
+            winner = "Draw!"
+        } else {
+            player = 3 - player
+            if opponent == .bot && player == 2 {
+                let token = roundID
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    guard roundID == token, player == 2, winner.isEmpty, opponent == .bot else { return }
+                    if let col = botColumn() { applyDrop(col) }
+                }
+            }
+        }
+    }
+
+    private func botColumn() -> Int? {
+        let legal = legalColumns(board)
+        guard !legal.isEmpty else { return nil }
+        if difficulty == .easy { return legal.randomElement() }
+        // Winning immediately and blocking an immediate loss work at both higher levels.
+        for disc in [2, 1] {
+            for col in legal {
+                if let next = placing(disc, in: col, on: board),
+                   hasWon(next, disc: disc) { return col }
+            }
+        }
+        if difficulty == .medium {
+            return legal.randomElement()
+        }
+        // Hard bot: look ahead three moves and favour central columns.
+        var bestScore = Int.min
+        var options = [Int]()
+        for col in legal {
+            guard let next = placing(2, in: col, on: board) else { continue }
+            let score = minimax(next, depth: 3, disc: 1) + (3 - abs(col - 3)) * 2
+            if score > bestScore { bestScore = score; options = [col] }
+            else if score == bestScore { options.append(col) }
+        }
+        return options.randomElement()
+    }
+
+    private func minimax(_ state: [Int], depth: Int, disc: Int) -> Int {
+        if hasWon(state, disc: 2) { return 10000 + depth }
+        if hasWon(state, disc: 1) { return -10000 - depth }
+        let legal = legalColumns(state)
+        if legal.isEmpty { return 0 }
+        if depth == 0 { return evaluate(state) }
+        if disc == 2 {
+            var value = Int.min
+            for c in legal {
+                if let next = placing(2, in: c, on: state) {
+                    value = max(value, minimax(next, depth: depth - 1, disc: 1))
+                }
+            }
+            return value
+        }
+        var value = Int.max
+        for c in legal {
+            if let next = placing(1, in: c, on: state) {
+                value = min(value, minimax(next, depth: depth - 1, disc: 2))
+            }
+        }
+        return value
+    }
+
+    private func evaluate(_ state: [Int]) -> Int {
+        var score = 0
+        for r in 0..<6 {
+            if state[r*7+3] == 2 { score += 5 }
+            if state[r*7+3] == 1 { score -= 5 }
+            for c in 0..<7 {
+                for (dc, dr) in [(1,0), (0,1), (1,1), (-1,1)] {
+                    let endX = c + 3*dc, endY = r + 3*dr
+                    guard endX >= 0, endX < 7, endY >= 0, endY < 6 else { continue }
+                    let window = (0..<4).map { t in state[(r+t*dr)*7+c+t*dc] }
+                    let mine = window.filter { $0 == 2 }.count
+                    let other = window.filter { $0 == 1 }.count
+                    if other == 0 { score += [0, 1, 9, 75, 500][mine] }
+                    if mine == 0 { score -= [0, 1, 9, 75, 500][other] }
+                }
+            }
+        }
+        return score
     }
 }
+
