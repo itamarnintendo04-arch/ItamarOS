@@ -2,6 +2,7 @@ package org.itamaros.nativeapp
 
 import android.content.Intent
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,7 +73,7 @@ private class AndroidConnectApi {
     }
     suspend fun profile():JSONObject?{
         val id=userID?:return null
-        val result=JSONArray(request("/rest/v1/itamar_profiles?id=eq."+id+"&select=id,username,display_name"))
+        val result=JSONArray(request("/rest/v1/itamar_profiles?id=eq."+id+"&select=id,username,display_name,avatar_path,read_receipts_enabled"))
         return if(result.length()>0)result.getJSONObject(0)else null
     }
     suspend fun createProfile(name:String,handle:String){
@@ -119,6 +120,47 @@ private class AndroidConnectApi {
             JSONObject().put("p_poll",poll).put("p_option",option))
     }
 
+    suspend fun uploadAvatar(context:Context,uri:Uri,group:String?=null):String {
+        val id=userID?:throw IllegalStateException("Sign in")
+        val image=withContext(Dispatchers.IO) {
+            context.contentResolver.openInputStream(uri)?.use { input->
+                BitmapFactory.decodeStream(input)
+            }?:throw IllegalStateException("Invalid photo")
+        }
+        val stream=ByteArrayOutputStream()
+        try{
+            if(image.width>4096||image.height>4096)throw IllegalStateException("Choose an image no larger than 4096px")
+            image.compress(Bitmap.CompressFormat.JPEG,75,stream)
+        }finally{image.recycle()}
+        val bytes=stream.toByteArray()
+        if(bytes.isEmpty()||bytes.size>3*1024*1024)
+            throw IllegalStateException("Profile photo must be less than 3 MB")
+        val path=(if(group==null)"profiles/"+id else "groups/"+group)+"/"+
+            java.util.UUID.randomUUID().toString()+".jpg"
+        withContext(Dispatchers.IO){
+            val conn=URL(base+"/storage/v1/object/itamar-connect-avatars/"+path).openConnection() as HttpURLConnection
+            try{
+                conn.requestMethod="POST";conn.doOutput=true
+                conn.setRequestProperty("apikey",key)
+                conn.setRequestProperty("Authorization","Bearer "+(token?:""))
+                conn.setRequestProperty("Content-Type","image/jpeg")
+                conn.outputStream.use{it.write(bytes)}
+                if(conn.responseCode !in 200..299)
+                    throw IllegalStateException("Avatar upload rejected")
+            }finally{conn.disconnect()}
+        }
+        return path
+    }
+    suspend fun profilePreferences(avatar:String?,receipts:Boolean){
+        request("/rest/v1/rpc/itamar_set_profile_prefs","POST",JSONObject()
+            .put("p_avatar",avatar ?: JSONObject.NULL).put("p_receipts",receipts))
+    }
+    suspend fun groupDetails(room:String,title:String,description:String,avatar:String?){
+        request("/rest/v1/rpc/itamar_set_group_details","POST",JSONObject()
+            .put("p_room",room).put("p_title",title).put("p_description",description)
+            .put("p_avatar",avatar ?: JSONObject.NULL))
+    }
+    fun avatarLink(path:String)=base+"/storage/v1/object/public/itamar-connect-avatars/"+path
     suspend fun makeInvite(room:String):String {
         val text=request("/rest/v1/rpc/itamar_make_group_invite","POST",
             JSONObject().put("p_room",room))
@@ -277,6 +319,10 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var viewOnce by remember{mutableStateOf(false)}
     var openedSecret by remember{mutableStateOf("")}
     var receipts by remember{mutableStateOf(mapOf<String,Pair<Int,Int>>())}
+    var profileAvatar by remember{mutableStateOf<String?>(null)}
+    var roomAvatar by remember{mutableStateOf<String?>(null)}
+    var readReceiptPreference by remember{mutableStateOf(true)}
+    var avatarTarget by remember{mutableStateOf("")}
     LaunchedEffect(groupInvite) {
         if(groupInvite?.matches(Regex("[a-f0-9]{48}"))==true) {
             inviteToJoin=groupInvite
@@ -295,6 +341,22 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
 
     fun perform(action:suspend()->Unit){
         scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
+    }
+    val chooseAvatar=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ uri ->
+        if(uri!=null){
+            perform{
+                val group=if(avatarTarget=="group")selectedRoom else null
+                val path=api.uploadAvatar(ctx,uri,group)
+                if(group==null){
+                    profileAvatar=path
+                    api.profilePreferences(profileAvatar,readReceiptPreference)
+                }else{
+                    roomAvatar=path
+                    api.groupDetails(selectedRoom,title,groupDescription,roomAvatar)
+                    rooms=api.rooms()
+                }
+            }
+        }
     }
     val chooseAttachment=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){ uri ->
         if(uri!=null && selectedRoom.isNotBlank()){
@@ -320,6 +382,8 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                 val p=api.profile()
                 handle=p?.optString("username").orEmpty()
                 displayName=p?.optString("display_name").orEmpty()
+                profileAvatar=p?.optString("avatar_path")?.takeIf{it.isNotEmpty()&&it!="null"}
+                readReceiptPreference=p?.optBoolean("read_receipts_enabled",true)?:true
                 rooms=api.rooms()
             }
         },enabled=email.contains("@")&&password.length>=6){Text(if(registration)"Register" else "Sign in")}
@@ -341,6 +405,18 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
             OutlinedTextField(displayName,{displayName=it},label={Text("Name")})
             OutlinedTextField(handle,{handle=it},label={Text("Unique @username")})
             Button(onClick={perform{api.createProfile(displayName,handle)}}){Text("Create profile")}
+            if(!profileAvatar.isNullOrBlank()) Text("Profile photo saved")
+            Button(onClick={avatarTarget="profile";chooseAvatar.launch("image/*")}){
+                Text("Choose profile photo")
+            }
+            Row {
+                Checkbox(readReceiptPreference,onCheckedChange={choice->
+                    readReceiptPreference=choice
+                    perform{api.profilePreferences(profileAvatar,choice)}
+                })
+                Text("Enable blue read receipts")
+            }
+            Text("Disabling read receipts also hides other people's read receipts from you.")
             if(handle.isNotEmpty()){
                 PublicContactQR(handle)
                 Button(onClick={
@@ -405,6 +481,9 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     Row {
                         TextButton(onClick={perform{
                             selectedRoom=id
+                            title=room.optString("title")
+                            groupDescription=room.optString("description")
+                            roomAvatar=room.optString("avatar_path").takeIf{it.isNotEmpty() && it!="null"}
                             messages=api.messages(id)
                             api.acknowledge(id,true)
                             if(room.optString("kind")=="group")polls=api.polls(id)
@@ -488,8 +567,12 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                 if(tab=="Groups"){
                     OutlinedTextField(title,{title=it},label={Text("Group name")})
                     OutlinedTextField(groupDescription,{groupDescription=it},label={Text("Description (optional)")})
-                    Button(onClick={perform{api.renameGroup(selectedRoom,title,groupDescription)}}){
+                    Button(onClick={perform{api.groupDetails(selectedRoom,title,groupDescription,roomAvatar)}}){
                         Text("Save group name and description")
+                    }
+                    if(!roomAvatar.isNullOrBlank())Text("Group photo saved")
+                    Button(onClick={avatarTarget="group";chooseAvatar.launch("image/*")}){
+                        Text("Choose group photo")
                     }
                     Button(onClick={perform{inviteToken=api.makeInvite(selectedRoom)}}){
                         Text("Create shareable invite (48 hours)")
