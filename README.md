@@ -47,6 +47,12 @@ The iOS/iPadOS SwiftUI application now includes **Messages → Chats / Channels 
 
 No contact names or messages are uploaded; the source must be reviewed, signed and tested before distribution. **Do not enter passwords, identification documents, or sensitive information in the parent preview.** [Apple source and privacy notes](native-apps/apple/README.md).
 
+## iOS 1.6.2 — chats, channels and guardian QR (developer preview)
+
+Native iOS 1.6.2 now includes an optional [ItamarOS Connect](messaging/README.md) integration for profiles, unique usernames, private messages, public broadcast channels, muted updates and consent-based parent/guardian invitations. The [SQL migration](messaging/supabase/migration.sql) defines backend access rules; **it must be applied to a configured Supabase project before any messages are delivered to other users**. An unconfigured app retains its existing offline-only message drafts. Background remote push, E2EE, public-service moderation, and verified guardianship are **not** implemented. Parents can use the [parent setup page](parent.html) or open the app through a custom scheme (automatic handoff is best-effort on iOS).
+
+Build an updated **unsigned** IPA from the [iOS Actions workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml). Previous GitHub Releases remain available.
+
 ## Editions
 
 | Edition | Package | Status | Purpose |
