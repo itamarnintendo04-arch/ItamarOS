@@ -1,6 +1,12 @@
 package org.itamaros.nativeapp
 
 import android.content.Intent
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.ByteArrayOutputStream
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
@@ -80,7 +86,7 @@ private class AndroidConnectApi {
     }
     suspend fun rooms()=JSONArray(request("/rest/v1/rpc/itamar_my_rooms","POST",JSONObject()))
     suspend fun messages(room:String)=JSONArray(request("/rest/v1/itamar_messages?room_id=eq."+room+
-        "&select=id,body,sender_id&order=created_at.asc&limit=100"))
+        "&select=id,body,sender_id,attachment_path,attachment_name&order=created_at.asc&limit=100"))
     suspend fun send(room:String,text:String){
         request("/rest/v1/itamar_messages","POST",JSONObject()
             .put("room_id",room).put("sender_id",userID).put("body",text))
@@ -111,6 +117,51 @@ private class AndroidConnectApi {
     suspend fun vote(poll:String,option:Int){
         request("/rest/v1/rpc/itamar_vote_poll","POST",
             JSONObject().put("p_poll",poll).put("p_option",option))
+    }
+    suspend fun uploadAttachment(context:Context,uri:Uri,room:String){
+        if(!configured)throw IllegalStateException("Connect is not configured")
+        val mime=context.contentResolver.getType(uri)?:throw IllegalStateException("Unknown file type")
+        val allowed=setOf("image/jpeg","image/png","image/gif","image/webp","image/heic",
+            "video/mp4","video/quicktime","audio/mpeg","audio/mp4","audio/wav",
+            "application/pdf","text/plain","text/vcard","text/calendar")
+        if(mime !in allowed)throw IllegalStateException("Choose a supported image, video, audio or document")
+        val name=context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{
+            if(it.moveToFirst())it.getString(0)else null
+        }?:"attachment"
+        val fileName=name.take(80).replace("/","_")
+        val bytes=withContext(Dispatchers.IO){
+            val data=ByteArrayOutputStream()
+            context.contentResolver.openInputStream(uri)?.use{input->
+                val buffer=ByteArray(8192)
+                while(true){
+                    val count=input.read(buffer)
+                    if(count<0)break
+                    data.write(buffer,0,count)
+                    if(data.size()>20*1024*1024)throw IllegalStateException("20 MB maximum")
+                }
+            }?:throw IllegalStateException("Cannot open attachment")
+            data.toByteArray()
+        }
+        if(bytes.isEmpty())throw IllegalStateException("Empty attachment")
+        val path=room+"/" + java.util.UUID.randomUUID().toString()+"/"+Uri.encode(fileName)
+        withContext(Dispatchers.IO){
+            val connection=URL(base+"/storage/v1/object/itamar-connect-media/"+path)
+                .openConnection() as HttpURLConnection
+            try{
+                connection.requestMethod="POST";connection.doOutput=true
+                connection.setRequestProperty("apikey",key)
+                connection.setRequestProperty("Authorization","Bearer "+(token?:""))
+                connection.setRequestProperty("Content-Type",mime)
+                connection.setRequestProperty("x-upsert","false")
+                connection.outputStream.use{it.write(bytes)}
+                if(connection.responseCode !in 200..299)
+                    throw IllegalStateException("Attachment upload denied: HTTP "+connection.responseCode)
+            }finally{connection.disconnect()}
+        }
+        request("/rest/v1/itamar_messages","POST",JSONObject()
+            .put("room_id",room).put("sender_id",userID)
+            .put("body","📎 "+fileName).put("attachment_path",path)
+            .put("attachment_name",fileName).put("attachment_mime",mime))
     }
     suspend fun setPhone(phone:String){
         request("/auth/v1/user","PUT",JSONObject().put("phone",phone))
@@ -176,6 +227,14 @@ fun AndroidConnectScreen(){
 
     fun perform(action:suspend()->Unit){
         scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
+    }
+    val chooseAttachment=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){ uri ->
+        if(uri!=null && selectedRoom.isNotBlank()){
+            perform {
+                api.uploadAttachment(ctx,uri,selectedRoom)
+                messages=api.messages(selectedRoom)
+            }
+        }
     }
     if(!api.configured){
         Text("ItamarOS Connect needs a separately configured Supabase project before real chats can synchronize.")
@@ -300,6 +359,9 @@ fun AndroidConnectScreen(){
                 }
                 OutlinedTextField(message,{message=it},label={Text("Message or link")})
                 Button(onClick={perform{api.send(selectedRoom,message);message="";messages=api.messages(selectedRoom)}}){Text("Send")}
+                Button(onClick={chooseAttachment.launch(arrayOf("image/*","video/*","audio/*","application/pdf","text/plain","text/vcard","text/calendar"))}){
+                    Text("Attach media, file or contact card (max 20 MB)")
+                }
                 if(tab=="Groups"){
                     Text("Polls",style=MaterialTheme.typography.titleMedium)
                     for(i in 0 until polls.length()){
