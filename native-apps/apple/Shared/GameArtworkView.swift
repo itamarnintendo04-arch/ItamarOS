@@ -67,7 +67,7 @@ struct GameArtworkView: View {
 struct CartoonSnakeCell: View {
     let head: Bool
     let food: Bool
-    let body: Bool
+    let segment: Bool
 
     var bodyView: some View {
         ZStack {
@@ -91,7 +91,7 @@ struct CartoonSnakeCell: View {
                         }
                         .offset(y: -3)
                     }
-            } else if body {
+            } else if segment {
                 Circle().fill(Color.mint.gradient).padding(2)
                     .overlay(Circle().stroke(Color.green.opacity(0.45), lineWidth: 1))
             }
