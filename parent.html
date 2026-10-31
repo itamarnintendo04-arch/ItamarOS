@@ -24,11 +24,30 @@
     <header class="brand"><img alt="" src="/assets/branding/itamaros-mark-512.png"> ItamarOS</header>
     <h1>Set up a parent or guardian</h1>
     <p>Scan this invitation to open the ItamarOS app on your own phone, or preview the registration here.</p>
-    <p class="note"><strong>Development preview:</strong> This form saves details only in this browser. It does not contact the inviting device, verify identity, create a remote account or activate parental controls. Do not enter sensitive documents or passwords.</p>
+    <p class="note" id="previewNotice"><strong>Offline preview:</strong> This form saves only in this browser. It does not link accounts or activate supervision. The online version is available only after ItamarOS Connect is configured.</p>
     <p id="error" role="alert" hidden>Invitation missing or invalid. Ask for a new QR code.</p>
     <section id="setup" hidden>
       <a id="openApp" class="button" href="#">Open in the ItamarOS app</a>
       <p id="appHint" class="note">If ItamarOS is installed and registered for app links, your phone can open the app. If it stays on this page, use the button or continue in the browser.</p>
+      <section id="cloudSetup" hidden>
+        <p class="note">To accept an online invitation, use <strong>your own</strong> verified account. Linking does not grant access to another person's private chats or establish legal guardianship.</p>
+        <form id="cloudAuth">
+          <label for="accountEmail">Email</label>
+          <input id="accountEmail" type="email" autocomplete="email" required maxlength="120">
+          <label for="accountPassword">Password</label>
+          <input id="accountPassword" type="password" autocomplete="current-password" minlength="6" required>
+          <button type="submit">Sign in as parent</button>
+          <button type="button" id="createAccount" class="secondary">Create a parent account</button>
+        </form>
+        <form id="redeemForm" hidden>
+          <label for="verifiedParentName">Your name</label>
+          <input id="verifiedParentName" autocomplete="name" required maxlength="70">
+          <label for="verifiedRelationship">Relationship</label>
+          <select id="verifiedRelationship"><option>Parent</option><option>Legal guardian</option></select>
+          <button type="submit">Accept one-time invitation</button>
+        </form>
+        <p id="cloudResult" role="status" aria-live="polite"></p>
+      </section>
       <form id="parentForm">
         <label for="parentName">Your name</label>
         <input id="parentName" autocomplete="name" required maxlength="70">
@@ -42,6 +61,8 @@
     </section>
     <footer>ItamarOS is a development project. A secure, consent-based server is required before real cross-device family linking can be enabled.</footer>
   </main>
+  <script src="/messaging/public-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     (() => {
       'use strict';
@@ -69,6 +90,67 @@
           result.textContent = 'The browser did not allow local storage. No details were saved.';
         }
       });
+
+
+      // An actual account link is possible only when Supabase has been configured.
+      // Never store credentials or a service_role key in this static page.
+      const cfg = window.ITAMAR_CONNECT || {};
+      const ready = /^https:\/\/[a-z0-9.-]+/i.test(cfg.url || '') &&
+                    !!cfg.publishableKey && !!window.supabase;
+      if (ready) {
+        document.getElementById('previewNotice').hidden = true;
+        document.getElementById('parentForm').hidden = true;
+        document.getElementById('cloudSetup').hidden = false;
+        const client = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        });
+        const authForm = document.getElementById('cloudAuth');
+        const redeemForm = document.getElementById('redeemForm');
+        const cloudResult = document.getElementById('cloudResult');
+        const showSession = async () => {
+          const { data, error } = await client.auth.getUser();
+          if (error) cloudResult.textContent = error.message;
+          const signedIn = !!data?.user;
+          authForm.hidden = signedIn;
+          redeemForm.hidden = !signedIn;
+        };
+        authForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          const email = document.getElementById('accountEmail').value.trim();
+          const password = document.getElementById('accountPassword').value;
+          const { error } = await client.auth.signInWithPassword({ email, password });
+          cloudResult.textContent = error ? error.message : 'Signed in. You can now accept the invitation.';
+          await showSession();
+        });
+        document.getElementById('createAccount').addEventListener('click', async () => {
+          const email = document.getElementById('accountEmail').value.trim();
+          const password = document.getElementById('accountPassword').value;
+          if (!email || password.length < 6) {
+            cloudResult.textContent = 'Enter your email and a password of at least six characters.';
+            return;
+          }
+          const { error } = await client.auth.signUp({
+            email, password, options: { emailRedirectTo: location.href }
+          });
+          cloudResult.textContent = error ? error.message :
+            'Check your inbox to confirm the email, then sign in.';
+          await showSession();
+        });
+        redeemForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          const name = document.getElementById('verifiedParentName').value.trim();
+          const relationship = document.getElementById('verifiedRelationship').value;
+          const { error } = await client.rpc('itamar_redeem_parent_invite', {
+            p_code: invite, p_name: name, p_relationship: relationship
+          });
+          cloudResult.textContent = error ? error.message :
+            'Invitation accepted. The accounts are linked, but no private messages are shared.';
+          if (!error) redeemForm.hidden = true;
+        });
+        showSession().catch(err => {
+          cloudResult.textContent = 'Unable to check account: ' + err.message;
+        });
+      }
 
       // Best effort only: browsers may require a tap. Universal Links require an
       // Apple-app-site-association file and Apple developer team credentials.
