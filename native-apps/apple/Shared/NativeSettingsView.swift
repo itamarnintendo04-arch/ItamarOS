@@ -43,7 +43,11 @@ struct NativeSettingsView: View {
                 #if os(iOS)
                 Section("Messages and family") {
                     NavigationLink("Profile, contacts, notifications and parent QR") {
-                        ItamarProfileView()
+                        if ItamarCloudConfig.enabled {
+                            ItamarCloudProfileView(required: false)
+                        } else {
+                            ItamarProfileView()
+                        }
                     }
                     Text(ItamarCloudConfig.enabled ?
                          "Cloud chat is enabled. Remote background push still requires APNs service setup." :
