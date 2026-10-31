@@ -16,6 +16,29 @@ function resetTimer(){if(timer)clearTimeout(timer);timer=null}
 function clear(){resetTimer();const box=$('ios-mini-area');if(box)box.replaceChildren();return box}
 function pick(n){return Math.floor(Math.random()*n)}
 function record(key,value){data.stats??={};data.stats[key]=value;save()}
+
+// Two-person games use local pass-and-play or an offline bot.
+function matchSettings(box,id,onChange){
+ data.matchSettings??={};
+ const state=data.matchSettings[id]??={mode:'friend',difficulty:'medium'};
+ const label=section('Who do you want to play against?');box.append(label);
+ const mode=el('select');
+ for(const [value,name] of [['friend','With a friend'],['bot','Against a bot']]){
+  const o=el('option',name);o.value=value;mode.append(o)
+ }
+ mode.value=state.mode;mode.setAttribute('aria-label','Choose opponent');box.append(mode);
+ const difficulty=el('select');
+ for(const [value,name] of [['easy','Easy'],['medium','Medium'],['hard','Hard']]){
+  const o=el('option',name);o.value=value;difficulty.append(o)
+ }
+ difficulty.value=state.difficulty;difficulty.setAttribute('aria-label','Bot difficulty');
+ difficulty.hidden=state.mode!=='bot';box.append(difficulty);
+ mode.onchange=()=>{state.mode=mode.value;save();onChange()};
+ difficulty.onchange=()=>{state.difficulty=difficulty.value;save();onChange()};
+ if(state.mode==='friend')box.append(section('Two friends play in turns on this device.'));
+ return state;
+}
+
 function mount(parent){
  if(!parent)return;mountRoot=el('section');mountRoot.className='ios-pane';
  mountRoot.append(el('h3','More ItamarOS Games · Instant play'));
@@ -50,10 +73,37 @@ function math(box){let g=data.math;if(!g||!g.question)g=data.math={score:0,strea
  box.append(button('Answer',answer),button('Reset score',()=>{data.math={score:0,streak:0,question:makeQuestion()};save();show('math')}));
  input.addEventListener('keydown',e=>{if(e.key==='Enter')answer()});refresh()
 }
-function rps(box){const names=['Rock','Paper','Scissors'];box.append(el('h4','Rock Paper Scissors'));art(box,'rps');
+function rps(box){
+ const names=['Rock','Paper','Scissors'];
+ box.append(el('h4','Rock Paper Scissors'));art(box,'rps');
+ const g=data.rpsMatch??={pending:null,history:[]};
+ const config=matchSettings(box,'rps',()=>{g.pending=null;g.history=[];save();show('rps')});
  const score=section('Wins: '+(data.stats?.rpsWin||0)+' · Losses: '+(data.stats?.rpsLoss||0)+' · Draws: '+(data.stats?.rpsTie||0));box.append(score);
- const msg=el('h3','Choose your move');box.append(msg);
- for(const [i,emoji] of ['✊','✋','✌️'].entries())box.append(button(emoji+' '+names[i],()=>{const c=pick(3);const result=(i-c+3)%3;data.stats??={};const key=result===0?'rpsTie':result===1?'rpsWin':'rpsLoss';data.stats[key]=(data.stats[key]||0)+1;effect(result===1?'win':result===2?'error':'move');save();msg.textContent='You: '+names[i]+' · Computer: '+names[c]+' — '+(result===0?'Draw':result===1?'You win!':'Computer wins');score.textContent='Wins: '+(data.stats.rpsWin||0)+' · Losses: '+(data.stats.rpsLoss||0)+' · Draws: '+(data.stats.rpsTie||0)}))
+ const msg=el('h3',g.pending===null?(config.mode==='bot'?'Choose your move':'Player 1: choose secretly'):'Player 2: choose without seeing Player 1’s move');
+ box.append(msg);
+ for(const [i,emoji] of ['✊','✋','✌️'].entries())box.append(button(emoji+' '+names[i],()=>{
+  if(config.mode==='friend'&&g.pending===null){g.pending=i;save();msg.textContent='Player 1 choice saved. Pass the device to Player 2.';return}
+  const mine=g.pending===null?i:g.pending;
+  let other=i;
+  if(config.mode==='bot'){
+   const history=g.history||[];
+   other=pick(3);
+   if(config.difficulty!=='easy'&&history.length){
+    const counts=[0,1,2].map(n=>history.filter(x=>x===n).length);
+    const predict=counts.indexOf(Math.max(...counts));
+    if(Math.random()<(config.difficulty==='hard'?.85:.45))other=(predict+1)%3;
+   }
+  }
+  const outcome=(mine-other+3)%3;
+  data.stats??={};
+  const key=outcome===0?'rpsTie':outcome===1?'rpsWin':'rpsLoss';
+  data.stats[key]=(data.stats[key]||0)+1;
+  effect(outcome===1?'win':outcome===2?'error':'move');
+  g.history??=[];g.history.push(mine);g.pending=null;save();
+  msg.textContent='Player 1: '+names[mine]+' · '+(config.mode==='bot'?'Bot':'Player 2')+': '+names[other]+' — '+(outcome===0?'Draw':outcome===1?'Player 1 wins!':(config.mode==='bot'?'Bot':'Player 2')+' wins!');
+  score.textContent='Wins: '+(data.stats.rpsWin||0)+' · Losses: '+(data.stats.rpsLoss||0)+' · Draws: '+(data.stats.rpsTie||0);
+ }));
+ box.append(button('New match',()=>{g.pending=null;g.history=[];save();show('rps')}));
 }
 function reaction(box){box.append(el('h4','Reaction Test'));art(box,'reaction');
  const best=section('Best: '+(data.stats?.reactionBest?data.stats.reactionBest+' ms':'—'));box.append(best);
@@ -74,20 +124,60 @@ function words(box){let g=data.words;if(!g||!g.word)g=data.words={word:dictionar
  input.addEventListener('keydown',e=>{if(e.key==='Enter')submit()})
 }
 function connect(box){
- let g=data.connect;if(!g||!Array.isArray(g.board)||g.board.length!==42)g=data.connect={board:Array(42).fill(0),turn:1,winner:0};
- box.append(el('h4','Connect Four · Local 2-player'));art(box,'connect');
- const status=section(g.winner===3?'Draw!':g.winner?'Winner: '+(g.winner===1?'Red':'Yellow'):'Turn: '+(g.turn===1?'Red':'Yellow'));box.append(status);
+ let g=data.connect;
+ if(!g||!Array.isArray(g.board)||g.board.length!==42)g=data.connect={board:Array(42).fill(0),turn:1,winner:0};
+ box.append(el('h4','Connect Four'));art(box,'connect');
+ const config=matchSettings(box,'connect',()=>{data.connect={board:Array(42).fill(0),turn:1,winner:0};save();show('connect')});
+ const status=section('');box.append(status);
  const tray=el('div','🔴 Drag a disc to the board or tap a column');tray.className='ios-disc-tray';tray.setAttribute('role','note');box.append(tray);
  const grid=el('div');grid.className='ios-connect-grid';grid.style.cssText='display:grid;grid-template-columns:repeat(7,minmax(30px,1fr));gap:4px;max-width:440px;margin:12px auto;background:#2861aa;padding:6px;border-radius:10px';box.append(grid);
  let dragging=false;
  tray.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;dragging=true;tray.classList.add('dragging')});
  document.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;tray.classList.remove('dragging');const bounds=grid.getBoundingClientRect?.();if(!bounds||e.clientX<bounds.left||e.clientX>bounds.right||e.clientY<bounds.top||e.clientY>bounds.bottom)return;const column=Math.min(6,Math.max(0,Math.floor((e.clientX-bounds.left)/bounds.width*7)));drop(column)});
  tray.style.touchAction='none';grid.style.touchAction='none';
- const won=(board,color,x,y)=>[[1,0],[0,1],[1,1],[1,-1]].some(([dx,dy])=>{let n=1;for(const sign of [-1,1]){let px=x+dx*sign,py=y+dy*sign;while(px>=0&&px<7&&py>=0&&py<6&&board[py*7+px]===color){n++;px+=dx*sign;py+=dy*sign}}return n>=4});
- const draw=()=>{grid.replaceChildren();for(let row=0;row<6;row++)for(let column=0;column<7;column++){const token=g.board[row*7+column];const b=button(token===1?'🔴':token===2?'🟡':'⚪',()=>drop(column));b.style.cssText='padding:4px;min-width:0;font-size:clamp(18px,4vw,31px);background:#4479c3;color:#fff';b.setAttribute('aria-label','Column '+(column+1)+' row '+(row+1));grid.append(b)}status.textContent=g.winner===3?'Draw!':g.winner?'Winner: '+(g.winner===1?'Red':'Yellow'):'Turn: '+(g.turn===1?'Red':'Yellow')};
- function drop(column){if(g.winner)return;let row=-1;for(let y=5;y>=0;y--)if(!g.board[y*7+column]){row=y;break}if(row<0)return;g.board[row*7+column]=g.turn;if(won(g.board,g.turn,column,row)){g.winner=g.turn;data.stats??={};const key=g.turn===1?'connectRed':'connectYellow';data.stats[key]=(data.stats[key]||0)+1}else if(g.board.every(Boolean))g.winner=3;else g.turn=g.turn===1?2:1;effect(g.winner===g.turn?'win':'move');save();draw()}
- draw();box.append(button('New round',()=>{data.connect={board:Array(42).fill(0),turn:1,winner:0};save();show('connect')}));
- box.append(section('Red wins: '+(data.stats?.connectRed||0)+' · Yellow wins: '+(data.stats?.connectYellow||0)))
+ const won=(board,color)=>{for(let y=0;y<6;y++)for(let x=0;x<7;x++)if(board[y*7+x]===color)for(const [dx,dy] of [[1,0],[0,1],[1,1],[-1,1]])if([0,1,2,3].every(t=>{const cx=x+dx*t,cy=y+dy*t;return cx>=0&&cx<7&&cy>=0&&cy<6&&board[cy*7+cx]===color}))return true;return false};
+ const legal=b=>[0,1,2,3,4,5,6].filter(c=>!b[c]);
+ const place=(b,c,color)=>{const next=b.slice();for(let row=5;row>=0;row--)if(!next[row*7+c]){next[row*7+c]=color;return next}return null};
+ const evaluate=b=>{let score=0;for(let row=0;row<6;row++){if(b[row*7+3]===2)score+=6;if(b[row*7+3]===1)score-=6;
+   for(let col=0;col<7;col++)for(const [dx,dy] of [[1,0],[0,1],[1,1],[-1,1]]){
+    if(col+dx*3<0||col+dx*3>=7||row+dy*3>=6)continue;
+    const cells=[0,1,2,3].map(t=>b[(row+dy*t)*7+col+dx*t]);
+    const mine=cells.filter(n=>n===2).length,other=cells.filter(n=>n===1).length;
+    if(!other)score+=[0,1,9,75,500][mine];if(!mine)score-=[0,1,9,75,500][other];
+   }
+  }return score};
+ const minimax=(b,depth,player)=>{if(won(b,2))return 10000+depth;if(won(b,1))return -10000-depth;
+  const available=legal(b);if(!available.length)return 0;if(depth===0)return evaluate(b);
+  return player===2?Math.max(...available.map(c=>minimax(place(b,c,2),depth-1,1))):Math.min(...available.map(c=>minimax(place(b,c,1),depth-1,2)))};
+ const botCol=()=>{
+  const cols=legal(g.board);if(!cols.length)return null;
+  if(config.difficulty==='easy')return cols[pick(cols.length)];
+  for(const color of [2,1])for(const c of cols)if(won(place(g.board,c,color),color))return c;
+  if(config.difficulty==='medium')return cols[pick(cols.length)];
+  const ranked=cols.map(c=>({c,score:minimax(place(g.board,c,2),3,1)+(3-Math.abs(c-3))*2}));
+  const best=Math.max(...ranked.map(x=>x.score));
+  const tied=ranked.filter(x=>x.score===best);
+  return tied[pick(tied.length)].c;
+ };
+ const draw=()=>{grid.replaceChildren();for(let row=0;row<6;row++)for(let col=0;col<7;col++){
+  const token=g.board[row*7+col],b=button(token===1?'🔴':token===2?'🟡':'⚪',()=>drop(col));
+  b.style.cssText='padding:4px;min-width:0;font-size:clamp(18px,4vw,31px);background:#4479c3;color:#fff';
+  b.setAttribute('aria-label','Column '+(col+1)+' row '+(row+1));
+  b.disabled=!!g.winner||(config.mode==='bot'&&g.turn===2);grid.append(b)
+ }
+ status.textContent=g.winner===3?'Draw!':g.winner?'Winner: '+(g.winner===1?'Player 1':(config.mode==='bot'?'Bot':'Player 2')):'Turn: '+(g.turn===1?'Player 1':(config.mode==='bot'?'Bot':'Player 2'));
+ };
+ function apply(column){
+  if(g.winner)return;const next=place(g.board,column,g.turn);if(!next)return;
+  g.board=next;if(won(next,g.turn)){g.winner=g.turn;data.stats??={};const key=g.turn===1?'connectRed':'connectYellow';data.stats[key]=(data.stats[key]||0)+1}
+  else if(g.board.every(Boolean))g.winner=3;else g.turn=3-g.turn;
+  effect(g.winner?'win':'move');save();draw();
+  if(config.mode==='bot'&&g.turn===2&&!g.winner)timer=setTimeout(()=>{if(active!=='connect'||data.connect!==g)return;const c=botCol();if(c!==null)apply(c)},450);
+ }
+ function drop(column){if(config.mode==='bot'&&g.turn===2)return;apply(column)}
+ draw();if(config.mode==='bot'&&g.turn===2&&!g.winner)timer=setTimeout(()=>{if(active==='connect'&&data.connect===g){const c=botCol();if(c!==null)apply(c)}},450);
+ box.append(button('New round',()=>{data.connect={board:Array(42).fill(0),turn:1,winner:0};save();show('connect')}));
+ box.append(section('Player 1 wins: '+(data.stats?.connectRed||0)+' · Opponent wins: '+(data.stats?.connectYellow||0)));
 }
 window.ItamarMoreGames={mount,cleanup:resetTimer};
 })();
