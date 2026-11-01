@@ -63,7 +63,7 @@ struct ItamarConnectContactsView: View {
                         do {
                             found = try await cloud.lookupPhone(lookup.trimmingCharacters(in:.whitespacesAndNewlines))
                             error = found == nil ? "No discoverable account found. You can invite this person instead." : ""
-                        } catch { error = error.localizedDescription }
+                        } catch { self.error = error.localizedDescription }
                     }
                 }
                 .disabled(!lookup.hasPrefix("+"))
@@ -93,7 +93,7 @@ struct ItamarConnectContactsView: View {
 
     private func reload() async {
         do { saved = try await cloud.savedContacts() }
-        catch { error = error.localizedDescription }
+        catch { self.error = error.localizedDescription }
     }
     private func add(_ handle: String) async {
         do {
@@ -103,7 +103,7 @@ struct ItamarConnectContactsView: View {
             nickname = ""
             error = ""
             await reload()
-        } catch { error = error.localizedDescription }
+        } catch { self.error = error.localizedDescription }
     }
 }
 
@@ -214,7 +214,7 @@ struct ItamarCreateGroupView: View {
                         }.filter { !$0.isEmpty }
                         try await cloud.createGroup(title: title, usernames: names)
                         dismiss()
-                    } catch { error = error.localizedDescription }
+                    } catch { self.error = error.localizedDescription }
                 }
             }
             .disabled(title.isEmpty || usernames.isEmpty)
@@ -251,7 +251,7 @@ struct ItamarGroupPollsView: View {
                             try await cloud.createPoll(room:room, question:question, options:values, multiple:multiple)
                             question = ""
                             await refresh()
-                        } catch { error = error.localizedDescription }
+                        } catch { self.error = error.localizedDescription }
                     }
                 }.disabled(question.isEmpty)
             }
@@ -265,7 +265,7 @@ struct ItamarGroupPollsView: View {
                                     do {
                                         try await cloud.vote(poll:poll.id,option:i)
                                         await refresh()
-                                    } catch { error = error.localizedDescription }
+                                    } catch { self.error = error.localizedDescription }
                                 }
                             } label: {
                                 HStack {
@@ -296,7 +296,7 @@ struct ItamarGroupPollsView: View {
                 }
             }
             polls = loaded; totals = counts
-        } catch { error = error.localizedDescription }
+        } catch { self.error = error.localizedDescription }
     }
 }
 
@@ -440,7 +440,7 @@ struct ItamarAcceptGroupInviteView: View {
                                 do {
                                     try await cloud.acceptGroupInvite(code:token)
                                     joined=true
-                                } catch { error=error.localizedDescription }
+                                } catch { self.error=error.localizedDescription }
                             }
                         }.disabled(joined)
                         if joined {
