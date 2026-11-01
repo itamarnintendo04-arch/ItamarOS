@@ -414,6 +414,11 @@ private struct ItamarCloudThreadView: View {
     @State private var editingID: UUID?
     @State private var sendOnce = false
     @State private var receipts = [UUID:ItamarReceiptSummary]()
+    @State private var reactionCounts = [UUID:[ItamarReactionCount]]()
+    @State private var replyTo: UUID?
+    @State private var expiresAfter = 0
+    @State private var reportTarget: UUID?
+    @State private var blockTarget: UUID?
 
     private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
@@ -423,82 +428,38 @@ private struct ItamarCloudThreadView: View {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(messages) { message in
-                            let mine = message.sender_id == cloud.userID
-                            HStack {
-                                if mine { Spacer(minLength: 45) }
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(message.deleted_at == nil ? message.body : "Message deleted")
-                                        .opacity(message.deleted_at == nil ? 1 : 0.65)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                    if message.deleted_at == nil,
-                                       message.is_view_once != true,
-                                       let url=firstItamarLink(message.body) {
-                                        Link("Open shared link",destination:url)
-                                            .font(.caption)
-                                    }
-                                    if message.edited_at != nil && message.deleted_at == nil {
-                                        Text("Edited").font(.caption2).foregroundStyle(.secondary)
-                                    }
-                                    if message.is_view_once == true && !mine {
-                                        Button {
-                                            Task {
-                                                do {
-                                                    let value = try await cloud.openOnceText(message:message.id)
-                                                    openedOnce = OpenedOnceText(body:value)
-                                                } catch { self.error=error.localizedDescription }
-                                            }
-                                        } label: {
-                                            Label("Open once",systemImage:"eye")
-                                        }
-                                        .buttonStyle(.bordered)
-                                    }
-                                    if message.attachment_path != nil {
-                                        Button {
-                                            Task {
-                                                do { sharedFile = try await cloud.downloadAttachment(message) }
-                                                catch { self.error = error.localizedDescription }
-                                            }
-                                        } label: {
-                                            Label("Open attached file", systemImage: "paperclip")
-                                        }
-                                        .buttonStyle(.bordered)
-                                    }
-                                    HStack(spacing:6) {
-                                        Text(String(message.created_at.prefix(16)).replacingOccurrences(of:"T",with:" "))
-                                        if mine {
-                                            let receipt=receipts[message.id]
-                                            Text((receipt?.read ?? 0) > 0 ? "✓✓" :
-                                                 (receipt?.delivered ?? 0) > 0 ? "✓✓" : "✓")
-                                                .fontWeight(.bold)
-                                                .foregroundStyle(receipt?.read ?? 0 > 0 ? Color.blue : Color.secondary)
-                                                .accessibilityLabel(receipt?.read ?? 0 > 0 ? "Read" :
-                                                    receipt?.delivered ?? 0 > 0 ? "Delivered" : "Sent")
-                                        }
-                                    }.font(.caption2).foregroundStyle(.secondary)
-                                }
-                                .padding(12)
-                                .background(mine ? Color.blue.opacity(0.16) : Color.gray.opacity(0.12),
-                                            in: RoundedRectangle(cornerRadius: 14))
-                                .frame(maxWidth: 310)
-                                .contextMenu {
-                                    if mine && message.deleted_at == nil {
-                                        if message.attachment_path == nil && message.is_view_once != true {
-                                            Button("Edit message",systemImage:"pencil") {
-                                                draft=message.body
-                                                editingID=message.id
-                                            }
-                                        }
-                                        Button("Delete message",systemImage:"trash",role:.destructive) {
-                                            Task {
-                                                do { try await cloud.deleteMessage(id:message.id); await reloadThread() }
-                                                catch { self.error=error.localizedDescription }
-                                            }
-                                        }
-                                    }
-                                }
-                                if !mine { Spacer(minLength: 45) }
-                            }
-                            .id(message.id)
+                            ItamarMessageBubbleView(
+                                message:message,
+                                ownMessage:message.sender_id == cloud.userID,
+                                receipt:receipts[message.id],
+                                reactionCounts:reactionCounts[message.id] ?? [],
+                                repliedText:messages.first(where:{$0.id == message.reply_to})?
+                                    .body,
+                                onReply:{ replyTo=message.id },
+                                onEdit:{ draft=message.body;editingID=message.id },
+                                onDelete:{ Task {
+                                    do { try await cloud.deleteMessage(id:message.id);await reloadThread() }
+                                    catch { self.error=error.localizedDescription }
+                                }},
+                                onViewOnce:{ Task {
+                                    do {
+                                        let content=try await cloud.openOnceText(message:message.id)
+                                        openedOnce=OpenedOnceText(body:content)
+                                    } catch { self.error=error.localizedDescription }
+                                }},
+                                onFile:{ Task {
+                                    do { sharedFile=try await cloud.downloadAttachment(message) }
+                                    catch { self.error=error.localizedDescription }
+                                }},
+                                onReact:{ emoji in Task {
+                                    do {
+                                        try await cloud.setReaction(message:message.id,emoji:emoji)
+                                        await reloadThread()
+                                    } catch { self.error=error.localizedDescription }
+                                }},
+                                onReport:{ reportTarget=message.id },
+                                onBlock:{ blockTarget=message.sender_id }
+                            )
                         }
                     }
                     .padding()
@@ -510,6 +471,13 @@ private struct ItamarCloudThreadView: View {
                 }
             }
             if canPost {
+                if replyTo != nil {
+                    HStack {
+                        Text("Replying to message").font(.caption.bold())
+                        Spacer()
+                        Button("Cancel") { replyTo=nil }
+                    }.padding(.horizontal)
+                }
                 if editingID != nil {
                     HStack {
                         Text("Editing message").font(.caption.bold())
@@ -517,8 +485,15 @@ private struct ItamarCloudThreadView: View {
                         Button("Cancel") { editingID=nil;draft="" }
                     }.padding(.horizontal)
                 } else {
-                    Toggle("View once (text only)",isOn:$sendOnce)
-                        .font(.caption).padding(.horizontal)
+                    HStack {
+                        Toggle("View once (text)",isOn:$sendOnce)
+                        Picker("Disappearing",selection:$expiresAfter) {
+                            Text("Keep").tag(0)
+                            Text("1h").tag(3600)
+                            Text("1d").tag(86400)
+                            Text("7d").tag(604800)
+                        }.frame(maxWidth:170)
+                    }.font(.caption).padding(.horizontal)
                 }
                 HStack {
                     TextField("Message", text: $draft, axis: .vertical)
@@ -530,9 +505,14 @@ private struct ItamarCloudThreadView: View {
                                 if let edit=editingID {
                                     try await cloud.editMessage(id:edit,text:toSend)
                                     editingID=nil
+                                } else if let reply=replyTo {
+                                    try await cloud.sendReply(room:room.id,to:reply,body:toSend)
+                                    replyTo=nil
                                 } else if sendOnce {
                                     try await cloud.sendOnceText(room:room.id,text:toSend)
                                     sendOnce=false
+                                } else if expiresAfter>0 {
+                                    try await cloud.sendDisappearing(room:room.id,body:toSend,seconds:expiresAfter)
                                 } else {
                                     try await cloud.send(toSend,in:room.id)
                                 }
@@ -622,7 +602,41 @@ private struct ItamarCloudThreadView: View {
             }
             .accessibilityLabel(muted ? "Unmute updates" : "Mute updates")
         }
-        .alert("Error", isPresented: Binding(get: { !error.isEmpty },
+        .confirmationDialog("Report this message",isPresented:Binding(
+            get:{ reportTarget != nil },
+            set:{ if !$0 { reportTarget=nil } }
+        ),titleVisibility:.visible) {
+            ForEach(["Spam","Harassment","Threats","Other"],id:.self) { reason in
+                Button(reason) {
+                    guard let id=reportTarget else { return }
+                    reportTarget=nil
+                    Task {
+                        do {
+                            try await cloud.reportMessage(id,reason:reason)
+                            error="Report saved. No automated moderator review is available yet."
+                        } catch { self.error=error.localizedDescription }
+                    }
+                }
+            }
+            Button("Cancel",role:.cancel) { reportTarget=nil }
+        }
+        .confirmationDialog("Block this user?",isPresented:Binding(
+            get:{ blockTarget != nil },
+            set:{ if !$0 { blockTarget=nil } }
+        ),titleVisibility:.visible) {
+            Button("Block",role:.destructive) {
+                guard let id=blockTarget else { return }
+                blockTarget=nil
+                Task {
+                    do { try await cloud.blockUser(id); error="User blocked." }
+                    catch { self.error=error.localizedDescription }
+                }
+            }
+            Button("Cancel",role:.cancel) { blockTarget=nil }
+        } message: {
+            Text("Blocking prevents new contact but does not erase previous messages.")
+        }
+        .alert("Message", isPresented: Binding(get: { !error.isEmpty },
             set: { if !$0 { error = "" } })) {
             Button("OK") { error = "" }
         } message: { Text(error) }
@@ -645,6 +659,7 @@ private struct ItamarCloudThreadView: View {
             // A conversation is 'read' only after it is actually opened.
             try await cloud.acknowledge(room:room.id,opened:true)
             receipts=(try? await cloud.receiptSummaries(for:latest)) ?? [:]
+            reactionCounts=(try? await cloud.reactions(for:latest.map{$0.id})) ?? [:]
         } catch { self.error=error.localizedDescription }
     }
 }
