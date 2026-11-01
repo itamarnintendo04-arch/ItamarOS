@@ -22,6 +22,7 @@
     "files": [
       "main.cjs",
       "preload.cjs",
+      "windows-apps.cjs",
       "package.json",
       "web/**/*",
       "assets/**/*"
