@@ -1,0 +1,9 @@
+#itamar-power-dialog[hidden],#itamar-power-overlay[hidden]{display:none!important}
+#itamar-power-dialog{position:fixed;inset:0;z-index:10000;background:#07172b99;display:grid;place-items:center;padding:20px}
+.it-power-panel{background:#fff;color:#172d50;border-radius:20px;box-shadow:0 15px 60px #07182c66;max-width:450px;width:100%;padding:24px}
+.it-power-panel h2{margin:0 0 14px}.it-power-options{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}
+.it-power-options button{border-radius:11px;border:1px solid #b9cce9;padding:12px 15px;background:#e7f1ff;color:#143d79;cursor:pointer}
+.it-power-note{font-size:12px;color:#56718e}
+#itamar-power-overlay{position:fixed;inset:0;z-index:11000;background:linear-gradient(150deg,#030b20,#143a61);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;text-align:center;padding:25px}
+#itamar-power-overlay h1{font-size:29px}#itamar-power-overlay p{max-width:540px}
+#itamar-power-overlay button{padding:14px 22px;border:0;border-radius:12px;background:#e5eeff;color:#173b7b;font:inherit;cursor:pointer}
