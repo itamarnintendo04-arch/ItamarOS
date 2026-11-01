@@ -248,7 +248,15 @@ final class ItamarCloudService: ObservableObject {
             throw ItamarCloudError.badResponse("The SMS code could not be verified.")
         }
         setSession(access:result.access_token,refresh:result.refresh_token,userID:uid)
-        if deviceSyncEnabled { try await reload() }
+        if deviceSyncEnabled {
+            try await reload()
+            if profile != nil, let jpeg = pendingSignupAvatarJPEG {
+                let avatar = try await uploadAvatarJPEG(jpeg)
+                try await updateProfilePreferences(avatar: avatar, receipts: true)
+                pendingSignupAvatarJPEG = nil
+                try await reload()
+            }
+        }
     }
 
     func setOptionalPassword(_ password: String) async throws {
