@@ -307,15 +307,21 @@ struct ItamarCloudProfileView: View {
                     NavigationLink("My shareable QR code") { ItamarMyContactQRView() }
                     NavigationLink("Verify my phone and discovery privacy") { ItamarPhoneSettingsView() }
                     NavigationLink("Device address book (optional)") { ItamarOnlineContactsView() }
-                    Button("Allow message notifications") {
+                    Button("Enable real chat Push notifications") {
                         Task {
-                            do {
-                                let allowed = try await UNUserNotificationCenter.current()
-                                    .requestAuthorization(options: [.alert, .badge, .sound])
-                                permissionText = allowed ?
-                                    "Permission allowed. Background push still needs APNs and a notification server." :
-                                    "Notifications permission was declined."
-                            } catch { permissionText = error.localizedDescription }
+                            let allowed=await ItamarPushAppDelegate.requestOptIn()
+                            if allowed {
+                                await cloud.registerDeviceForPushIfAvailable()
+                                permissionText="iPhone push registration requested. APNs signing and server credentials are needed to deliver."
+                            } else {
+                                permissionText="Notifications permission was declined or unavailable."
+                            }
+                        }
+                    }
+                    Button("Disable chat Push on this iPhone") {
+                        Task {
+                            await cloud.unregisterPushDevice()
+                            permissionText="Chat push disabled on this device."
                         }
                     }
                     if !permissionText.isEmpty { Text(permissionText).font(.caption) }
@@ -329,8 +335,11 @@ struct ItamarCloudProfileView: View {
                 }
                 Section {
                     Button("Sign out", role: .destructive) {
-                        cloud.signOut()
-                        dismiss()
+                        Task {
+                            await cloud.unregisterPushDevice()
+                            cloud.signOut()
+                            dismiss()
+                        }
                     }
                 }
             }
