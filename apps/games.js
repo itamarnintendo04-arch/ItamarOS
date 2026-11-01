@@ -157,16 +157,16 @@ function snakeTick(dt){
       g.body.slice(8).some(p=>Math.hypot(next.x-p.x,next.y-p.y)<SNAKE_RADIUS*1.4)){
    g.over=true;g.running=false;stopTimers();effect('gameover');save();return;
   }
-  let previous=next;
-  for(let i=0;i<g.body.length;i++){
-   const current=g.body[i];
+  // Advance the head first; following body points preserve fixed spacing.
+  g.body[0]=next;
+  for(let i=1;i<g.body.length;i++){
+   const previous=g.body[i-1],current=g.body[i];
    const distance=Math.hypot(current.x-previous.x,current.y-previous.y);
    if(distance>SNAKE_SPACING){
     const factor=(distance-SNAKE_SPACING)/distance;
     g.body[i]={x:current.x+(previous.x-current.x)*factor,
                 y:current.y+(previous.y-current.y)*factor};
    }
-   previous=g.body[i];
   }
   if(g.food&&Math.hypot(next.x-g.food.x,next.y-g.food.y)<19){
    const end=g.body[g.body.length-1];g.body.push({...end});
