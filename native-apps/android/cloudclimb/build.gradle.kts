@@ -23,7 +23,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.srcDir("../app/src/main/java")
+            kotlin.directories += "../app/src/main/java"
             res.srcDir("../app/src/main/res")
         }
     }
@@ -60,5 +60,3 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// Kotlin files shared with the main ItamarOS application.
-kotlin.sourceSets.getByName("main").kotlin.srcDir("../app/src/main/java")
