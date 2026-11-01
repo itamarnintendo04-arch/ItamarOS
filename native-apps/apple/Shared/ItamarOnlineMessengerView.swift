@@ -133,7 +133,7 @@ struct ItamarOnlineMessengerView: View {
                 while !Task.isCancelled {
                     if cloud.isSignedIn {
                         do { try await cloud.reload() }
-                        catch { error = error.localizedDescription }
+                        catch { self.error = error.localizedDescription }
                     }
                     try? await Task.sleep(for: .seconds(15))
                 }
@@ -171,7 +171,7 @@ struct ItamarCloudLoginView: View {
                                 try await cloud.signIn(email: email, password: password)
                             }
                             error = ""
-                        } catch { error = error.localizedDescription }
+                        } catch { self.error = error.localizedDescription }
                         processing = false
                     }
                 }
@@ -225,7 +225,7 @@ struct ItamarCloudProfileView: View {
                             }
                             avatarPath=try await cloud.uploadAvatarJPEG(jpeg)
                             try await cloud.updateProfilePreferences(avatar:avatarPath,receipts:readReceipts)
-                        } catch { error=error.localizedDescription }
+                        } catch { self.error=error.localizedDescription }
                     }
                 }
                 TextField("Display name", text: $name)
@@ -239,7 +239,7 @@ struct ItamarCloudProfileView: View {
                             try await cloud.saveProfile(name: name, username: username, about: about)
                             error = ""
                             if !required { dismiss() }
-                        } catch { error = error.localizedDescription }
+                        } catch { self.error = error.localizedDescription }
                         busy = false
                     }
                 }.disabled(busy || name.isEmpty || username.isEmpty)
@@ -251,7 +251,7 @@ struct ItamarCloudProfileView: View {
                         .onChange(of:readReceipts) { _,enabled in
                             Task {
                                 do { try await cloud.updateProfilePreferences(avatar:avatarPath,receipts:enabled) }
-                                catch { error=error.localizedDescription }
+                                catch { self.error=error.localizedDescription }
                             }
                         }
                     Text("Turning off read receipts prevents others seeing your blue checks and prevents you seeing theirs.")
@@ -336,7 +336,7 @@ private struct ItamarCloudNewRoomView: View {
                     do {
                         try await cloud.createRoom(kind: kind, title: title, username: username)
                         dismiss()
-                    } catch { error = error.localizedDescription }
+                    } catch { self.error = error.localizedDescription }
                     busy = false
                 }
             }.disabled(busy || title.isEmpty || (kind == "chat" && username.isEmpty))
@@ -366,7 +366,7 @@ private struct ItamarCloudExploreView: View {
                             do {
                                 try await cloud.joinChannel(channel.id)
                                 dismiss()
-                            } catch { error = error.localizedDescription }
+                            } catch { self.error = error.localizedDescription }
                         }
                     }
                     .disabled(cloud.rooms.contains(where: { $0.id == channel.id }))
@@ -379,7 +379,7 @@ private struct ItamarCloudExploreView: View {
             Button("Done") { dismiss() }
         } }
         .task { do { try await cloud.loadPublicChannels() }
-                catch { error = error.localizedDescription } }
+                catch { self.error = error.localizedDescription } }
     }
 }
 
@@ -445,7 +445,7 @@ private struct ItamarCloudThreadView: View {
                                                 do {
                                                     let value = try await cloud.openOnceText(message:message.id)
                                                     openedOnce = OpenedOnceText(body:value)
-                                                } catch { error=error.localizedDescription }
+                                                } catch { self.error=error.localizedDescription }
                                             }
                                         } label: {
                                             Label("Open once",systemImage:"eye")
@@ -456,7 +456,7 @@ private struct ItamarCloudThreadView: View {
                                         Button {
                                             Task {
                                                 do { sharedFile = try await cloud.downloadAttachment(message) }
-                                                catch { error = error.localizedDescription }
+                                                catch { self.error = error.localizedDescription }
                                             }
                                         } label: {
                                             Label("Open attached file", systemImage: "paperclip")
@@ -491,7 +491,7 @@ private struct ItamarCloudThreadView: View {
                                         Button("Delete message",systemImage:"trash",role:.destructive) {
                                             Task {
                                                 do { try await cloud.deleteMessage(id:message.id); await reloadThread() }
-                                                catch { error=error.localizedDescription }
+                                                catch { self.error=error.localizedDescription }
                                             }
                                         }
                                     }
@@ -562,7 +562,7 @@ private struct ItamarCloudThreadView: View {
                 Task {
                     do { try await cloud.sendAttachment(file, in: room.id)
                         messages = try await cloud.messages(in: room.id)
-                    } catch { error = error.localizedDescription }
+                    } catch { self.error = error.localizedDescription }
                 }
             case .failure(let issue): error = issue.localizedDescription
             }
@@ -615,7 +615,7 @@ private struct ItamarCloudThreadView: View {
                     do {
                         try await cloud.setMuted(!muted, roomID: room.id)
                         muted.toggle()
-                    } catch { error = error.localizedDescription }
+                    } catch { self.error = error.localizedDescription }
                 }
             } label: {
                 Image(systemName: muted ? "bell.slash.fill" : "bell.fill")
@@ -645,7 +645,7 @@ private struct ItamarCloudThreadView: View {
             // A conversation is 'read' only after it is actually opened.
             try await cloud.acknowledge(room:room.id,opened:true)
             receipts=(try? await cloud.receiptSummaries(for:latest)) ?? [:]
-        } catch { error=error.localizedDescription }
+        } catch { self.error=error.localizedDescription }
     }
 }
 
@@ -689,7 +689,7 @@ struct ItamarCloudParentInviteView: View {
                 Button("Generate new QR") {
                     Task {
                         do { code = try await cloud.createParentInvite(); error = "" }
-                        catch { error = error.localizedDescription }
+                        catch { self.error = error.localizedDescription }
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -705,7 +705,7 @@ struct ItamarCloudParentInviteView: View {
         .task {
             if code.isEmpty {
                 do { code = try await cloud.createParentInvite() }
-                catch { error = error.localizedDescription }
+                catch { self.error = error.localizedDescription }
             }
         }
     }
@@ -742,7 +742,7 @@ struct ItamarCloudParentRegistrationView: View {
                                     try await cloud.redeemParentInvite(
                                         code: inviteCode, name: name, relationship: relation)
                                     linked = true; error = ""
-                                } catch { error = error.localizedDescription }
+                                } catch { self.error = error.localizedDescription }
                             }
                         }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || linked)
                         if linked {
