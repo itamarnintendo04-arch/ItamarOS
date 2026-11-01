@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.SystemClock
 import android.view.InputDevice
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 import kotlin.math.abs
@@ -69,22 +72,70 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var syncRevision by remember(accountKey) { mutableLongStateOf(0L) }
     var syncRefresh by remember(accountKey) { mutableIntStateOf(0) }
     var syncStatus by remember(accountKey) { mutableStateOf("Local save") }
+    val scope = rememberCoroutineScope()
+    var playerName by remember(accountKey) { mutableStateOf("Player") }
+    var activeWorld by remember(accountKey) {
+        mutableIntStateOf(prefs.getInt("active_world",1).coerceIn(1,11))
+    }
+    var unlockedWorlds by remember(accountKey) { mutableStateOf(setOf(1)) }
+    var collectedCubes by remember(accountKey) { mutableStateOf(emptySet<Pair<Int,Int>>()) }
+    var rewardsRefresh by remember(accountKey) { mutableIntStateOf(0) }
+    var rewardsStatus by remember(accountKey) { mutableStateOf("World progress loads after sign-in") }
+    var slashInput by remember { mutableStateOf("") }
+    var slashReply by remember { mutableStateOf("Type /help for Cloud Climb commands") }
+    val worldKeys = ((level - 1) / 100 - (unlockedWorlds.size - 1)).coerceAtLeast(0)
+    val secretWorldReady = collectedCubes.size == 50
+    val cubeNumber = (level - 1) % 5 + 1
+    val cubeAlreadyCollected = (activeWorld to cubeNumber) in collectedCubes
+
     val showTouchControls = !(autoHideControls && controllerConnected)
     val darkBackground = if (nightSky) Color(0xFF151438) else Color(0xFF1C427D)
     val lightBackground = if (nightSky) Color(0xFF423064) else Color(0xFF4AAFD4)
     val goldAccent = Color(0xFFFFD57C)
 
-    val seed = roomSeed xor (level * 2039)
+    val seed = roomSeed xor (level * 2039) xor (activeWorld * 1009)
     val platforms = remember(seed) { cloudStages(seed) }
     val bossX = platforms.last().first + platforms.last().third / 2f
     val bossStage = level % 30 == 0
 
+    LaunchedEffect(accountKey) {
+        if (api.userID.isNullOrBlank()) return@LaunchedEffect
+        try {
+            val profile = api.profile()
+            playerName = profile?.optString("display_name")?.ifBlank {
+                profile.optString("username","Player")
+            } ?: "Player"
+        } catch (_: Exception) {}
+    }
+    LaunchedEffect(accountKey, rewardsRefresh, syncReady) {
+        if (!syncReady || api.userID.isNullOrBlank()) return@LaunchedEffect
+        try {
+            val rewards=JSONObject(api.request("/rest/v1/rpc/itamar_climb_rewards_state",
+                "POST",JSONObject()))
+            val worlds=rewards.optJSONArray("worlds")
+            unlockedWorlds=buildSet {
+                add(1)
+                if (worlds!=null) for(i in 0 until worlds.length()) add(worlds.optInt(i))
+            }
+            val cubes=rewards.optJSONArray("cubes")
+            collectedCubes=buildSet {
+                if(cubes!=null)for(i in 0 until cubes.length()) {
+                    val cube=cubes.optJSONObject(i) ?: continue
+                    add(cube.optInt("world") to cube.optInt("cube"))
+                }
+            }
+            if(activeWorld !in unlockedWorlds && !(activeWorld==11 && collectedCubes.size==50))
+                activeWorld=1
+            rewardsStatus="Collected "+collectedCubes.size+"/50 cubes"
+        }catch(_:Exception) { rewardsStatus="World rewards temporarily unavailable" }
+    }
     // Save after each meaningful change and on room exit; no manual save required.
     LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver) {
         prefs.edit()
             .putInt("level", level).putInt("coins", coins).putInt("hearts", hearts)
             .putInt("boss_health", bossHealth).putInt("shop_due", shopDue)
             .putBoolean("game_over", gameOver).apply()
+        prefs.edit().putInt("active_world",activeWorld).apply()
     }
     LaunchedEffect(accountKey, syncRefresh) {
         syncReady = false
@@ -136,11 +187,28 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     fun advanceStage() {
         val completed = level
+        val awardWorld=activeWorld
+        val awardCube=cubeNumber
+        if (!cubeAlreadyCollected && awardWorld in 1..10 && syncReady) {
+            collectedCubes = collectedCubes + (awardWorld to awardCube)
+            scope.launch {
+                try {
+                    api.request("/rest/v1/rpc/itamar_climb_collect_cube",
+                        "POST",JSONObject().put("p_world",awardWorld)
+                            .put("p_cube",awardCube))
+                    rewardsRefresh += 1
+                } catch(e:Exception) {
+                    collectedCubes = collectedCubes - (awardWorld to awardCube)
+                    rewardsStatus=e.localizedMessage ?: "Cube could not be saved"
+                }
+            }
+        }
         coins += 10
         level += 1
         bossHealth = 3
         shopDue = if (completed % 10 == 0 && hearts < 3) completed else 0
-        message = "Level " + completed + " complete! +10 coins."
+        message = "Level " + completed + " complete! +10 coins." +
+            (if (completed % 100 == 0) " A new world key is available!" else "")
         resetPosition()
     }
     fun loseHeart() {
@@ -240,6 +308,37 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Spacer(Modifier.weight(1f))
             Text("❤️ " + hearts + "/3  🪙 " + coins, color = Color.White)
         }
+        Text("👤 " + playerName + "   ·   WORLD " + activeWorld +
+            "   ·   🔑 " + worldKeys, color = Color.White)
+        Text(rewardsStatus, color=goldAccent,style=MaterialTheme.typography.bodySmall)
+        Row(modifier=Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            for(world in 1..11) {
+                val unlocked=world in unlockedWorlds || world==1 ||
+                    (world==11 && secretWorldReady)
+                OutlinedButton(
+                    onClick = {
+                        if (unlocked) {
+                            activeWorld=world
+                            resetPosition()
+                        } else if(world in 2..10 && worldKeys>0 && syncReady) {
+                            scope.launch {
+                                try {
+                                    api.request("/rest/v1/rpc/itamar_climb_unlock_world","POST",
+                                        JSONObject().put("p_world",world))
+                                    rewardsRefresh += 1
+                                    rewardsStatus="World " + world + " unlocked!"
+                                }catch(e:Exception) {
+                                    rewardsStatus=e.localizedMessage ?: "Unable to unlock world"
+                                }
+                            }
+                        }
+                    },
+                    enabled=unlocked || (world in 2..10 && worldKeys>0 && syncReady),
+                    colors=ButtonDefaults.outlinedButtonColors(contentColor=Color.White)
+                ){Text(if(world==11)"SECRET" else if(unlocked)"$world" else "🔒$world")}
+            }
+        }
         if (bossStage) Text("BOSS ENCOUNTER · " + bossHealth + "/3",
             color = goldAccent, style = MaterialTheme.typography.titleMedium)
         if (showControlHints) Text(
@@ -300,6 +399,13 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         size = Size(platform.third * sx, 12f * sy),
                         cornerRadius = CornerRadius(5f))
                 }
+                if (activeWorld in 1..10 && !cubeAlreadyCollected) {
+                    val gemColors=listOf(Color(0xFFFFA35C),Color(0xFFFF64A8),
+                        Color(0xFF71F2E4),Color(0xFFFFDD67),Color(0xFFA68AFF))
+                    drawRoundRect(gemColors[(cubeNumber-1)%gemColors.size],
+                        topLeft=Offset((platforms.last().first+platforms.last().third/2-10)*sx,82f*sy),
+                        size=Size(20f*sx,20f*sy),cornerRadius=CornerRadius(4f))
+                }
                 if (bossStage) {
                     drawCircle(Color(0xFFAF4EF2), 21f * sx, Offset(bossX * sx, 65f * sy))
                     drawCircle(Color.White, 6f * sx, Offset(bossX * sx, 63f * sy))
@@ -341,6 +447,33 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             else "",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
         Text(syncStatus, color = goldAccent, style = MaterialTheme.typography.bodySmall)
+        Text("Cloud Climb Commands", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            OutlinedTextField(slashInput,{slashInput=it.take(100)},
+                modifier=Modifier.weight(1f),singleLine=true,
+                label={Text("Enter /command")})
+            Button(onClick={
+                val cmd=slashInput.trim().lowercase()
+                slashReply=when {
+                    cmd=="/help"->"/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
+                    cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Cubes ${collectedCubes.size}/50 · Keys $worldKeys"
+                    cmd=="/pause"->{paused=true;"Game paused."}
+                    cmd=="/resume"->{paused=false;"Game resumed."}
+                    cmd=="/room"->if(room=="local-cloudclimb")"Offline demo · no room code" else "Room code: $room"
+                    cmd=="/theme day"->{nightSky=false;prefs.edit().putBoolean("night_sky",false).apply();"Day theme enabled"}
+                    cmd=="/theme twilight"->{nightSky=true;prefs.edit().putBoolean("night_sky",true).apply();"Twilight theme enabled"}
+                    cmd.startsWith("/world ")-> {
+                        val chosen=cmd.removePrefix("/world ").toIntOrNull()
+                        if(chosen!=null && (chosen in unlockedWorlds || chosen==11 && secretWorldReady)){
+                            activeWorld=chosen;resetPosition();"Entered world $chosen"
+                        }else "World locked or invalid. Unlock it with a key."
+                    }
+                    else->"Unknown command. Type /help."
+                }
+                slashInput=""
+            },enabled=slashInput.startsWith("/")){Text("Send")}
+        }
+        Text(slashReply,color=Color.White,style=MaterialTheme.typography.bodySmall)
         if (settingsOpen) AlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Cloud Climb Settings") },
