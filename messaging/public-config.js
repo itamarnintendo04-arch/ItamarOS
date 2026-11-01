@@ -1,6 +1,6 @@
-// PUBLIC Supabase project settings only; never put service_role keys or secrets here.
-// Copy these values from Supabase -> Project Settings -> API (URL + publishable/anon key).
+// PUBLIC Supabase project settings only. Twilio credentials, service_role keys,
+// database passwords and other secrets must NEVER be added to this file.
 window.ITAMAR_CONNECT = {
-  url: "",
-  publishableKey: ""
+  url: "https://slqjkysinhfkqjoigfuz.supabase.co",
+  publishableKey: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
 };
