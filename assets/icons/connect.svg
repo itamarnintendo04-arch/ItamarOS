@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="ItamarConnect">
+<defs><linearGradient id="c" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#09c7d9"/><stop offset="1" stop-color="#2752cd"/></linearGradient></defs>
+<rect x="5" y="5" width="118" height="118" rx="28" fill="url(#c)"/>
+<path d="M30 38a14 14 0 0 1 14-14h43a14 14 0 0 1 14 14v39a14 14 0 0 1-14 14H52L30 108V76Z" fill="#fff"/>
+<path d="M48 49h36M48 63h27" stroke="#2375c2" stroke-width="7" stroke-linecap="round"/>
+</svg>
