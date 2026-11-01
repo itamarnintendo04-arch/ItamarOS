@@ -250,7 +250,9 @@ private class AndroidConnectApi {
     }
     suspend fun uploadAttachment(context:Context,uri:Uri,room:String){
         if(!configured)throw IllegalStateException("Connect is not configured")
-        val mime=context.contentResolver.getType(uri)?:throw IllegalStateException("Unknown file type")
+        val mime=context.contentResolver.getType(uri)
+            ?: if(uri.path?.endsWith(".m4a",ignoreCase=true)==true)"audio/mp4"
+               else throw IllegalStateException("Unknown file type")
         val allowed=setOf("image/jpeg","image/png","image/gif","image/webp","image/heic",
             "video/mp4","video/quicktime","audio/mpeg","audio/mp4","audio/wav",
             "application/pdf","text/plain","text/vcard","text/calendar")
@@ -382,6 +384,8 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var receipts by remember{mutableStateOf(mapOf<String,Pair<Int,Int>>())}
     var reactions by remember{mutableStateOf(mapOf<String,List<String>>())}
     var reactionTarget by remember{mutableStateOf("")}
+    val voiceRecorder=remember{AndroidVoiceNoteRecorder(ctx)}
+    var recordingVoice by remember{mutableStateOf(false)}
     var replyTarget by remember{mutableStateOf("")}
     var expiringSeconds by remember{mutableIntStateOf(0)}
     var reportTarget by remember{mutableStateOf("")}
@@ -423,6 +427,15 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                 }
             }
         }
+    }
+    val microphonePermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ granted ->
+        if(granted) {
+            try{voiceRecorder.start();recordingVoice=true}
+            catch(e:Exception){notice=e.localizedMessage?:"Cannot record audio"}
+        } else {notice="Microphone permission declined"}
+    }
+    DisposableEffect(Unit) {
+        onDispose { voiceRecorder.discard() }
     }
     val chooseAttachment=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){ uri ->
         if(uri!=null && selectedRoom.isNotBlank()){
@@ -573,7 +586,10 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     Button(onClick={perform{api.create(kind,title,other);rooms=api.rooms()}}){Text("Create")}
                 }else Text("Updates from unmuted chats and channels. Push notifications require APNs/FCM.")
             }else{
-                Button(onClick={selectedRoom=""}){Text("← Back")}
+                Button(onClick={
+                    if(recordingVoice){voiceRecorder.discard();recordingVoice=false}
+                    selectedRoom=""
+                }){Text("← Back")}
                 for(i in 0 until messages.length()){
                     val entry=messages.optJSONObject(i)?:continue
                     val id=entry.optString("id")
@@ -700,6 +716,28 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                     reactions=api.reactions(messages)
                 }}){Text(if(editingID.isNotBlank())"Save edit" else "Send")}
                 if(editingID.isNotBlank()) Button(onClick={editingID="";message=""}){Text("Cancel edit")}
+                if(recordingVoice){
+                    Row {
+                        Text("Recording voice note")
+                        Button(onClick={
+                            try{
+                                val recorded=voiceRecorder.stop()
+                                recordingVoice=false
+                                if(recorded!=null)perform{
+                                    try {
+                                        api.uploadAttachment(ctx,Uri.fromFile(recorded),selectedRoom)
+                                        messages=api.messages(selectedRoom)
+                                    } finally {recorded.delete()}
+                                }
+                            }catch(e:Exception){recordingVoice=false;notice=e.localizedMessage?:"Cannot send recording"}
+                        }){Text("Stop and send")}
+                        Button(onClick={voiceRecorder.discard();recordingVoice=false}){Text("Discard")}
+                    }
+                }else{
+                    Button(onClick={microphonePermission.launch(android.Manifest.permission.RECORD_AUDIO)}){
+                        Text("Record voice message (up to 90 seconds)")
+                    }
+                }
                 Button(onClick={chooseAttachment.launch(arrayOf("image/*","video/*","audio/*","application/pdf","text/plain","text/vcard","text/calendar"))}){
                     Text("Attach media, file or contact card (max 20 MB)")
                 }
