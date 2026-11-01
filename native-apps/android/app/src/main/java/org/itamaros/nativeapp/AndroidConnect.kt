@@ -437,6 +437,7 @@ fun AndroidConnectScreen(
     var pollOptions by remember{mutableStateOf("Yes\nNo")}
     var lookupResult by remember{mutableStateOf("")}
     var notice by remember{mutableStateOf("")}
+    var pushNotice by remember{mutableStateOf("")}
     var inviteToken by remember{mutableStateOf("")}
     var inviteToJoin by remember{mutableStateOf("")}
     var groupDescription by remember{mutableStateOf("")}
@@ -498,6 +499,10 @@ fun AndroidConnectScreen(
                 }
             }
         }
+    }
+    val pushPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ granted ->
+        if(granted)ItamarAndroidPush.register(ctx,api){ pushNotice=it }
+        else pushNotice="Chat notification permission declined."
     }
     val microphonePermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ granted ->
         if(granted) {
@@ -573,7 +578,11 @@ fun AndroidConnectScreen(
                 .edit().putBoolean("connectSync",true).apply()
             syncOnThisDevice=true
         }){Text("Enable sync for this device")}
-        Button(onClick={api.token=null;api.userID=null;signed=false;onSignOut()}){Text("Sign out")}
+        Button(onClick={perform{
+            runCatching { api.request("/rest/v1/rpc/itamar_push_unregister","POST",
+                JSONObject().put("p_device_id",ItamarAndroidPush.deviceId(ctx))) }
+            api.token=null;api.userID=null;signed=false;onSignOut()
+        }}){Text("Sign out")}
         return
     }
     if(authOnly){
@@ -631,6 +640,19 @@ fun AndroidConnectScreen(
     }
     if(desktopApprovalStatus.isNotBlank())Text(desktopApprovalStatus)
     Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
+    if(api.token!=null){
+        Button(onClick={
+            if(android.os.Build.VERSION.SDK_INT>=33 &&
+               androidx.core.content.ContextCompat.checkSelfPermission(ctx,
+                   android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+                pushPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }else ItamarAndroidPush.register(ctx,api){pushNotice=it}
+        }){Text("Enable chat Push notifications")}
+        TextButton(onClick={ItamarAndroidPush.unregister(ctx,api){pushNotice=it}}){
+            Text("Disable chat Push on this device")
+        }
+        if(pushNotice.isNotEmpty())Text(pushNotice,style=MaterialTheme.typography.bodySmall)
+    }
     Row(modifier=Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
         listOf("Chats","Groups","Channels","Contacts","Updates","Profile").forEach{value->
             FilterChip(selected=tab==value,onClick={tab=value;selectedRoom=""},label={Text(value)})
@@ -688,7 +710,11 @@ fun AndroidConnectScreen(
                 inviteToJoin=""
                 rooms=api.rooms()
             }},enabled=inviteToJoin.length==48){Text("Accept and join invited group")}
-            Button(onClick={api.token=null;api.userID=null;signed=false;onSignOut()}){Text("Sign out")}
+            Button(onClick={perform{
+            runCatching { api.request("/rest/v1/rpc/itamar_push_unregister","POST",
+                JSONObject().put("p_device_id",ItamarAndroidPush.deviceId(ctx))) }
+            api.token=null;api.userID=null;signed=false;onSignOut()
+        }}){Text("Sign out")}
         }
         "Contacts"->{
             Button(onClick={perform{contacts=api.contacts()}}){Text("Refresh synced contacts")}
