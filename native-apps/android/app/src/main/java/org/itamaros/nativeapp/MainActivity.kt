@@ -1,6 +1,8 @@
 package org.itamaros.nativeapp
 
+import android.Manifest
 import android.app.UiModeManager
+import android.os.Build
 import android.content.Context
 import android.content.Intent
 import android.provider.OpenableColumns
@@ -37,6 +39,28 @@ class MainActivity : ComponentActivity() {
     private var incomingContact by mutableStateOf<String?>(null)
     private var isTv = false
     private val prefs by lazy { getSharedPreferences("itamaros_native", MODE_PRIVATE) }
+
+    private val updateNotificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { allowed ->
+        prefs.edit().putBoolean("updateAlerts",allowed).apply()
+        status = if (allowed) "Update alerts are enabled. Background checks are scheduled by Android."
+                 else "Notification permission was denied; app update checks remain available."
+    }
+    private fun enableUpdateAlerts() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            updateNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            prefs.edit().putBoolean("updateAlerts",true).apply()
+            status = "Update alerts are enabled."
+        }
+    }
+    private fun setAutomaticUpdateChecks(enabled:Boolean) {
+        prefs.edit().putBoolean("autoUpdateChecks",enabled).apply()
+        ItamarUpdateWorker.schedule(this,enabled)
+        status = if (enabled) "Automatic Android update checks enabled."
+                 else "Automatic Android update checks disabled."
+    }
 
     private val chooseUSB = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -141,6 +165,8 @@ class MainActivity : ComponentActivity() {
                     selectedMedia = selectedMedia,
                     selectedApkName = selectedApkName,
                     onCheckUpdates = ::checkUpdates,
+                    onEnableUpdateAlerts = ::enableUpdateAlerts,
+                    onSetAutoUpdateChecks = ::setAutomaticUpdateChecks,
                     onLaunchService = ::launchTVService,
                     onOpenStoreListing = ::openPlayStoreListing,
                     onBrowseStore = ::openTVPlayStore,
