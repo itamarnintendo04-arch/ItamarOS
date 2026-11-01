@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarMirror (preview)
+Comment=Open consent-based screen sharing preview; AirPlay / Cast receiver not implemented
+Exec=xdg-open https://itamaros-web-emulator.onrender.com/mirror.html
+Icon=video-display
+Terminal=false
+Categories=AudioVideo;Network;
+StartupNotify=false
