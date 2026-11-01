@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://slqjkysinhfkqjoigfuz.supabase.co wss://slqjkysinhfkqjoigfuz.supabase.co https://itamaros-store-api.onrender.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Approve ItamarConnect computer</title>
+<style>
+:root{font:16px system-ui,sans-serif;color:#193658;background:#edf4fe}*{box-sizing:border-box}
+main{max-width:480px;margin:5vh auto;padding:25px;border-radius:18px;background:white;box-shadow:0 10px 40px #1234}
+h1{font-size:1.4rem}p{line-height:1.5}.note{background:#f0f5fe;padding:14px;border-radius:10px}
+button{background:#1c5dbd;color:white;padding:14px 22px;border:0;border-radius:10px;font:inherit;width:100%;cursor:pointer}
+button:disabled{opacity:.5}a{color:#1455a3}#status{min-height:44px}
+</style></head><body>
+<main><h1>ItamarConnect · Approve computer</h1>
+<p>You can sign in on a computer without another SMS, using an already signed-in phone.</p>
+<div class="note">
+<p><strong>Only approve a computer you are using.</strong> Someone could read your messages if you approve their computer. The computer receives a temporary access session, not your password, phone number or SMS code.</p>
+<p>Compare this request identifier with the one on your computer:</p>
+<p id="pairCode" style="font-size:1.25em;font-weight:bold;letter-spacing:1px">—</p></div>
+<p id="identity"></p>
+<button id="approve" disabled>Approve this computer</button>
+<p id="status" role="status" aria-live="polite"></p>
+<a href="/connect.html">Sign in to ItamarConnect on this phone</a>
+<p style="font-size:.85em;color:#556">A login created this way expires when the phone's current access token expires. You must scan a new code to reconnect later. Never share screenshots of the QR code.</p>
+</main>
+<script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="/apps/connect-approve.js" defer></script>
+</body></html>
