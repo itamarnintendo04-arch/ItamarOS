@@ -80,7 +80,9 @@ fun ItamarPartyGamesAndroid(api: AndroidConnectApi){
             Text("Players: "+count+" / "+maxPlayers)
             if(match?.optString("game")=="cloud_climb"){
                 Text("Code-only. Invitations and share buttons are disabled.")
-                CloudClimbAndroid(api,match,slot)
+                CloudClimbAndroid(api, match, slot, onExit = {
+                    match = null; roomInput = ""; problem = ""
+                })
             }else {
                 if(active=="waiting"){
                     Text("Waiting for the other player")
