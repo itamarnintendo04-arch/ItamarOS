@@ -29,23 +29,30 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/messaging/README.md" target="_blank" rel="noopener noreferrer">Setup and privacy requirements</a>
 <p>Sign in with ItamaRos Hub will be available only when the integration is explicitly enabled later.</p>
 </section>
-<section id="auth" hidden><h2 id="authTitle">Sign in</h2><form id="authForm">
-<label for="email">Email</label><input id="email" type="email" required autocomplete="email">
-<label for="password">Password</label><input id="password" type="password" minlength="6" required autocomplete="current-password">
-<div class="row" style="margin-top:12px"><button class="primary" type="submit">Continue</button>
-<button id="swapAuth" type="button">Create an account</button></div></form>
-<div class="note"><h3>Or sign in with SMS via Twilio</h3>
+<section id="auth" hidden>
+<h2 id="authTitle">Get started with your phone</h2>
+<p class="muted">A verified phone number is required. Profile photo and password are optional. A code is sent only after you tap Next.</p>
 <form id="smsForm">
-<label for="phone">Your phone number (international format)</label>
-<input type="tel" id="phone" placeholder="+972501234567" autocomplete="tel" inputmode="tel" required>
-<button type="submit">Send a one-time SMS code</button>
+<label for="phone">Mobile number (required)</label>
+<input type="tel" id="phone" placeholder="+972501234567" autocomplete="tel" inputmode="tel" pattern="\\+[1-9][0-9]{7,14}" required>
+<label for="signupAvatar">Profile photo (optional)</label>
+<input type="file" id="signupAvatar" accept="image/jpeg,image/png,image/webp">
+<img id="avatarPreview" alt="Selected profile picture" hidden style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin-top:7px">
+<label for="signupPassword">Password (optional, at least 8 characters)</label>
+<input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS only">
+<p class="muted">A password can be saved after SMS verification. You'll still verify your phone on this screen. Your photo is publicly visible if you add one.</p>
+<button class="primary" type="submit">Next — send SMS</button>
 </form>
 <form id="smsVerifyForm" hidden>
-<label for="smsCode">SMS verification code</label><input id="smsCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required>
-<button type="submit" class="primary">Verify code and sign in</button>
+<h3>Enter your SMS code</h3>
+<p class="muted">The code was requested for <strong id="phoneDestination"></strong>. Never share your code.</p>
+<label for="smsCode">Verification code</label>
+<input id="smsCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required>
+<div class="row"><button type="submit" class="primary">Verify and continue</button>
+<button type="button" id="changePhone">Change number</button></div>
 </form>
-<p class="muted">SMS delivery works after the project owner configures Twilio in Supabase Auth. Standard message charges and provider limits may apply. Only request a code for a phone you control.</p></div>
-<p class="muted">The future ItamaRos Hub button remains disabled until you enable it.</p></section>
+<p class="muted">SMS is delivered by the provider configured in Supabase Auth (Twilio Verify). Provider charges and rate limits apply. Only use a number you control.</p>
+</section>
 <div id="app" hidden>
 <nav>
 <button data-tab="chats" data-selected="true">Chats</button>
