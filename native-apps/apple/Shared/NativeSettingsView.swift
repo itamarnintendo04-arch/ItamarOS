@@ -6,6 +6,8 @@ struct NativeSettingsView: View {
     @AppStorage("itamaros.settings.sounds") private var sounds = true
     @AppStorage("itamaros.settings.largeText") private var largeText = false
     @AppStorage("itamaros.settings.language") private var selectedLanguage = "system"
+    @AppStorage("itamaros.updates.autoCheck") private var autoCheckUpdates = true
+    @AppStorage("itamaros.updates.notify") private var updateNotifications = false
     @EnvironmentObject private var updates: ReleaseMonitor
     #if os(iOS)
     @AppStorage("itamaros.connect.syncEnabled") private var connectSync = true
