@@ -2,10 +2,10 @@
    Window DOM is parked between app switches, preserving handlers and user-entered state. */
 (()=>{'use strict';
 const KEY='itamaros-taskbar-v1';
-const DEFAULT=['files','browser','connect','player','games','settings'];
-const LABELS={connect:'ItamarConnect',welcome:'Start',notes:'Notepad',files:'Files',terminal:'Terminal',calculator:'Calculator',browser:'Browser',settings:'Settings',store:'Store',player:'ItamarOS Player',games:'ItamarOS Games',youtubewebview:'YouTube WebView',github:'GitHub',streaming:'TV Streaming',weather:'Weather',contacts:'Contacts',journal:'Journal',converter:'Converter',passwords:'Password Tools',timer:'Timer',stopwatch:'Stopwatch',whiteboard:'Whiteboard',bookmarks:'Bookmarks',downloads:'Downloads',about:'About',shortcuts:'Shortcuts',reader:'Reader',random:'Random',colors:'Colors',json:'JSON Viewer'};
+const DEFAULT=['files','browser','connect','mirror','player','games','settings'];
+const LABELS={mirror:'ItamarMirror',phonelink:'ItamarPhone',connect:'ItamarConnect',welcome:'Start',notes:'Notepad',files:'Files',terminal:'Terminal',calculator:'Calculator',browser:'Browser',settings:'Settings',store:'Store',player:'ItamarOS Player',games:'ItamarOS Games',youtubewebview:'YouTube WebView',github:'GitHub',streaming:'TV Streaming',weather:'Weather',contacts:'Contacts',journal:'Journal',converter:'Converter',passwords:'Password Tools',timer:'Timer',stopwatch:'Stopwatch',whiteboard:'Whiteboard',bookmarks:'Bookmarks',downloads:'Downloads',about:'About',shortcuts:'Shortcuts',reader:'Reader',random:'Random',colors:'Colors',json:'JSON Viewer'};
 const ICONS={welcome:'itamaros',notes:'notes',json:'json',streaming:'streaming',youtubewebview:'youtubewebview'};
-const TV_SUPPORTED=new Set(['connect','welcome','player','games','streaming','settings','browser','youtubewebview','weather','clock','about']);
+const TV_SUPPORTED=new Set(['mirror','connect','welcome','player','games','streaming','settings','browser','youtubewebview','weather','clock','about']);
 const supported=id=>Object.hasOwn(LABELS,id)&&(document.body.dataset.device==='tv'?TV_SUPPORTED.has(id):id!=='streaming');
 const $=id=>document.getElementById(id);
 function readPins(){try{const v=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(v))return [...new Set(v.filter(id=>typeof id==='string'&&supported(id)))].slice(0,30)}catch{}return DEFAULT.filter(supported)}
