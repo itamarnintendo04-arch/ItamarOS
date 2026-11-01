@@ -178,14 +178,14 @@ end $$;
 
 
 create or replace function public.itamar_set_mute(p_room uuid, p_muted boolean)
-returns boolean language plpgsql security definer set search_path = public, pg_temp as $
+returns boolean language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   if auth.uid() is null then raise exception 'Sign in required'; end if;
   update public.itamar_members set muted = p_muted
   where room_id = p_room and user_id = auth.uid();
   if not found then raise exception 'Not a member'; end if;
   return true;
-end $;
+end $$;
 
 create or replace function public.itamar_my_rooms()
 returns table(id uuid, title text, kind text, owner_id uuid, muted boolean, latest_at timestamptz)
