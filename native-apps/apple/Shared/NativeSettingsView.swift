@@ -7,6 +7,10 @@ struct NativeSettingsView: View {
     @AppStorage("itamaros.settings.largeText") private var largeText = false
     @AppStorage("itamaros.settings.language") private var selectedLanguage = "system"
     @EnvironmentObject private var updates: ReleaseMonitor
+    #if os(iOS)
+    @AppStorage("itamaros.connect.syncEnabled") private var connectSync = true
+    @EnvironmentObject private var cloud: ItamarCloudService
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -64,6 +68,16 @@ struct NativeSettingsView: View {
                 }
                 #if os(iOS)
                 Section("Messages and family") {
+                    Toggle("Sync ItamarConnect chats and contacts on this device",
+                           isOn:$connectSync)
+                        .onChange(of:connectSync) { _,enabled in
+                            cloud.setDeviceSync(enabled)
+                            if enabled {
+                                Task { try? await cloud.reload() }
+                            }
+                        }
+                    Text("Switching this off stops loading account chats and contacts here. It does not delete messages already stored on the server or other devices.")
+                        .font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Profile, contacts, notifications and parent QR") {
                         if ItamarCloudConfig.enabled {
                             ItamarCloudProfileView(required: false)
