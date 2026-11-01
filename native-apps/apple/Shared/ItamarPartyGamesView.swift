@@ -25,6 +25,9 @@ struct ItamarPartyGamesView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @Environment(\.dismiss) private var dismiss
     @State private var selectedGame="connect_four"
+    init(defaultGame:String="connect_four") {
+        _selectedGame=State(initialValue:defaultGame)
+    }
     @State private var match: ItamarPartyState?
     @State private var joinCode=""
     @State private var inviteUser=""
