@@ -24,6 +24,16 @@ struct ItamarPoll: Identifiable, Decodable {
     let created_at: String
 }
 
+struct ItamarMessageReaction: Decodable {
+    let message_id: UUID
+    let user_id: UUID
+    let emoji: String
+}
+struct ItamarReactionCount: Identifiable {
+    let emoji: String
+    let count: Int
+    var id: String { emoji }
+}
 struct ItamarDeliveryReceipt: Decodable {
     let message_id: UUID
     let delivered_at: String?
@@ -200,6 +210,55 @@ extension ItamarCloudService {
         return ItamarReceiptSummary(
             delivered:receipts.filter{$0.delivered_at != nil}.count,
             read:receipts.filter{$0.read_at != nil}.count)
+    }
+
+
+    func sendReply(room:UUID, to parent:UUID, body:String) async throws {
+        _ = try await request("/rest/v1/rpc/itamar_send_reply",method:"POST",
+            data:["p_room":room.uuidString.lowercased(),
+                  "p_parent":parent.uuidString.lowercased(),"p_body":body])
+    }
+    func sendDisappearing(room:UUID,body:String,seconds:Int) async throws {
+        guard [3600,86400,604800].contains(seconds) else { return }
+        _ = try await request("/rest/v1/rpc/itamar_send_disappearing_text",
+            method:"POST",data:["p_room":room.uuidString.lowercased(),
+                                 "p_body":body,"p_seconds":seconds])
+    }
+    func setReaction(message:UUID,emoji:String) async throws {
+        _ = try await request("/rest/v1/rpc/itamar_react",method:"POST",
+            data:["p_message":message.uuidString.lowercased(),"p_emoji":emoji])
+    }
+    func removeReaction(message:UUID) async throws {
+        _ = try await request("/rest/v1/rpc/itamar_remove_reaction",method:"POST",
+            data:["p_message":message.uuidString.lowercased()])
+    }
+    func reactions(for messageIDs:[UUID]) async throws -> [UUID:[ItamarReactionCount]] {
+        guard !messageIDs.isEmpty else { return [:] }
+        let query=messageIDs.suffix(80).map{$0.uuidString.lowercased()}.joined(separator:",")
+        let data=try await request("/rest/v1/itamar_reactions",
+            query:[URLQueryItem(name:"message_id",value:"in.(\(query))"),
+                   URLQueryItem(name:"select",value:"message_id,user_id,emoji")])
+        let entries=try JSONDecoder().decode([ItamarMessageReaction].self,from:data)
+        var grouped=[UUID:[String:Int]]()
+        for reaction in entries {
+            grouped[reaction.message_id,default:[:]][reaction.emoji,default:0]+=1
+        }
+        return grouped.mapValues { map in
+            map.map { ItamarReactionCount(emoji:$0.key,count:$0.value) }
+                .sorted { $0.emoji < $1.emoji }
+        }
+    }
+    func blockUser(_ target:UUID) async throws {
+        guard let me=userID,me != target else { return }
+        _ = try await request("/rest/v1/itamar_blocks",method:"POST",
+            data:["blocker_id":me.uuidString.lowercased(),
+                  "blocked_id":target.uuidString.lowercased()])
+    }
+    func reportMessage(_ message:UUID,reason:String,details:String="") async throws {
+        guard ["Spam","Harassment","Threats","Other"].contains(reason) else { return }
+        _ = try await request("/rest/v1/rpc/itamar_report_message",method:"POST",
+            data:["p_message":message.uuidString.lowercased(),
+                  "p_reason":reason,"p_detail":String(details.prefix(500))])
     }
 
 }
