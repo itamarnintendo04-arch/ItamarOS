@@ -1,6 +1,8 @@
 package org.itamaros.nativeapp
 
 import android.content.Intent
+import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -416,6 +418,27 @@ fun AndroidConnectScreen(
     var codeRequested by remember{mutableStateOf(false)}
     var pendingDesktopRequest by remember{mutableStateOf("")}
     var desktopApprovalStatus by remember{mutableStateOf("")}
+    var credentialRequest by remember { mutableStateOf("") }
+    val approvalCredentialPrompt = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = credentialRequest
+        credentialRequest = ""
+        if (result.resultCode == Activity.RESULT_OK &&
+            pending == pendingDesktopRequest && pending.isNotBlank()) {
+            scope.launch {
+                try {
+                    api.approveDesktopPairing(pending)
+                    pendingDesktopRequest = ""
+                    desktopApprovalStatus = "Verified. Login approved on your other device."
+                } catch (e: Exception) {
+                    desktopApprovalStatus = e.localizedMessage ?: "Unable to approve login"
+                }
+            }
+        } else {
+            desktopApprovalStatus = "Device verification was cancelled or failed. Login not approved."
+        }
+    }
     var pendingSignupAvatar by remember{mutableStateOf<Uri?>(null)}
     var syncOnThisDevice by remember {
         mutableStateOf(ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
@@ -628,11 +651,23 @@ fun AndroidConnectScreen(
                 Text("Compare this code with the one on your computer: "+pendingDesktopRequest.take(6).uppercase())
                 Text("Only approve your own computer. It receives temporary message access, not your password or SMS code.")
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    Button(onClick={perform{
-                        api.approveDesktopPairing(pendingDesktopRequest)
-                        pendingDesktopRequest=""
-                        desktopApprovalStatus="Computer approved. Return to your PC or Mac."
-                    }}){Text("Approve")}
+                    Button(onClick={
+                        val manager=ctx.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                        if (!manager.isDeviceSecure) {
+                            desktopApprovalStatus="Set up a device PIN, password or pattern before approving."
+                        } else {
+                            val credentialIntent=manager.createConfirmDeviceCredentialIntent(
+                                "Approve ItamarOS login",
+                                "Confirm it is you before approving the device shown in the QR request"
+                            )
+                            if (credentialIntent!=null) {
+                                credentialRequest=pendingDesktopRequest
+                                approvalCredentialPrompt.launch(credentialIntent)
+                            } else {
+                                desktopApprovalStatus="Secure device confirmation is unavailable."
+                            }
+                        }
+                    }){Text("Verify device and approve")}
                     TextButton(onClick={pendingDesktopRequest=""}){Text("Cancel")}
                 }
             }
