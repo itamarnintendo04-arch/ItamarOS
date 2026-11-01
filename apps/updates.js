@@ -11,6 +11,16 @@ const id=s=>document.getElementById(s);
 const version=v=>String(v||'').split('.').slice(0,3).map(part=>Number(part.replace(/[^0-9].*$/,''))||0);
 function compare(a,b){const x=version(a),y=version(b);for(let i=0;i<3;i++){if(x[i]!==y[i])return x[i]>y[i]?1:-1}return 0}
 function saved(){try{return JSON.parse(localStorage.getItem('itamaros-update-preferences')||'{}')}catch{return {}}}
+function automaticEnabled(){return saved().autoCheck!==false}
+function intervalMinutes(){const value=Number(saved().intervalMin)||15;return [15,30,60].includes(value)?value:15}
+function notifyNewRelease(){
+ const p=saved();if(!p.notificationOn||!('Notification' in window)||Notification.permission!=='granted')return;
+ if(!latest||p.lastNotifiedVersion===latest.version)return;
+ try {
+   new Notification('ItamarOS update available',{body:'Version '+latest.version+' is ready. Open Software Updates to review it.',tag:'itamaros-update-'+latest.version});
+   save({lastNotifiedVersion:latest.version});
+ }catch{}
+}
 function save(p){localStorage.setItem('itamaros-update-preferences',JSON.stringify({...saved(),...p}))}
 function el(tag,txt,cls){const e=document.createElement(tag);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e}
 function button(txt,fn){const b=el('button',txt);b.type='button';b.addEventListener('click',fn);return b}
@@ -47,7 +57,7 @@ async function check(manual=false){
     const m=await response.json();if(!validManifest(m))throw Error('Invalid update manifest');
     latest=m;lastError='';lastCheck=Date.now();
     save({lastChecked:lastCheck});render();
-    if(newAvailable()){if(!manual&&tryAutoWebUpdate())return m;showToast(manual)}
+    if(newAvailable()){showToast(manual);notifyNewRelease()}
     else if(manual)displayMessage('You have the latest web version ('+BUILD+').');
     return m;
    }catch(e){lastCheck=Date.now();lastError=e.message||'Unknown error';render();if(manual)displayMessage('Update check failed: '+lastError);return null}
@@ -75,6 +85,29 @@ function render(){
  root.append(status);
  const tools=el('div',undefined,'ios-row');
  tools.append(button('Check for updates',()=>check(true)));
+ const controls=el('div',undefined,'ios-pane');
+ const on=el('label');const auto=el('input');auto.type='checkbox';auto.checked=automaticEnabled();
+ auto.addEventListener('change',()=>save({autoCheck:auto.checked}));
+ on.append(auto,' Check for updates automatically while ItamarOS is running');
+ const intervalLabel=el('label','Check every ');const select=el('select');
+ for(const mins of [15,30,60]){const option=el('option',mins+' minutes');option.value=mins;select.append(option)}
+ select.value=intervalMinutes();
+ select.addEventListener('change',()=>save({intervalMin:Number(select.value)}));
+ intervalLabel.append(select);
+ const notificationLabel=el('label');const toggle=el('input');
+ toggle.type='checkbox';toggle.checked=saved().notificationOn===true;
+ toggle.addEventListener('change',async()=>{
+   if(toggle.checked){
+     if(!('Notification' in window)){toggle.checked=false;displayMessage('Browser notifications are unsupported.');return}
+     const permission=await Notification.requestPermission();
+     if(permission!=='granted'){toggle.checked=false;displayMessage('Notification permission was not granted.');return}
+   }
+   save({notificationOn:toggle.checked});
+ });
+ notificationLabel.append(toggle,' Send a browser notification when a new version is found');
+ controls.append(on,intervalLabel,notificationLabel);
+ controls.append(el('p','Checks run while the app/browser is active. Background delivery after an app is closed needs OS-specific push notification setup and cannot be guaranteed.','ios-caption'));
+ root.append(controls);
  if(newAvailable()){tools.append(button(localDesktopDemo()?'View downloads':'Update now',applyUpdate));tools.append(button('Remind me later',()=>{save({deferVersion:latest.version,deferUntil:Date.now()+86400000});const toast=id('ios-update-toast');if(toast)toast.hidden=true;displayMessage('Reminder postponed for 24 hours.')}))}
  root.append(tools);
  root.append(el('p',localDesktopDemo()?'Desktop demo packages must be updated using a verified published desktop release. This program cannot replace its own binary.':'When a new web version is published to GitHub and deployed on Render, it can be installed by reloading this page. Native OS packages require a separate signed system updater.','ios-caption'));
@@ -102,10 +135,13 @@ function openSettings(){
 function init(){
  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installedPrompt=event;render()});
  window.addEventListener('appinstalled',()=>{installedPrompt=null;render()});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>15*60*1000)check(false)});
- window.addEventListener('focus',()=>{if(Date.now()-lastCheck>30*60*1000)check(false)});
- setInterval(()=>{if(!document.hidden)check(false)},30*60*1000);
- setTimeout(()=>check(false),1100);
+ const maybeCheck=()=>{
+   if(automaticEnabled()&&!document.hidden&&Date.now()-lastCheck>=intervalMinutes()*60000)check(false);
+ };
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)maybeCheck()});
+ window.addEventListener('focus',maybeCheck);
+ setInterval(maybeCheck,60*1000);
+ setTimeout(maybeCheck,1100);
 }
 window.ItamarUpdates={BUILD,check,openSettings,applyUpdate};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
