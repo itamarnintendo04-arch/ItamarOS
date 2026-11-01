@@ -2,8 +2,8 @@
 /* Copy ONLY reviewed static demo resources into the Electron package. */
 const fs=require('node:fs'),path=require('node:path');
 const repo=path.resolve(__dirname,'..'),out=path.join(__dirname,'web');
-const list=['index.html','connect.html','setup.html','downloads.html','feedback.html','itamarcode/resources/itamarcode-icon.svg','manifest.webmanifest','sw.js',
-'apps/addons.css','apps/connect.js','messaging/public-config.js','apps/player.js','apps/game-art.js','apps/game-audio.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/settings.js','apps/taskbar.js','apps/windows-start.js','apps/power.js','apps/power.css','apps/updates.js',
+const list=['index.html','connect.html','mirror.html','phone-link.html','setup.html','downloads.html','feedback.html','itamarcode/resources/itamarcode-icon.svg','manifest.webmanifest','sw.js',
+'apps/addons.css','apps/connect.js','apps/phone-link.js','apps/vendor/qrcode.min.js','apps/vendor/LICENSE.qrcodejs','messaging/public-config.js','apps/player.js','apps/game-art.js','apps/game-audio.js','apps/games.js','apps/more-games.js','apps/tv-streaming.js','apps/settings.js','apps/taskbar.js','apps/windows-start.js','apps/power.js','apps/power.css','apps/updates.js',
 'assets/itamaros-icon.svg',
 'assets/branding/itamaros-logo.png','assets/branding/itamaros-logo.webp','assets/branding/itamaros-mark-512.png',
 'assets/branding/itamaros-icon-192.png','assets/branding/itamaros-maskable-512.png',
