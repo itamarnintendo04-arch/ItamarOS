@@ -22,6 +22,10 @@ struct ItamarOnlineMessengerView: View {
             Group {
                 if !cloud.isSignedIn {
                     ItamarCloudLoginView()
+                } else if !cloud.deviceSyncEnabled {
+                    ContentUnavailableView("Cloud sync is disabled",
+                        systemImage:"icloud.slash",
+                        description:Text("Your local choice stops this device from loading cloud chats or contacts. Enable sync in Settings to continue."))
                 } else if cloud.profile == nil {
                     ItamarCloudProfileView(required: true)
                 } else {
@@ -148,6 +152,9 @@ struct ItamarCloudLoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var signingUp = false
+    @State private var phone = ""
+    @State private var smsCode = ""
+    @State private var smsRequested = false
     @State private var processing = false
     @State private var error = ""
 
@@ -178,6 +185,40 @@ struct ItamarCloudLoginView: View {
                 .disabled(processing || email.isEmpty || password.count < 6)
                 if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
                 if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
+            }
+            Section("Sign in with SMS (Twilio)") {
+                Text("SMS messages are sent through the SMS provider configured in Supabase Auth. You must use a number you control.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                TextField("Phone, e.g. +972501234567",text:$phone)
+                    .keyboardType(.phonePad)
+                Button("Send verification code") {
+                    processing=true
+                    Task {
+                        do {
+                            try await cloud.requestSMS(phone:phone)
+                            smsRequested=true
+                            self.error=""
+                        } catch { self.error=error.localizedDescription }
+                        processing=false
+                    }
+                }
+                .disabled(processing || !phone.hasPrefix("+"))
+                if smsRequested {
+                    TextField("SMS code",text:$smsCode)
+                        .keyboardType(.numberPad)
+                    Button("Verify SMS and sign in") {
+                        processing=true
+                        Task {
+                            do {
+                                try await cloud.verifySMS(phone:phone,code:smsCode)
+                                smsCode=""
+                                self.error=""
+                            } catch { self.error=error.localizedDescription }
+                            processing=false
+                        }
+                    }
+                    .disabled(processing || smsCode.count < 4)
+                }
             }
             Section {
                 Text("Never share your password. Conversations are stored in the connected project's database; end-to-end encryption is not implemented. Use block/report controls before public launch.")
