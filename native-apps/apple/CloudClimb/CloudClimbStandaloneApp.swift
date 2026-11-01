@@ -459,15 +459,16 @@ private struct CloudClimbOfflineDemo:View {
         coins+=10;level+=1;bossHP=3
         shopDue=hearts<3 && (level%30==0 ||
             (cleared%10==0 && cleared%30 != 0)) ? level : 0
+        var rewardMessage="Level \(cleared) complete! +10 coins."
         for index in 1...10 {
             let due=index*30+1+((index*7+5)%3)
             if cleared==due && !colored.contains(index) {
                 var updated=colored;updated.insert(index)
                 coloredStorage=updated.sorted().map(String.init).joined(separator:",")
-                notice="🌈 Found a random colored cube after a boss!"
+                rewardMessage+=" 🌈 Found a colored cube after the boss!"
             }
         }
-        if notice.isEmpty {notice="Level \(cleared) complete! +10 coins."}
+        notice=rewardMessage
         if cleared%100==0 {notice+=" 🔑 Earned a new world key!"}
         resetPosition()
     }
