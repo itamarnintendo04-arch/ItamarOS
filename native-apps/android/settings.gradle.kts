@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "ItamarOSNative"
-include(":app")
+include(":app",":cloudclimb")
