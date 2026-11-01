@@ -2,7 +2,13 @@ import SwiftUI
 
 struct NativeGameView: View {
     @AppStorage("itamaros.games.bestGuessStreak") private var best = 0
+    #if os(iOS)
+    @EnvironmentObject private var cloud: ItamarCloudService
+    #endif
     @State private var selectedGame: String?
+    #if os(iOS)
+    @State private var showOnlineMatch = false
+    #endif
     @State private var target = Int.random(in: 1...100)
     @State private var guess = 50
     @State private var streak = 0
@@ -54,6 +60,18 @@ struct NativeGameView: View {
                     } else {
                         Text("Choose a game to start")
                             .font(.title2.bold())
+                        #if os(iOS)
+                        Button {
+                            showOnlineMatch = true
+                        } label: {
+                            Label("Online match · Create or join by code",systemImage:"network")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .sheet(isPresented:$showOnlineMatch) {
+                            OnlineTicTacToeView()
+                                .environmentObject(cloud)
+                        }
+                        #endif
                         Text("11 offline games")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
