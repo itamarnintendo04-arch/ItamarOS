@@ -151,7 +151,8 @@ assert.ok(load('apps/player.js').includes('image/*,.gif'),'Player picker must ac
 assert.ok(load('apps/player.js').includes('ios-media-image'),'Player must display images with native img animation rather than video element');
 assert.ok(load('apps/games.js').includes("addEventListener('pointerdown'"),'Games must support PointerEvent swipe and drag gestures');
 assert.ok(load('apps/games.js').includes("swipe(grid,play2048)"),'2048 board must support direct swipe play');
-assert.ok(load('apps/games.js').includes("swipe(c,d=>"),'Cartoon Snake must be steered by continuous finger dragging');
+assert.ok(load('apps/games.js').includes("c.addEventListener('pointermove'") && load('apps/games.js').includes('snakeDirection(target.x-head.x,target.y-head.y)'), 'Smooth Snake must support live pointer steering');
+assert.ok(load('apps/games.js').includes('76+g.score*11'),'Snake accelerates as its score increases');
 assert.ok(load('apps/more-games.js').includes("addEventListener('pointerup'"),'Connect Four must permit dragged token placement');
 assert.ok(load('apps/game-art.js').includes("const cherry="),'Snake artwork needs a cartoon cherry, not a plain red circle');
 assert.ok(load('apps/game-audio.js').includes("/assets/sfx/"),'Real CC0 WAV audio must be used');
@@ -161,11 +162,14 @@ assert.ok(load('desktop/prepare.cjs').includes('apps/game-art.js'),'Offline desk
 const tabs=all(game.content,e=>Boolean(e.dataset.game));tabs.find(e=>e.dataset.game==='snake').events.click();
 assert.ok(game.document.getElementById('snake-board'));
 assert.ok(all(game.content,e=>e.className==='ios-game-illustration').length>0,'Illustrated Snake banner should be rendered');
-const start=all(game.content,e=>e.textContent==='Start / Pause')[0];assert.ok(start);
+const start=all(game.content,e=>e.textContent==='Start')[0];assert.ok(start);
 start.events.click();
 saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.snake.running,true);
-const before=saved.snake.body[0].x;const tick=[...game.timers.values()][0];assert.equal(typeof tick,'function');tick();
-saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.snake.body[0].x,before+1);
+const before=saved.snake.body[0].x;
+const frame1=[...game.timers.values()][0];assert.equal(typeof frame1,'function');frame1(1000);
+const frame2=[...game.timers.values()][0];assert.equal(typeof frame2,'function');frame2(1016);
+const frame3=[...game.timers.values()][0];assert.equal(typeof frame3,'function');frame3(2300);
+saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.ok(saved.snake.body[0].x>before,"Snake must move by smooth pixels rather than one tile");
 tabs.find(e=>e.dataset.game==='memory').events.click();
 saved=JSON.parse(game.data.get('itamaros-games-v1'));assert.equal(saved.memory.cards.length,16);
 tabs.find(e=>e.dataset.game==='tictactoe').events.click();
