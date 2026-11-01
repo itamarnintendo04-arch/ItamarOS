@@ -8,7 +8,7 @@ struct ExtraMobileGames: View {
     @ViewBuilder var body: some View {
         switch game {
         case "2048": Game2048View()
-        case "Snake": SnakeView()
+        case "Snake": SmoothSnakeView()
         case "Memory Match": MemoryMatchView()
         case "Reaction Test": ReactionTestView()
         case "Rock Paper Scissors": RockPaperScissorsView()
