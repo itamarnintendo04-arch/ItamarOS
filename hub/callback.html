@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>ItamaRos Hub · Authentication callback</title>
+<style>body{font:16px system-ui;background:#eaf2ff;color:#19345b;padding:24px}
+main{margin:8vh auto;max-width:510px;background:white;padding:28px;border-radius:20px;box-shadow:0 12px 40px #142e5324}
+p{line-height:1.6}a{color:#1d5abb}button{font:inherit;padding:12px;border:0;border-radius:9px;background:#2569c9;color:#fff}
+small{color:#5e718f}</style></head><body><main>
+<h1>ItamaRos Hub</h1><h2>Return to ItamarOS</h2>
+<p id="status" role="status">Checking the authorization response…</p>
+<a id="openApp" hidden rel="noreferrer">Return to ItamarOS app</a>
+<p><small>Sign in with ItamaRos Hub is not enabled yet. This page never accepts a name, email, profile or token supplied in its URL as proof of identity. Account details must be verified by the Hub provider and exchanged securely by an ItamarOS backend.</small></p>
+<a href="/connect.html">Back to ItamarConnect</a>
+</main><script src="/hub/config.js"></script><script>
+(async()=>{'use strict';
+const config=window.ITAMAR_HUB_AUTH;
+const status=document.getElementById('status');
+function fail(msg){status.textContent=msg;document.getElementById('openApp').hidden=true;}
+if(!config?.enabled){fail('Hub sign-in is not available yet. No account has been linked.');return;}
+if(location.hash){fail('Tokens in URL fragments are not accepted. Start sign-in again.');return;}
+const params=new URLSearchParams(location.search);
+if(params.has('error')){fail('Sign-in cancelled or denied by the identity provider.');return;}
+const code=params.get('code'),state=params.get('state');
+const savedState=sessionStorage.getItem('itamaros-hub-pkce-state');
+const verifier=sessionStorage.getItem('itamaros-hub-pkce-verifier');
+sessionStorage.removeItem('itamaros-hub-pkce-state');
+sessionStorage.removeItem('itamaros-hub-pkce-verifier');
+if(!savedState||!verifier||!state||state!==savedState||
+   !code||!(/^[A-Za-z0-9._~-]{8,2048}$/.test(code))||
+   !(/^[A-Za-z0-9_-]{43,128}$/.test(verifier))){
+  fail('Invalid or expired login request. Sign-in was not completed.');return;
+}
+try{
+ const endpoint=new URL(config.exchangeEndpoint,location.origin);
+ if(endpoint.origin!==location.origin||endpoint.protocol!=='https:'||
+   !endpoint.pathname.startsWith('/api/hub/')){
+   fail('Hub exchange endpoint is not trusted.');return;
+ }
+ // The server must validate the OIDC issuer, audience, nonce, expiry and
+ // Hub's signature, exchange the authorization code using PKCE, map only
+ // consented profile fields and return a short-lived one-use opaque ticket.
+ const response=await fetch(endpoint,{method:'POST',cache:'no-store',
+   credentials:'same-origin',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({code,state,code_verifier:verifier,
+     redirect_uri:location.origin+config.callbackPath})});
+ if(!response.ok)throw Error('The Hub identity exchange is not available.');
+ const data=await response.json();
+ const ticket=data?.handoff_ticket,ttl=data?.expires_in;
+ if(typeof ticket!=='string'||!/^[A-Za-z0-9_-]{32,128}$/.test(ticket)||
+    !Number.isFinite(ttl)||ttl<=0||ttl>90)throw Error('Invalid identity handoff.');
+ const deepLink='itamaros://hub-auth?ticket='+encodeURIComponent(ticket);
+ const button=document.getElementById('openApp');
+ button.href=deepLink;button.hidden=false;button.textContent='Open ItamarOS to complete sign-in';
+ status.textContent='Your identity was verified by the configured backend. Return to the ItamarOS app to redeem the one-time ticket.';
+ // Only a ticket is passed to the app: no access token, phone, email or PII.
+}catch(err){fail(err?.message||'Hub sign-in could not be completed.');}
+})();
+</script></body></html>
