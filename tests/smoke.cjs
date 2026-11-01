@@ -185,7 +185,8 @@ assert.equal(all(player.content,e=>e.tagName==='VIDEO').length,1);
 assert.ok(all(player.content,e=>e.tagName==='BUTTON').length>=10);
 
 const iconPaths=[...html.matchAll(/<img class="app-icon" src="(\/assets\/icons\/[a-z-]+\.svg)"/g)].map(m=>m[1]);
-assert.equal(iconPaths.length,37,'Every web built-in app needs an icon');
+assert.equal(iconPaths.length,(html.match(/<button class="app" data-builtin="true"/g)||[]).length,'Every web built-in app needs an icon');
+assert.ok(iconPaths.includes('/assets/icons/connect.svg'),'ItamarConnect must have a built-in app icon');
 for(const file of iconPaths)assert.ok(fs.existsSync(path.join(__dirname,'..',file)),'Missing app icon '+file);
 assert.ok(!fs.existsSync(path.join(__dirname,'..','apps','itamio.js')));
 assert.match(html,/Built-in apps/);
