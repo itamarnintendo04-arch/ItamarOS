@@ -16,6 +16,8 @@ object ItamarGamepad {
     var jump by mutableStateOf(false)
     var left by mutableStateOf(false)
     var right by mutableStateOf(false)
+    var attack by mutableStateOf(false)
+    var pause by mutableStateOf(false)
     var detected by mutableStateOf(false)
     fun motion(event: MotionEvent):Boolean {
         if(!enabled || event.source and InputDevice.SOURCE_JOYSTICK != InputDevice.SOURCE_JOYSTICK)return false
@@ -32,10 +34,12 @@ object ItamarGamepad {
             KeyEvent.KEYCODE_DPAD_RIGHT->right=down
             KeyEvent.KEYCODE_BUTTON_A,KeyEvent.KEYCODE_BUTTON_B,
             KeyEvent.KEYCODE_DPAD_UP->jump=down
+            KeyEvent.KEYCODE_BUTTON_X,KeyEvent.KEYCODE_BUTTON_Y->attack=down
+            KeyEvent.KEYCODE_BUTTON_START->pause=down
             else->return false
         }
         detected=true
         return true
     }
-    fun reset(){enabled=false;axis=0f;jump=false;left=false;right=false}
+    fun reset(){enabled=false;axis=0f;jump=false;left=false;right=false;attack=false;pause=false;detected=false}
 }
