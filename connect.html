@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>ItamarConnect · ItamarOS</title>
+<style>
+:root{font:15px system-ui,-apple-system,Segoe UI,sans-serif;color:#152b4a;background:#f1f6ff}
+*{box-sizing:border-box}body{margin:0}header{padding:13px 18px;background:#123c80;color:white;display:flex;align-items:center;gap:12px}
+header h1{font-size:20px;margin:0}header small{color:#d7e8ff}nav{display:flex;gap:6px;flex-wrap:wrap;background:#e3edfc;padding:8px}
+button,input,textarea,select{font:inherit}button{border:0;background:#d9e7fc;color:#143f7e;border-radius:9px;padding:9px 13px;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #5695f5}
+button.primary{background:#2369da;color:white}button:disabled{opacity:.55;cursor:default}
+button[data-selected="true"]{background:#2369da;color:white}
+input,textarea{border:1px solid #b5c9e3;border-radius:9px;padding:10px;background:#fff;max-width:100%;min-width:0}
+main{padding:16px;max-width:1050px;margin:auto}
+section{background:white;padding:16px;border:1px solid #d9e4f1;border-radius:13px;margin:12px 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}h2{font-size:19px;margin:0 0 12px}
+h3{font-size:16px;margin:0 0 10px}.muted{color:#526785;line-height:1.6}
+fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:7px 0 4px}
+.messages{display:flex;flex-direction:column;gap:8px;min-height:100px;max-height:45vh;overflow-y:auto}
+.msg{max-width:90%;padding:10px;border-radius:12px;background:#edf3fb;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.mine{margin-left:auto;background:#d7e8ff}.msg small{display:block;color:#5c708d;margin:5px 0}
+.room{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0;padding:8px;background:#f2f6fc;border-radius:8px}
+.note{padding:12px;background:#fff3dc;border-radius:8px}#status{min-height:22px;color:#a32d33}
+[hidden]{display:none!important}a{color:#1955b9}@media(min-width:740px){.columns{display:grid;grid-template-columns:250px 1fr;gap:15px}}
+</style></head><body>
+<header><h1>💬 ItamarConnect</h1><small>Chats · Groups · Channels</small></header>
+<main>
+<section id="offline"><h2>Connect is not active yet</h2>
+<p class="muted">ItamarOS Connect needs a dedicated Supabase project with the reviewed SQL migrations and a public project URL/key. This local emulator does not simulate real messages or upload contacts.</p>
+<a href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/messaging/README.md" target="_blank" rel="noopener noreferrer">Setup and privacy requirements</a>
+<p>Sign in with ItamaRos Hub will be available only when the integration is explicitly enabled later.</p>
+</section>
+<section id="auth" hidden><h2 id="authTitle">Sign in</h2><form id="authForm">
+<label for="email">Email</label><input id="email" type="email" required autocomplete="email">
+<label for="password">Password</label><input id="password" type="password" minlength="6" required autocomplete="current-password">
+<div class="row" style="margin-top:12px"><button class="primary" type="submit">Continue</button>
+<button id="swapAuth" type="button">Create an account</button></div></form>
+<p class="muted">Sign in using your ItamarConnect account. The future ItamaRos Hub button is disabled until it is ready.</p></section>
+<div id="app" hidden>
+<nav>
+<button data-tab="chats" data-selected="true">Chats</button>
+<button data-tab="channels">Channels</button>
+<button data-tab="groups">Groups</button>
+<button data-tab="updates">Updates</button>
+<button data-tab="profile">Profile</button>
+<button id="logout">Sign out</button>
+</nav>
+<div id="tab-chats"><div class="columns">
+<section><h2>Conversations</h2><div id="rooms"></div>
+<h3>New private chat</h3><form id="newChat"><label for="chatName">Chat title</label><input id="chatName" required maxlength="90" placeholder="Conversation name">
+<label for="chatUser">Username</label><input id="chatUser" required placeholder="@username">
+<button type="submit" class="primary">Start chat</button></form></section>
+<section><h2 id="threadTitle">Choose a chat</h2><div id="messages" class="messages" aria-live="polite"></div>
+<form id="sendForm" class="row" hidden><input id="messageBody" maxlength="4000" required placeholder="Write a message or link" style="flex:1">
+<button class="primary" type="submit">Send</button></form></section>
+</div></div>
+<div id="tab-groups" hidden><section><h2>Groups</h2><div id="groups"></div>
+<h3>New group</h3><form id="newGroup"><label for="groupTitle">Group name</label><input id="groupTitle" maxlength="90" required>
+<label for="groupUsers">Member usernames (comma-separated)</label><input id="groupUsers" placeholder="friend1, friend2" required>
+<button class="primary" type="submit">Create group</button></form></section></div>
+<div id="tab-channels" hidden><section><h2>Channels</h2><div id="channels"></div>
+<form id="newChannel"><label for="channelTitle">New channel name</label><input id="channelTitle" maxlength="90" required><button class="primary" type="submit">Create channel</button></form>
+<button id="discover">Discover public channels</button><div id="discovered"></div></section></div>
+<div id="tab-updates" hidden><section><h2>Updates from unmuted rooms</h2><button id="reloadUpdates">Refresh</button><div id="updates"></div>
+<p class="muted">Browser push notifications and background delivery are not configured. This feed refreshes on demand.</p></section></div>
+<div id="tab-profile" hidden><section><h2>My profile</h2><form id="profileForm">
+<label for="displayName">Display name</label><input id="displayName" maxlength="70" required>
+<label for="username">Unique username</label><input id="username" minlength="3" maxlength="24" required pattern="[a-z0-9_.]{3,24}">
+<label for="bio">About (optional)</label><textarea id="bio" maxlength="160"></textarea>
+<button class="primary" type="submit">Save profile</button></form>
+<p class="muted">Your verified phone is not shared by this emulator. Only contacts you explicitly choose are added.</p>
+</section></div>
+</div>
+<p id="status" role="status" aria-live="polite"></p>
+</main>
+<script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="/apps/connect.js" defer></script>
+</body></html>
