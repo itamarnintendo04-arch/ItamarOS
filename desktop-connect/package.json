@@ -1,0 +1,60 @@
+{
+  "name": "itamaros-connect-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Independent ItamarOS Connect desktop messaging client",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.cjs && node --check preload.cjs && node --check renderer.js",
+    "build:win": "electron-builder --win nsis --x64 --publish never",
+    "build:mac": "electron-builder --mac dmg --x64 --arm64 --publish never"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.18.1"
+  },
+  "build": {
+    "appId": "org.itamaros.connect",
+    "productName": "ItamarOS Connect",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "renderer.js",
+      "index.html",
+      "package.json",
+      "node_modules/qrcode/**",
+      "node_modules/dijkstrajs/**",
+      "node_modules/pngjs/**"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "ItamarOS-Connect-Windows-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.social-networking",
+      "artifactName": "ItamarOS-Connect-macOS-${version}-${arch}.${ext}",
+      "identity": null
+    },
+    "dmg": {
+      "title": "ItamarOS Connect"
+    }
+  }
+}
