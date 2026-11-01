@@ -419,6 +419,7 @@ private struct ItamarCloudThreadView: View {
     @State private var expiresAfter = 0
     @State private var reportTarget: UUID?
     @State private var blockTarget: UUID?
+    @StateObject private var voiceRecorder = ItamarVoiceNoteRecorder()
 
     private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
