@@ -27,10 +27,15 @@ device protections; properly sign/notarize before broad distribution.
    phone status. A one-use claim gives the desktop a temporary ACCESS token.
 5. The desktop uses that token for allowed chat requests, protected by Supabase RLS.
 
-No second Twilio SMS is needed if the approving phone's browser is already
-signed in. IMPORTANT: A separate browser is not automatically signed in just
-because a phone is signed in to the native iOS/Android app. Native app QR approval
-is not implemented yet; this flow currently uses the phone's connected WEB session.
+No second Twilio SMS is needed when the approving phone already holds a verified
+session. The QR opens an approval page with **Open ItamarOS phone app**, which
+uses a native deep link into the installed iOS/Android app. A signed-in native
+user must explicitly approve the matching short code. Alternatively, the same
+page can approve through an already-authenticated ItamarConnect browser session.
+A new web session is NOT automatically shared with the native app. Android's
+current session lives in memory, so reopening a killed app may require sign-in.
+Native QR approval was added after the first desktop installer build, but the
+server protocol is compatible with those installers.
 
 Sessions are TEMPORARY; they cannot refresh and are held in desktop main-process
 memory. The desktop must pair again after access token expiry, app restart or sign-out.
