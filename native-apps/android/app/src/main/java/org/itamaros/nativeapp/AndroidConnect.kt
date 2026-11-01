@@ -86,6 +86,10 @@ private class AndroidConnectApi {
         }
         userID=result.optJSONObject("user")?.optString("id")
     }
+    suspend fun setOptionalPassword(value:String){
+        require(value.length>=8){"Optional password must be at least 8 characters"}
+        request("/auth/v1/user","PUT",JSONObject().put("password",value))
+    }
     suspend fun profile():JSONObject?{
         val id=userID?:return null
         val result=JSONArray(request("/rest/v1/itamar_profiles?id=eq."+id+"&select=id,username,display_name,avatar_path,read_receipts_enabled"))
@@ -377,6 +381,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var signInPhone by remember{mutableStateOf("")}
     var otpInput by remember{mutableStateOf("")}
     var codeRequested by remember{mutableStateOf(false)}
+    var pendingSignupAvatar by remember{mutableStateOf<Uri?>(null)}
     val syncOnThisDevice=remember {
         ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
             .getBoolean("connectSync",true)
@@ -434,6 +439,9 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     fun perform(action:suspend()->Unit){
         scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
     }
+    val chooseSignupAvatar=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ uri ->
+        pendingSignupAvatar=uri
+    }
     val chooseAvatar=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ uri ->
         if(uri!=null){
             perform{
@@ -474,43 +482,43 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     }
     if(!signed){
         Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
-        OutlinedTextField(email,{email=it},label={Text("Email")})
-        OutlinedTextField(password,{password=it},label={Text("Password")})
-        Button(onClick={
-            perform{
-                api.login(email,password,registration)
-                signed=true
-                val p=api.profile()
-                handle=p?.optString("username").orEmpty()
-                displayName=p?.optString("display_name").orEmpty()
-                profileAvatar=p?.optString("avatar_path")?.takeIf{it.isNotEmpty()&&it!="null"}
-                readReceiptPreference=p?.optBoolean("read_receipts_enabled",true)?:true
-                if(syncOnThisDevice){rooms=api.rooms()}
-            }
-        },enabled=email.contains("@")&&password.length>=6){Text(if(registration)"Register" else "Sign in")}
-        TextButton(onClick={registration=!registration}){Text("Switch sign-in / registration")}
-        HorizontalDivider()
-        Text("Sign in with SMS (Twilio through Supabase Auth)")
-        OutlinedTextField(signInPhone,{signInPhone=it},label={Text("Your phone +country code")})
+        Text("Phone verification by SMS is required. A photo and password are optional.")
+        OutlinedTextField(signInPhone,{signInPhone=it},label={Text("Phone (+country code)")})
+        Button(onClick={chooseSignupAvatar.launch("image/*")}){
+            Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
+        }
+        OutlinedTextField(password,{password=it},label={Text("Password (optional, minimum 8 characters)")})
+        Text("Your photo uploads only after verifying your phone and saving your profile.")
         Button(onClick={perform{
             api.requestSms(signInPhone.trim())
             codeRequested=true
-        }},enabled=signInPhone.startsWith("+")){Text("Send one-time SMS code")}
+        }},enabled=Regex("^\\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()) &&
+            (password.isEmpty()||password.length>=8)){
+            Text("Next — send SMS")
+        }
         if(codeRequested){
             OutlinedTextField(otpInput,{otpInput=it},label={Text("SMS verification code")})
             Button(onClick={perform{
                 api.verifySms(signInPhone.trim(),otpInput.trim())
-                signed=true;otpInput="";codeRequested=false
-                if(syncOnThisDevice){
-                    val profile=api.profile()
-                    handle=profile?.optString("username").orEmpty()
-                    displayName=profile?.optString("display_name").orEmpty()
-                    rooms=api.rooms()
+                if(password.isNotEmpty()){
+                    api.setOptionalPassword(password)
+                    password=""
                 }
-            }},enabled=otpInput.length>=4){Text("Verify code and sign in")}
+                signed=true;otpInput="";codeRequested=false
+                val p=api.profile()
+                handle=p?.optString("username").orEmpty()
+                displayName=p?.optString("display_name").orEmpty()
+                if(p!=null && pendingSignupAvatar!=null){
+                    profileAvatar=api.uploadAvatar(ctx,pendingSignupAvatar!!)
+                    api.profilePreferences(profileAvatar,true)
+                    pendingSignupAvatar=null
+                }
+                if(syncOnThisDevice){rooms=api.rooms()}
+                if(p==null)tab="Profile"
+            }},enabled=otpInput.length>=4){Text("Verify and continue")}
+            TextButton(onClick={codeRequested=false;otpInput=""}){Text("Change number")}
         }
-        Text("You must control this phone number. Supabase/Twilio SMS fees and limits may apply.")
-
+        Text("Twilio Verify must be configured in Supabase Auth to deliver SMS codes. SMS charges apply.")
         if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.error)
         return
     }
@@ -533,7 +541,14 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
             Text("Public profile")
             OutlinedTextField(displayName,{displayName=it},label={Text("Name")})
             OutlinedTextField(handle,{handle=it},label={Text("Unique @username")})
-            Button(onClick={perform{api.createProfile(displayName,handle)}}){Text("Create profile")}
+            Button(onClick={perform{
+                api.createProfile(displayName,handle)
+                if(pendingSignupAvatar!=null){
+                    profileAvatar=api.uploadAvatar(ctx,pendingSignupAvatar!!)
+                    api.profilePreferences(profileAvatar,readReceiptPreference)
+                    pendingSignupAvatar=null
+                }
+            }}){Text("Save profile")}
             PublicAvatar(profileAvatar)
             Button(onClick={avatarTarget="profile";chooseAvatar.launch("image/*")}){
                 Text("Choose profile photo")
