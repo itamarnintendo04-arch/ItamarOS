@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarPhone (QR pairing)
+Comment=Pair your own signed-in phone with explicit account consent
+Exec=xdg-open https://itamaros-web-emulator.onrender.com/phone-link.html
+Icon=phone
+Terminal=false
+Categories=Network;System;
+StartupNotify=false
