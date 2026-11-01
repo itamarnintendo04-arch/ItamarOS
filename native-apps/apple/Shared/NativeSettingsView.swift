@@ -1,5 +1,8 @@
 import SwiftUI
 import Foundation
+#if os(iOS)
+import UserNotifications
+#endif
 
 struct NativeSettingsView: View {
     @AppStorage("itamaros.settings.accent") private var accent = "blue"
