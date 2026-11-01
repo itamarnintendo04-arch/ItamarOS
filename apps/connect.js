@@ -197,7 +197,7 @@ $('changePhone').onclick=()=>{
 $('smsForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
  const phone=$('phone').value.trim();
- if(!/^\\+[1-9]\\d{7,14}$/.test(phone))throw Error('Use your own mobile number with a country code, such as +972...');
+ if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error('Use your own mobile number with a country code, such as +972...');
  const password=$('signupPassword').value;
  if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
  const {error}=await client.auth.signInWithOtp({phone});
@@ -227,7 +227,7 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
  if(!pendingPhone)throw Error('First request a code for your phone.');
  const code=$('smsCode').value.trim();
- if(!/^\\d{4,8}$/.test(code))throw Error('Enter the SMS verification code.');
+ if(!/^\d{4,8}$/.test(code))throw Error('Enter the SMS verification code.');
  const {data,error}=await client.auth.verifyOtp({phone:pendingPhone,token:code,type:'sms'});
  if(error)throw error;
  if(!data?.session||!data.user?.phone_confirmed_at)throw Error('Phone verification not completed.');
