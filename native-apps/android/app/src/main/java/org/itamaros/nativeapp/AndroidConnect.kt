@@ -71,6 +71,21 @@ private class AndroidConnectApi {
         token=r.optString("access_token").ifEmpty{throw IllegalStateException("Confirm your email, then sign in")}
         userID=r.optJSONObject("user")?.optString("id")
     }
+    suspend fun requestSms(phone:String){
+        require(Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)) {
+            "Enter an international phone number belonging to you"
+        }
+        request("/auth/v1/otp","POST",JSONObject().put("phone",phone),false)
+    }
+    suspend fun verifySms(phone:String,code:String){
+        require(Regex("^[0-9]{4,8}$").matches(code)){"Enter the SMS verification code"}
+        val result=JSONObject(request("/auth/v1/verify","POST",JSONObject()
+            .put("phone",phone).put("token",code).put("type","sms"),false))
+        token=result.optString("access_token").ifEmpty {
+            throw IllegalStateException("The code was not verified")
+        }
+        userID=result.optJSONObject("user")?.optString("id")
+    }
     suspend fun profile():JSONObject?{
         val id=userID?:return null
         val result=JSONArray(request("/rest/v1/itamar_profiles?id=eq."+id+"&select=id,username,display_name,avatar_path,read_receipts_enabled"))
@@ -359,6 +374,13 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
     var password by remember{mutableStateOf("")}
+    var signInPhone by remember{mutableStateOf("")}
+    var otpInput by remember{mutableStateOf("")}
+    var codeRequested by remember{mutableStateOf(false)}
+    val syncOnThisDevice=remember {
+        ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
+            .getBoolean("connectSync",true)
+    }
     var handle by remember{mutableStateOf("")}
     var displayName by remember{mutableStateOf("")}
     var tab by remember{mutableStateOf("Chats")}
@@ -463,14 +485,42 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                 displayName=p?.optString("display_name").orEmpty()
                 profileAvatar=p?.optString("avatar_path")?.takeIf{it.isNotEmpty()&&it!="null"}
                 readReceiptPreference=p?.optBoolean("read_receipts_enabled",true)?:true
-                rooms=api.rooms()
+                if(syncOnThisDevice){rooms=api.rooms()}
             }
         },enabled=email.contains("@")&&password.length>=6){Text(if(registration)"Register" else "Sign in")}
         TextButton(onClick={registration=!registration}){Text("Switch sign-in / registration")}
+        HorizontalDivider()
+        Text("Sign in with SMS (Twilio through Supabase Auth)")
+        OutlinedTextField(signInPhone,{signInPhone=it},label={Text("Your phone +country code")})
+        Button(onClick={perform{
+            api.requestSms(signInPhone.trim())
+            codeRequested=true
+        }},enabled=signInPhone.startsWith("+")){Text("Send one-time SMS code")}
+        if(codeRequested){
+            OutlinedTextField(otpInput,{otpInput=it},label={Text("SMS verification code")})
+            Button(onClick={perform{
+                api.verifySms(signInPhone.trim(),otpInput.trim())
+                signed=true;otpInput="";codeRequested=false
+                if(syncOnThisDevice){
+                    val profile=api.profile()
+                    handle=profile?.optString("username").orEmpty()
+                    displayName=profile?.optString("display_name").orEmpty()
+                    rooms=api.rooms()
+                }
+            }},enabled=otpInput.length>=4){Text("Verify code and sign in")}
+        }
+        Text("You must control this phone number. Supabase/Twilio SMS fees and limits may apply.")
+
         if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.error)
         return
     }
 
+    if(!syncOnThisDevice){
+        Text("Cloud sync is disabled on this tablet/device.")
+        Text("Enable it in ItamarOS Settings to load online conversations and saved contacts. This does not delete cloud messages.")
+        Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
+        return
+    }
     Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
     Row(modifier=Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
         listOf("Chats","Groups","Channels","Contacts","Updates","Profile").forEach{value->
