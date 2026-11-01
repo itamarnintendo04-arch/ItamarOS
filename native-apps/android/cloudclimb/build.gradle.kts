@@ -59,3 +59,6 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+// Kotlin files shared with the main ItamarOS application.
+kotlin.sourceSets.getByName("main").kotlin.srcDir("../app/src/main/java")
