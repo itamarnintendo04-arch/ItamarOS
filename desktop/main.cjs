@@ -5,11 +5,17 @@ const {app,BrowserWindow,shell,ipcMain,session}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
+const {discoverWindowsStartApps,isStartShortcut}=require('./windows-apps.cjs');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon'};
 let local=null;
 let mainWindow=null;
 let youtubeWindow=null;
 let localOrigin='';
+let windowsStartApps={apps:[],pathsById:new Map(),roots:[]};
+function fromTrustedWindow(event){
+ if(!mainWindow||mainWindow.isDestroyed()||event.sender!==mainWindow.webContents)return false;
+ try{return new URL(event.senderFrame.url).origin===localOrigin}catch{return false}
+}
 const trustedExternal=u=>{try{const url=new URL(u);return url.protocol==='https:'}catch{return false}};
 async function openExternal(url){if(trustedExternal(url))await shell.openExternal(url)}
 
@@ -72,6 +78,20 @@ async function main(){
  await win.loadURL(url)
 }
 app.whenReady().then(()=>{
+  ipcMain.handle('itamaros:list-windows-apps',event=>{
+    if(!fromTrustedWindow(event)||process.platform!=='win32')return [];
+    windowsStartApps=discoverWindowsStartApps();
+    return windowsStartApps.apps;
+  });
+  ipcMain.handle('itamaros:open-windows-app',async(event,id)=>{
+    if(!fromTrustedWindow(event)||process.platform!=='win32'||typeof id!=='string')return false;
+    const file=windowsStartApps.pathsById.get(id);
+    if(!file||!isStartShortcut(file,windowsStartApps.roots))return false;
+    // User actively selected a Windows Start Menu shortcut. No command-line
+    // arguments or arbitrary paths are accepted from the renderer.
+    const result=await shell.openPath(file);
+    return result==='';
+  });
   ipcMain.handle('itamaros:youtube-webview',event=>{
     if(!mainWindow||mainWindow.isDestroyed()||event.sender!==mainWindow.webContents)return false;
     try{if(new URL(event.senderFrame.url).origin!==localOrigin)return false}catch{return false}
