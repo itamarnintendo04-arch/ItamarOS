@@ -11,6 +11,8 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.widget.Toast
@@ -28,6 +30,14 @@ import java.util.TimeZone
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    override fun dispatchGenericMotionEvent(event: MotionEvent):Boolean {
+        if(ItamarGamepad.motion(event))return true
+        return super.dispatchGenericMotionEvent(event)
+    }
+    override fun dispatchKeyEvent(event: KeyEvent):Boolean {
+        if(ItamarGamepad.key(event))return true
+        return super.dispatchKeyEvent(event)
+    }
     private var status by mutableStateOf("Native app ready")
     private var selectedTree by mutableStateOf<Uri?>(null)
     private var selectedMedia by mutableStateOf<Uri?>(null)
