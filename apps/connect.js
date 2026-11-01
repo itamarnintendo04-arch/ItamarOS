@@ -171,7 +171,7 @@ async function drawSession(){
  const {data,error}=await client.auth.getUser();
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
- if(deviceSync){await refreshRooms();await loadProfile();await showBlocks();await showBlocks();}
+ if(deviceSync){await refreshRooms();await loadProfile();await showBlocks();}
  else {clearCloudView();selectTab('settings');}
 }
 $('authForm').addEventListener('submit',safe(async(event)=>{
