@@ -63,10 +63,34 @@ struct ItamarPartyGamesView: View {
     @State private var climbCloudSaving=false
     @State private var climbPendingUpload=false
     @State private var climbSyncStatus="Local save"
+    @State private var climbWorld=1
+    @State private var climbWorlds:Set<Int>=[1]
+    @State private var climbBlueCubes:Set<String>=[]
+    @State private var climbColoredBosses:Set<Int>=[]
+    @State private var climbCharacters:Set<String>=[]
+    @State private var climbCharacterOrbOpen=false
+    @State private var climbCharacterBusy=false
+    @State private var climbCharacterNotice="Surprise character · 500 earned coins"
+    @State private var climbDoorBusy=false
+    @State private var climbSlashInput=""
+    @State private var climbSlashReply="Type /help for commands"
     private var climbSaveKey:String {
         "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest")
     }
-    private var climbStageSeed:Int {(match?.seed ?? 0) &+ (climbLevel &* 2039)}
+    private var climbStageSeed:Int {(match?.seed ?? 0) &+ (climbLevel &* 2039) &+ (climbWorld &* 1009)}
+    private var climbKeyCount:Int {max(0,(climbLevel-1)/100-(climbWorlds.count-1))}
+    private var climbSecretAvailable:Bool {climbColoredBosses.count==10}
+    private var climbDoors:[Int] {
+        guard (1...10).contains(climbWorld) else{return []}
+        return (1...5).filter{!climbBlueCubes.contains("\(climbWorld):\($0)")}
+    }
+    private var climbNearDoor:Int? {
+        let stages=platforms(climbStageSeed)
+        return climbDoors.first {
+            let rect=stages[$0]
+            return abs(posX-rect.midX)<60 && abs(posY-(rect.minY-5))<60
+        }
+    }
     private var climbIsBoss:Bool {climbLevel % 30 == 0}
     private var climbShowTouch:Bool {!climbControllerConnected || !climbAutoHideControls}
     private var climbBossX:CGFloat {platforms(climbStageSeed).last?.midX ?? 200}
@@ -250,6 +274,25 @@ struct ItamarPartyGamesView: View {
                 Text("❤️ \(climbHearts)/3  🪙 \(climbCoins)")
                     .font(.subheadline.bold()).foregroundStyle(.white)
             }
+            Text("World \(climbWorld) · 🔑 \(climbKeyCount) · 💙 \(climbBlueCubes.count)/50 · 🌈 \(climbColoredBosses.count)/10")
+                .font(.caption.bold()).foregroundStyle(.white)
+            ScrollView(.horizontal,showsIndicators:false){
+                HStack(spacing:7) {
+                    ForEach(1...11,id:\.self) { world in
+                        let open=climbWorlds.contains(world) ||
+                            (world==11 && climbSecretAvailable)
+                        Button(world==11 ? "SECRET" : open ? "World \(world)" : "🔒 \(world)") {
+                            if open {
+                                climbWorld=world;resetMovement();saveClimb()
+                            } else if world <= 10 && climbKeyCount>0 {
+                                Task {await unlockClimbWorld(world)}
+                            }
+                        }
+                        .disabled(!open && (climbKeyCount<1 || !climbCloudReady))
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
             if climbShowTips {
                 Text(climbIsBoss ? "Boss level: 3 hits!" : "Reach the highest platform to finish the level.")
                     .font(.caption).foregroundStyle(.white.opacity(0.85))
@@ -272,7 +315,9 @@ struct ItamarPartyGamesView: View {
                     resetMovement();saveClimb()
                 }.buttonStyle(.borderedProminent)
             } else if climbShopDue != 0 {
-                Text("Level \(climbShopDue) cleared! Buy a missing heart for 100 coins?")
+                Text(climbShopDue % 30 == 0 ?
+                    "Before Boss Level \(climbShopDue): buy a missing heart for 100 coins?" :
+                    "Heart Shop · Restore one missing heart for 100 coins?")
                 HStack {
                     Button("Buy heart · 100 🪙") {
                         guard climbCoins>=100 && climbHearts<3 else{return}
@@ -306,6 +351,18 @@ struct ItamarPartyGamesView: View {
                     ctx.fill(Path(roundedRect:rect,cornerRadius:4),
                              with:.color(i==0 ? .mint : .white.opacity(0.9)))
                 }
+                if (1...10).contains(climbWorld) {
+                    for door in climbDoors {
+                        let plat=stages[door]
+                        let rect=CGRect(x:(plat.midX-12)*sx,y:(plat.minY-37)*sy,
+                                        width:24*sx,height:37*sy)
+                        ctx.fill(Path(roundedRect:rect,cornerRadius:7),
+                            with:.color(Color(red:0.09,green:0.34,blue:0.85)))
+                        ctx.fill(Path(ellipseIn:CGRect(x:(plat.midX+5)*sx,
+                             y:(plat.minY-20)*sy,width:6*sx,height:6*sy)),
+                            with:.color(.cyan))
+                    }
+                }
                 if climbIsBoss {
                     let rect=CGRect(x:(climbBossX-22)*sx,y:43*sy,width:44*sx,height:44*sy)
                     ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
@@ -329,6 +386,11 @@ struct ItamarPartyGamesView: View {
             .frame(maxWidth:350)
             .clipShape(RoundedRectangle(cornerRadius:16))
             .onReceive(timer) { _ in tickClimb() }
+            if let door=climbNearDoor,!climbPaused,!climbGameOver,climbShopDue==0 {
+                Button("🚪 Enter Blue Door \(door)") {
+                    Task {await enterClimbBlueDoor(door)}
+                }.disabled(climbDoorBusy).buttonStyle(.borderedProminent)
+            }
             if climbShowTouch && climbIsBoss && !climbPaused && !climbGameOver && climbShopDue==0 {
                 Button("Strike boss · \(climbBossHealth)/3") {strikeClimbBoss()}
                     .disabled(!landed || posY>=115 || abs(posX-climbBossX)>=85)
@@ -343,7 +405,23 @@ struct ItamarPartyGamesView: View {
             }
             }
             if !climbMessage.isEmpty {
-                Text(climbMessage).font(.footnote).foregroundStyle(.secondary)
+                Text(climbMessage).font(.footnote).foregroundStyle(.white)
+            }
+            Button("🔮 Character Orb · \(climbCharacters.count) characters") {
+                climbCharacterOrbOpen=true
+            }
+            .buttonStyle(.borderedProminent)
+            VStack(alignment:.leading,spacing:8) {
+                Text("Cloud Climb Commands").font(.subheadline.bold()).foregroundStyle(.white)
+                HStack {
+                    TextField("Enter /command",text:$climbSlashInput)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textFieldStyle(.roundedBorder)
+                    Button("Send") {runClimbCommand()}
+                        .disabled(!climbSlashInput.hasPrefix("/"))
+                }
+                Text(climbSlashReply).font(.caption).foregroundStyle(.white)
             }
             Text(climbSyncStatus)
                 .font(.caption).foregroundStyle(.yellow)
@@ -361,6 +439,14 @@ struct ItamarPartyGamesView: View {
             in:RoundedRectangle(cornerRadius:24)
         )
         .sheet(isPresented:$climbSettingsPresented) {climbSettings}
+        .alert("🔮 Character Orb",isPresented:$climbCharacterOrbOpen) {
+            Button("Unlock for 500 Coins") {
+                Task {await buyClimbCharacter()}
+            }.disabled(climbCoins<500 || climbCharacterBusy)
+            Button("Close",role:.cancel){}
+        } message: {
+            Text("Random NEW character for 500 earned game coins. No real-money purchases.\n"+climbCharacterNotice)
+        }
     }
     private var climbSettings:some View {
         NavigationStack {
@@ -384,6 +470,139 @@ struct ItamarPartyGamesView: View {
                 Button("Done"){climbSettingsPresented=false}
             }}
         }
+    }
+
+    @MainActor private func loadClimbRewards() async {
+        guard climbCloudReady else{return}
+        do {
+            let data=try await cloud.request("/rest/v1/rpc/itamar_climb_rewards_state",
+                                             method:"POST",data:[:])
+            guard let obj=try JSONSerialization.jsonObject(with:data) as? [String:Any]
+            else{return}
+            climbWorlds=Set((obj["worlds"] as? [Int]) ?? [1])
+            climbWorlds.insert(1)
+            let blue=(obj["blue_cubes"] as? [[String:Any]]) ?? []
+            climbBlueCubes=Set(blue.compactMap { row -> String? in
+                guard let world=row["world"] as? Int,let cube=row["cube"] as? Int
+                else{return nil}
+                return "\(world):\(cube)"
+            })
+            climbColoredBosses=Set((obj["colored_bosses"] as? [Int]) ?? [])
+            climbCharacters=Set((obj["characters"] as? [String]) ?? [])
+            if !climbWorlds.contains(climbWorld) &&
+                !(climbWorld==11 && climbSecretAvailable) {climbWorld=1}
+        } catch {climbMessage="Some world rewards are temporarily unavailable."}
+    }
+    @MainActor private func enterClimbBlueDoor(_ door:Int) async {
+        guard !climbDoorBusy,(1...10).contains(climbWorld),
+              climbDoors.contains(door) else{return}
+        climbDoorBusy=true
+        defer {climbDoorBusy=false}
+        let world=climbWorld
+        if climbCloudReady {
+            do {
+                let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_enter_blue_door",
+                    method:"POST",data:["p_world":world,"p_cube":door])
+                let response=(try JSONSerialization.jsonObject(with:raw)) as? [String:Any] ?? [:]
+                climbMessage=(response["blue_collected"] as? Int ?? 0)==5 ?
+                    "🔮 World \(world) mystery character unlocked!" :
+                    "💙 You discovered a blue cube behind Door \(door)!"
+                await loadClimbRewards()
+            } catch {climbMessage="Blue door unavailable: \(error.localizedDescription)"}
+        } else {
+            climbBlueCubes.insert("\(world):\(door)")
+            if climbBlueCubes.filter({$0.hasPrefix("\(world):")}).count==5 {
+                climbCharacters.insert("mystery_world_\(world)")
+                climbMessage="🔮 Mystery character unlocked in the offline preview!"
+            } else {climbMessage="💙 Blue cube discovered (local preview)."}
+        }
+    }
+    @MainActor private func unlockClimbWorld(_ world:Int) async {
+        guard climbCloudReady,climbKeyCount>0,(2...10).contains(world) else{return}
+        do {
+            _=try await cloud.request("/rest/v1/rpc/itamar_climb_unlock_world",
+                                      method:"POST",data:["p_world":world])
+            await loadClimbRewards()
+            climbMessage="World \(world) unlocked!"
+        }catch{climbMessage="World unlock unavailable: \(error.localizedDescription)"}
+    }
+    @MainActor private func claimClimbColoredRewards() async {
+        let boss=min(10,max(0,(climbLevel-2)/30))
+        guard climbCloudReady,(1...10).contains(boss),
+              !climbColoredBosses.contains(boss) else{return}
+        do {
+            let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_claim_colored",
+                                    method:"POST",data:["p_boss_index":boss])
+            let obj=(try JSONSerialization.jsonObject(with:raw)) as? [String:Any] ?? [:]
+            if obj["awarded"] as? Bool == true {
+                climbMessage="✨ Rare colored cube found after the boss!"
+                await loadClimbRewards()
+            }
+        }catch {}
+    }
+    @MainActor private func buyClimbCharacter() async {
+        guard climbCoins>=500,!climbCharacterBusy else{return}
+        climbCharacterBusy=true
+        defer {climbCharacterBusy=false}
+        if climbCloudReady {
+            climbPendingUpload=false
+            climbCloudReady=false
+            do {
+                let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_buy_random_character",
+                    method:"POST",data:[:])
+                let result=(try JSONSerialization.jsonObject(with:raw)) as? [String:Any] ?? [:]
+                if result["purchased"] as? Bool == true {
+                    climbCoins=result["coins"] as? Int ?? climbCoins
+                    climbRevision=(result["revision"] as? NSNumber)?.int64Value ?? climbRevision
+                    let awarded=result["character"] as? String ?? "unknown"
+                    climbCharacters.insert(awarded)
+                    climbCharacterNotice="🎉 You unlocked \(awarded)!"
+                }else {climbCharacterNotice="You already own all regular characters."}
+                climbCloudReady=true
+                await loadClimbRewards()
+                saveClimb()
+            }catch {
+                climbCharacterNotice="Could not complete purchase. Your account was not charged here."
+                await loadCloudClimb()
+            }
+        } else {
+            let available=(1...12).map {String(format:"sky_%02d",$0)}
+                .filter{!climbCharacters.contains($0)}
+            guard let new=available.randomElement() else {
+                climbCharacterNotice="All regular characters owned."
+                return
+            }
+            climbCoins-=500
+            climbCharacters.insert(new)
+            climbCharacterNotice="🎉 Offline character: \(new)"
+            saveClimb()
+        }
+    }
+    private func runClimbCommand() {
+        let command=climbSlashInput.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        switch command {
+        case "/help":
+            climbSlashReply="/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
+        case "/stats":
+            climbSlashReply="Level \(climbLevel) · World \(climbWorld) · Coins \(climbCoins) · Blue \(climbBlueCubes.count)/50 · Colored \(climbColoredBosses.count)/10 · Heroes \(climbCharacters.count)"
+        case "/pause":
+            climbPaused=true;climbSlashReply="Game paused."
+        case "/resume":
+            climbPaused=false;climbSlashReply="Game resumed."
+        case "/room":
+            climbSlashReply="Room: \(match?.code ?? "offline")"
+        case "/theme day":
+            climbTwilightSky=false;climbSlashReply="Day theme enabled."
+        case "/theme twilight":
+            climbTwilightSky=true;climbSlashReply="Twilight theme enabled."
+        default:
+            if command.hasPrefix("/world "),let number=Int(command.dropFirst(7)),
+                climbWorlds.contains(number) || (number==11 && climbSecretAvailable) {
+                climbWorld=number;resetMovement();saveClimb()
+                climbSlashReply="Entered World \(number)."
+            } else {climbSlashReply="Unknown command or locked world. Try /help."}
+        }
+        climbSlashInput=""
     }
     private func steerButton(_ label:String,left:Bool)->some View {
         Text(label).font(.title2)
@@ -444,7 +663,7 @@ struct ItamarPartyGamesView: View {
         UserDefaults.standard.set([
             "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
             "bossHealth":climbBossHealth,"shopDue":climbShopDue,
-            "gameOver":climbGameOver
+            "gameOver":climbGameOver, "world":climbWorld
         ] as [String:Any],forKey:climbSaveKey)
         if climbCloudReady {
             climbPendingUpload=true
@@ -462,6 +681,7 @@ struct ItamarPartyGamesView: View {
         climbBossHealth=min(3,max(1,saved["bossHealth"] as? Int ?? 3))
         climbShopDue=max(0,saved["shopDue"] as? Int ?? 0)
         climbGameOver=(saved["gameOver"] as? Bool ?? false) || climbHearts==0
+        climbWorld=min(11,max(1,saved["world"] as? Int ?? 1))
         climbPaused=false;climbMessage="";climbLoaded=true
         resetMovement()
     }
@@ -490,6 +710,7 @@ struct ItamarPartyGamesView: View {
             }
             climbSyncStatus="Cloud save connected · Same verified number, same account"
             climbCloudReady=true
+            await loadClimbRewards()
             if state["exists"] as? Bool != true {saveClimb()}
             else {UserDefaults.standard.set([
                 "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
@@ -519,6 +740,7 @@ struct ItamarPartyGamesView: View {
                 if obj["saved"] as? Bool == true {
                     climbRevision=(obj["revision"] as? NSNumber)?.int64Value ?? climbRevision
                     climbSyncStatus="Cloud progress saved"
+                    await claimClimbColoredRewards()
                 }else{
                     climbPendingUpload=false
                     climbCloudReady=false
@@ -534,8 +756,10 @@ struct ItamarPartyGamesView: View {
     private func finishClimbLevel(){
         let completed=climbLevel
         climbCoins+=10;climbLevel+=1;climbBossHealth=3
-        climbShopDue=(completed % 10 == 0 && climbHearts<3) ? completed : 0
-        climbMessage="Level \(completed) complete! +10 coins."
+        climbShopDue=climbHearts<3 && (climbLevel % 30 == 0 ||
+            (completed % 10 == 0 && completed % 30 != 0)) ? climbLevel : 0
+        climbMessage="Level \(completed) complete! +10 coins." +
+            (completed % 100 == 0 ? " New world key available!" : "")
         resetMovement();saveClimb()
     }
     private func loseClimbHeart(){
