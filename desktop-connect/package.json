@@ -28,6 +28,7 @@
       "preload.cjs",
       "renderer.js",
       "index.html",
+      "itamaros-logo.svg",
       "package.json",
       "node_modules/qrcode/**",
       "node_modules/dijkstrajs/**",
