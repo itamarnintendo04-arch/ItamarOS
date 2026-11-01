@@ -1,0 +1,60 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ItamarMirror · Screen sharing</title>
+<style>
+:root{font:16px system-ui;color:#193653;background:#edf5ff}*{box-sizing:border-box}body{margin:0}
+header{background:#123d83;color:white;padding:18px 23px}h1{margin:0;font-size:22px}main{max-width:980px;margin:auto;padding:20px}
+section{background:white;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 5px 25px #11376612}
+button{font:inherit;border:0;border-radius:10px;padding:12px 17px;cursor:pointer;background:#2264ca;color:white;margin:4px}
+button:disabled{opacity:.5;cursor:default}button.secondary{background:#d8e6f8;color:#173e7a}
+video{width:100%;max-height:65vh;aspect-ratio:16/9;background:#061629;border-radius:13px;object-fit:contain}
+.note{color:#4c6482;line-height:1.55}#report{white-space:pre-line}a{color:#2059bd}
+</style></head><body>
+<header><h1>📺 ItamarMirror</h1><small>Screen sharing preview · AirPlay / Cast setup</small></header>
+<main>
+<section><h2>Share a screen or an app window</h2>
+<p class="note">This preview can capture and display a user-selected screen inside your browser. It does not yet operate as an AirPlay or Google Cast receiver and does not transmit your screen to another device. Screen permission is always requested by your browser.</p>
+<div><button id="start">Start screen preview</button><button id="stop" class="secondary" disabled>Stop sharing</button></div>
+<video id="view" autoplay playsinline muted aria-label="Your local screen preview"></video>
+<p id="report" role="status" class="note">Not sharing · no display is being captured.</p></section>
+<section><h2>Device mirroring protocols</h2>
+<h3>Apple AirPlay</h3><p class="note">On a supported iPhone, iPad or Mac, use the system's Screen Mirroring menu and choose an AirPlay-compatible TV or receiver. Standard third-party webpages do not become AirPlay receivers just by having an AirPlay button.</p>
+<h3>Android / Google Cast</h3><p class="note">On supported Android devices, use the system Cast / Screen Cast controls and choose your Google Cast-compatible display. A full native Cast receiver would require a registered receiver application and compatible device.</p>
+<h3>4K at 60 FPS</h3><p class="note">ItamarMirror asks for up to 3840×2160 at 60 FPS when the browser permits it. The actual resolution and frame rate depend on the source screen, device, encoder, connection and receiver. No 4K60 guarantee is made.</p></section>
+<section><a href="/index.html">Back to ItamarOS</a></section>
+</main>
+<script>
+(()=>{'use strict';
+const start=document.getElementById('start'),stop=document.getElementById('stop'),
+  video=document.getElementById('view'),report=document.getElementById('report');
+let stream=null;
+function reset(){
+ if(stream){for(const track of stream.getTracks())track.stop();stream=null;}
+ video.srcObject=null;start.disabled=false;stop.disabled=true;
+ report.textContent='Stopped · no screen is being captured.';
+}
+start.addEventListener('click',async()=>{
+ if(!window.isSecureContext||!navigator.mediaDevices?.getDisplayMedia){
+  report.textContent='Screen sharing needs HTTPS and a supported browser. No capture started.';return;
+ }
+ try{
+  stream=await navigator.mediaDevices.getDisplayMedia({
+   video:{width:{ideal:3840},height:{ideal:2160},frameRate:{ideal:60,max:60}},
+   audio:false
+  });
+  for(const track of stream.getTracks())track.addEventListener('ended',reset,{once:true});
+  video.srcObject=stream;
+  start.disabled=true;stop.disabled=false;
+  const track=stream.getVideoTracks()[0],info=track.getSettings();
+  report.textContent='Local preview active · '+(info.width||'?')+'×'+(info.height||'?')+
+    ' · reported '+(info.frameRate||'?')+' FPS. Nothing is transmitted to a remote receiver.';
+ }catch(e){
+  report.textContent=e?.name==='NotAllowedError'?'Screen sharing was cancelled or denied.':
+    'Could not start the preview on this device.';reset();
+ }
+});
+stop.addEventListener('click',reset);
+window.addEventListener('pagehide',reset);
+})();
+</script></body></html>
