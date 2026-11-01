@@ -66,7 +66,7 @@ fun MobileGamesHub() {
                 style = MaterialTheme.typography.titleLarge)
             when (selected) {
                 "2048" -> Game2048()
-                "Snake" -> SnakeGame()
+                "Snake" -> SmoothSnakeGame()
                 "Memory Match" -> MemoryGame()
                 "Tic-Tac-Toe" -> TicTacToeGame()
                 "Number Guess" -> GuessGame()
