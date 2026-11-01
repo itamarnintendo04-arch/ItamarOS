@@ -99,7 +99,7 @@ struct ItamarPartyGamesView: View {
                             rockPaperScissors
                         }
                         Button("Leave room view") {
-                            match=nil;joinCode="";resetMovement()
+                            self.match=nil;joinCode="";resetMovement()
                         }.buttonStyle(.bordered)
                     } else {
                         Picker("Game",selection:$selectedGame) {
