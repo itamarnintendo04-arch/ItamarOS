@@ -15,7 +15,7 @@ for(const component of platformManifest.components) {
   if(component.releaseStatus==='unverified-debug-preview') {
    assert.match(component.package,/^https:\/\/github\.com\/itamarnintendo04-arch\/ItamarOS\/releases\/download\/v1\.3-android-preview\/ItamarOS-Android-1\.3\.0-debug\.apk$/);
   } else {
-   assert.equal(component.releaseStatus,'source-only');
+   assert.ok(['source-only','CI-debug-preview'].includes(component.releaseStatus),'Android source/CI builds may not have a published package');
    assert.equal(component.package,null,'Never advertise an unpublished Android APK');
   }
  } else {
