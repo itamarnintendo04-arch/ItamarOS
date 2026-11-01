@@ -422,13 +422,9 @@ private struct ItamarCloudThreadView: View {
 
     private var canPost: Bool { room.kind != "channel" || room.owner_id == cloud.userID }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            ScrollViewReader { scroll in
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(messages) { message in
-                            ItamarMessageBubbleView(
+
+    private func bubble(_ message: ItamarCloudMessage) -> some View {
+        ItamarMessageBubbleView(
                                 message:message,
                                 ownMessage:message.sender_id == cloud.userID,
                                 receipt:receipts[message.id],
@@ -460,6 +456,14 @@ private struct ItamarCloudThreadView: View {
                                 onReport:{ reportTarget=message.id },
                                 onBlock:{ blockTarget=message.sender_id }
                             )
+    }
+
+    private var chatScrollView: some View {
+            ScrollViewReader { scroll in
+                ScrollView {
+                    LazyVStack(spacing: 10) {
+                        ForEach(messages) { message in
+                            bubble(message)
                         }
                     }
                     .padding()
@@ -470,6 +474,11 @@ private struct ItamarCloudThreadView: View {
                     }
                 }
             }
+    }
+
+    @ViewBuilder
+    private var chatComposer: some View {
+
             if canPost {
                 if replyTo != nil {
                     HStack {
@@ -534,6 +543,12 @@ private struct ItamarCloudThreadView: View {
                 Text("Only the channel owner can publish updates.")
                     .font(.caption).foregroundStyle(.secondary).padding()
             }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            chatScrollView
+            chatComposer
         }
         .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
             switch result {
