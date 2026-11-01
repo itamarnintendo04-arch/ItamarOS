@@ -8,6 +8,8 @@ struct NativeGameView: View {
     @State private var selectedGame: String?
     #if os(iOS)
     @State private var showOnlineMatch = false
+    @State private var showPartyRooms = false
+    @State private var initialPartyGame = "connect_four"
     #endif
     @State private var target = Int.random(in: 1...100)
     @State private var guess = 50
@@ -53,6 +55,19 @@ struct NativeGameView: View {
                         }
                         .buttonStyle(.bordered)
                         GameArtworkView(game: selectedGame)
+                        #if os(iOS)
+                        if ["Tic-Tac-Toe","Connect Four","Rock Paper Scissors"].contains(selectedGame) {
+                            Button("Play this game online with a code") {
+                                if selectedGame == "Tic-Tac-Toe" { showOnlineMatch = true }
+                                else {
+                                    initialPartyGame = selectedGame == "Connect Four" ?
+                                        "connect_four" : "rock_paper_scissors"
+                                    showPartyRooms = true
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        #endif
 
                         if selectedGame == "Number Guess" { numberGuess }
                         else if selectedGame == "Tic-Tac-Toe" { ticTacToe }
@@ -69,6 +84,20 @@ struct NativeGameView: View {
                         .buttonStyle(.borderedProminent)
                         .sheet(isPresented:$showOnlineMatch) {
                             OnlineTicTacToeView()
+                                .environmentObject(cloud)
+                        }
+                        #endif
+                        #if os(iOS)
+                        Button {
+                            initialPartyGame = "connect_four"
+                            showPartyRooms = true
+                        } label: {
+                            Label("Online Connect Four, Rock Paper Scissors & Cloud Climb",
+                                  systemImage:"person.3.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .sheet(isPresented:$showPartyRooms) {
+                            ItamarPartyGamesView(defaultGame:initialPartyGame)
                                 .environmentObject(cloud)
                         }
                         #endif
