@@ -21,65 +21,8 @@ struct SmoothSnakeView: View {
         VStack(spacing:12) {
             Text("Snake · Smooth movement").font(.title2.bold())
             Text("Score: \(score) · Best: \(best) · Speed: \(Int(speed)) px/s")
-            Canvas { context,size in
-                let scale=min(size.width,size.height)/400
-                func point(_ p:CGPoint)->CGPoint { CGPoint(x:p.x*scale,y:p.y*scale) }
-                context.fill(Path(CGRect(origin:.zero,size:size)),with:.color(Color(red:0.86,green:0.97,blue:0.9)))
-                for i in 0..<42 {
-                    let x=CGFloat((i*79+47)%400)*scale,y=CGFloat((i*131+36)%400)*scale
-                    context.fill(Path(ellipseIn:CGRect(x:x-3*scale,y:y-3*scale,
-                                                       width:6*scale,height:6*scale)),
-                                 with:.color(.green.opacity(0.12)))
-                }
-                let berry=point(food)
-                for offset:CGFloat in [-5,5] {
-                    context.fill(Path(ellipseIn:CGRect(x:berry.x+(offset-8)*scale,y:berry.y-6*scale,
-                        width:16*scale,height:16*scale)),with:.color(.pink))
-                }
-                var stem=Path()
-                stem.move(to:berry)
-                stem.addLine(to:CGPoint(x:berry.x+2*scale,y:berry.y-14*scale))
-                context.stroke(stem,with:.color(.brown),
-                               style:StrokeStyle(lineWidth:3*scale,lineCap:.round))
-                if segments.count>1 {
-                    var snakePath=Path()
-                    snakePath.move(to:point(segments[segments.count-1]))
-                    for p in segments.reversed().dropFirst() {
-                        snakePath.addLine(to:point(p))
-                    }
-                    context.stroke(snakePath,with:.color(Color(red:0.13,green:0.53,blue:0.36)),
-                                   style:StrokeStyle(lineWidth:19*scale,lineCap:.round,lineJoin:.round))
-                    context.stroke(snakePath,with:.color(Color(red:0.48,green:0.89,blue:0.62)),
-                                   style:StrokeStyle(lineWidth:12*scale,lineCap:.round,lineJoin:.round))
-                }
-                if let head=segments.first {
-                    let h=point(head)
-                    context.fill(Path(ellipseIn:CGRect(x:h.x-11*scale,y:h.y-11*scale,
-                       width:22*scale,height:22*scale)),with:.color(.green))
-                    for side:CGFloat in [-5,5] {
-                        let eye=CGPoint(x:h.x+(direction.dx*4-direction.dy*side)*scale,
-                                        y:h.y+(direction.dy*4+direction.dx*side)*scale)
-                        context.fill(Path(ellipseIn:CGRect(x:eye.x-4*scale,y:eye.y-4*scale,
-                            width:8*scale,height:8*scale)),with:.color(.white))
-                        context.fill(Path(ellipseIn:CGRect(x:eye.x-2*scale+direction.dx*scale,
-                            y:eye.y-2*scale+direction.dy*scale,width:4*scale,height:4*scale)),
-                            with:.color(.black))
-                    }
-                }
-            }
-            .aspectRatio(1,contentMode:.fit)
-            .background(Color.green.opacity(0.15),in:RoundedRectangle(cornerRadius:14))
+            steerableCanvas
             #if !os(tvOS)
-            .gesture(DragGesture(minimumDistance:0).onChanged { event in
-                let dx=event.translation.width-lastDrag.width
-                let dy=event.translation.height-lastDrag.height
-                let len=hypot(dx,dy)
-                if len>2 {
-                    let next=CGVector(dx:dx/len,dy:dy/len)
-                    if next.dx*direction.dx+next.dy*direction.dy > -0.8 { target=next }
-                    lastDrag=event.translation
-                }
-            }.onEnded { _ in lastDrag = .zero })
             Text("Drag to steer freely. Every cherry makes the snake faster.")
                 .font(.caption).foregroundStyle(.secondary)
             #else
@@ -107,6 +50,75 @@ struct SmoothSnakeView: View {
             tick(CGFloat(dt))
         }
         .onDisappear { running=false }
+    }
+
+    private var baseCanvas: some View {
+        Canvas { context,size in
+            let scale=min(size.width,size.height)/400
+            func point(_ p:CGPoint)->CGPoint { CGPoint(x:p.x*scale,y:p.y*scale) }
+            context.fill(Path(CGRect(origin:.zero,size:size)),with:.color(Color(red:0.86,green:0.97,blue:0.9)))
+            for i in 0..<42 {
+                let x=CGFloat((i*79+47)%400)*scale,y=CGFloat((i*131+36)%400)*scale
+                context.fill(Path(ellipseIn:CGRect(x:x-3*scale,y:y-3*scale,
+                                                   width:6*scale,height:6*scale)),
+                             with:.color(.green.opacity(0.12)))
+            }
+            let berry=point(food)
+            for offset:CGFloat in [-5,5] {
+                context.fill(Path(ellipseIn:CGRect(x:berry.x+(offset-8)*scale,y:berry.y-6*scale,
+                    width:16*scale,height:16*scale)),with:.color(.pink))
+            }
+            var stem=Path()
+            stem.move(to:berry)
+            stem.addLine(to:CGPoint(x:berry.x+2*scale,y:berry.y-14*scale))
+            context.stroke(stem,with:.color(.brown),
+                           style:StrokeStyle(lineWidth:3*scale,lineCap:.round))
+            if segments.count>1 {
+                var snakePath=Path()
+                snakePath.move(to:point(segments[segments.count-1]))
+                for p in segments.reversed().dropFirst() {
+                    snakePath.addLine(to:point(p))
+                }
+                context.stroke(snakePath,with:.color(Color(red:0.13,green:0.53,blue:0.36)),
+                               style:StrokeStyle(lineWidth:19*scale,lineCap:.round,lineJoin:.round))
+                context.stroke(snakePath,with:.color(Color(red:0.48,green:0.89,blue:0.62)),
+                               style:StrokeStyle(lineWidth:12*scale,lineCap:.round,lineJoin:.round))
+            }
+            if let head=segments.first {
+                let h=point(head)
+                context.fill(Path(ellipseIn:CGRect(x:h.x-11*scale,y:h.y-11*scale,
+                   width:22*scale,height:22*scale)),with:.color(.green))
+                for side:CGFloat in [-5,5] {
+                    let eye=CGPoint(x:h.x+(direction.dx*4-direction.dy*side)*scale,
+                                    y:h.y+(direction.dy*4+direction.dx*side)*scale)
+                    context.fill(Path(ellipseIn:CGRect(x:eye.x-4*scale,y:eye.y-4*scale,
+                        width:8*scale,height:8*scale)),with:.color(.white))
+                    context.fill(Path(ellipseIn:CGRect(x:eye.x-2*scale+direction.dx*scale,
+                        y:eye.y-2*scale+direction.dy*scale,width:4*scale,height:4*scale)),
+                        with:.color(.black))
+                }
+            }
+        }
+        .aspectRatio(1,contentMode:.fit)
+        .background(Color.green.opacity(0.15),in:RoundedRectangle(cornerRadius:14))
+    }
+
+    @ViewBuilder private var steerableCanvas: some View {
+        #if os(tvOS)
+        baseCanvas
+        #else
+        baseCanvas
+            .gesture(DragGesture(minimumDistance:0).onChanged { event in
+                let dx=event.translation.width-lastDrag.width
+                let dy=event.translation.height-lastDrag.height
+                let len=hypot(dx,dy)
+                if len>2 {
+                    let next=CGVector(dx:dx/len,dy:dy/len)
+                    if next.dx*direction.dx+next.dy*direction.dy > -0.8 { target=next }
+                    lastDrag=event.translation
+                }
+            }.onEnded { _ in lastDrag = .zero })
+        #endif
     }
 
     private func steer(dx:CGFloat,dy:CGFloat) {
