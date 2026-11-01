@@ -86,6 +86,50 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             .putInt("boss_health", bossHealth).putInt("shop_due", shopDue)
             .putBoolean("game_over", gameOver).apply()
     }
+    LaunchedEffect(accountKey, syncRefresh) {
+        syncReady = false
+        if (api.userID.isNullOrBlank()) {
+            syncStatus = "Local save · Sign in with verified SMS to sync"
+            return@LaunchedEffect
+        }
+        try {
+            val remote = JSONObject(api.request("/rest/v1/rpc/itamar_cloud_climb_state", "POST", JSONObject()))
+            if (remote.optBoolean("exists", false)) {
+                level = remote.optInt("level", 1).coerceAtLeast(1)
+                coins = remote.optInt("coins", 0).coerceAtLeast(0)
+                hearts = remote.optInt("hearts", 3).coerceIn(0, 3)
+                bossHealth = remote.optInt("boss_health", 3).coerceIn(1, 3)
+                shopDue = remote.optInt("shop_due", 0).coerceAtLeast(0)
+                gameOver = remote.optBoolean("game_over", false)
+            }
+            syncRevision = remote.optLong("revision", 0L)
+            syncStatus = "Cloud save connected · Same verified phone, same account"
+            syncReady = true
+        } catch (_: Exception) {
+            syncStatus = "Local save · Cloud sync unavailable"
+        }
+    }
+    LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver, syncReady) {
+        if (!syncReady) return@LaunchedEffect
+        delay(350)
+        try {
+            val response = JSONObject(api.request("/rest/v1/rpc/itamar_cloud_climb_save",
+                "POST", JSONObject()
+                    .put("p_level", level).put("p_coins", coins).put("p_hearts", hearts)
+                    .put("p_boss_health", bossHealth).put("p_shop_due", shopDue)
+                    .put("p_game_over", gameOver).put("p_revision", syncRevision)))
+            if (response.optBoolean("saved")) {
+                syncRevision = response.optLong("revision", syncRevision)
+                syncStatus = "Cloud progress saved to your account"
+            } else {
+                syncStatus = "Updated on another device · Reloading cloud save"
+                syncReady = false
+                syncRefresh += 1
+            }
+        } catch (_: Exception) {
+            syncStatus = "Local save · Cloud sync will retry on next update"
+        }
+    }
     fun resetPosition() {
         px = 48f; py = 430f; vy = 0f; landed = true
         jump = false; left = false; right = false
