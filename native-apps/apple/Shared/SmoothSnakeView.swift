@@ -69,6 +69,7 @@ struct SmoothSnakeView: View {
             }
             .aspectRatio(1,contentMode:.fit)
             .background(Color.green.opacity(0.15),in:RoundedRectangle(cornerRadius:14))
+            #if !os(tvOS)
             .gesture(DragGesture(minimumDistance:0).onChanged { event in
                 let dx=event.translation.width-lastDrag.width
                 let dy=event.translation.height-lastDrag.height
@@ -81,6 +82,16 @@ struct SmoothSnakeView: View {
             }.onEnded { _ in lastDrag = .zero })
             Text("Drag to steer freely. Every cherry makes the snake faster.")
                 .font(.caption).foregroundStyle(.secondary)
+            #else
+            Text("Use your Apple TV remote to steer. Every cherry makes the snake faster.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("↑"){ steer(dx:0,dy:-1) }
+                Button("←"){ steer(dx:-1,dy:0) }
+                Button("↓"){ steer(dx:0,dy:1) }
+                Button("→"){ steer(dx:1,dy:0) }
+            }
+            #endif
             HStack {
                 Button(finished ? "Try again" : running ? "Pause" : "Start") {
                     if finished { reset() } else { running.toggle();previousTick=Date() }
@@ -96,6 +107,12 @@ struct SmoothSnakeView: View {
             tick(CGFloat(dt))
         }
         .onDisappear { running=false }
+    }
+
+    private func steer(dx:CGFloat,dy:CGFloat) {
+        if dx*direction.dx+dy*direction.dy > -0.8 {
+            target=CGVector(dx:dx,dy:dy)
+        }
     }
 
     private func length(_ a:CGPoint,_ b:CGPoint)->CGFloat {
