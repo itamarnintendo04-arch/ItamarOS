@@ -75,3 +75,32 @@ Group/contact invite websites must be served by the current ItamarOS host before
 - [Android native debug APK workflow](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml)
 
 A GitHub workflow URL is not a finished binary: only a successful run has a downloadable artifact. A debug APK is not a signed Play Store release, and an unsigned IPA needs appropriate Apple signing. Neither package can connect users before the backend is deployed and tested.
+
+
+## Follow-up conversation tools (source-only, November 2026)
+
+The fourth SQL file, [conversation-tools.sql](supabase/conversation-tools.sql), adds limited member-only
+message reactions, replies, disappearing **text** (1 hour / 1 day / 7 days), and user-initiated reports.
+Apply it **after** migration.sql, extended-features.sql, and message-experience.sql on a dedicated
+staging Supabase instance. No project has had this migration applied by this update.
+
+Both native clients now contain reply/reaction/report/blocked-user controls. User reports
+are stored for future moderation; **there is no moderator queue or guaranteed review**.
+The database visibility rule hides expired text but does **not** erase backups,
+exports, screenshots, or other saved copies.
+
+Voice-note capture (maximum 90 seconds, explicit microphone permission, explicit
+send or discard) has been added in both native clients. Audio is uploaded through
+the existing private 20 MB attachment path when Connect is configured. Voice notes
+are **not** voice calls. These code paths need real-device QA.
+
+**Still not implemented:** end-to-end encryption, secure voice/video calling,
+status stories, full content forwarding, public anti-spam moderation infrastructure,
+one-time image/video delivery, and full WhatsApp feature parity.
+These must not be described as finished or as offering the privacy of a
+fully deployed encrypted messenger.
+
+New smoke-test tasks: verify member versus nonmember reactions and replies,
+blocked contacts, edit/delete, expired visibility in RPC and feeds,
+report-only-self RLS, voice permission denial and local discard,
+and Android / iOS CI build logs.
