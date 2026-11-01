@@ -37,6 +37,8 @@ struct ItamarCloudMessage: Codable, Identifiable {
     let edited_at: String?
     let deleted_at: String?
     let is_view_once: Bool?
+    let reply_to: UUID?
+    let expires_at: String?
 }
 
 struct ItamarCloudUpdate: Codable, Identifiable {
@@ -319,7 +321,7 @@ final class ItamarCloudService: ObservableObject {
     func messages(in roomID: UUID) async throws -> [ItamarCloudMessage] {
         let raw = try await request("/rest/v1/itamar_messages",
             query: [URLQueryItem(name: "room_id", value: "eq.\(roomID.uuidString.lowercased())"),
-                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime,edited_at,deleted_at,is_view_once"),
+                    URLQueryItem(name: "select", value: "id,room_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime,edited_at,deleted_at,is_view_once,reply_to,expires_at"),
                     URLQueryItem(name: "order", value: "created_at.asc"),
                     URLQueryItem(name: "limit", value: "100")])
         return try JSONDecoder().decode([ItamarCloudMessage].self, from: raw)
