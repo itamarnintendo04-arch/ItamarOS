@@ -151,6 +151,42 @@ final class ItamarCloudService: ObservableObject {
     var pendingSignupAvatarJPEG: Data?
     private var session: CloudStoredToken?
     private var notificationsInitialized = false
+    private var lastPushRegistrationToken=""
+    private var lastPushRegistrationAttempt=Date.distantPast
+
+    func registerDeviceForPushIfAvailable() async {
+        guard isSignedIn && profile != nil && deviceSyncEnabled &&
+              UserDefaults.standard.bool(forKey:"itamaros.push.enabled"),
+              let token=UserDefaults.standard.string(forKey:"itamaros.push.apnsToken"),
+              token.count>=64 else {return}
+        if lastPushRegistrationToken==token {return}
+        if Date().timeIntervalSince(lastPushRegistrationAttempt)<120 {return}
+        lastPushRegistrationAttempt=Date()
+        let defaults=UserDefaults.standard
+        var deviceId=defaults.string(forKey:"itamaros.push.deviceId")
+        if deviceId == nil {
+            deviceId=UUID().uuidString.lowercased()
+            defaults.set(deviceId,forKey:"itamaros.push.deviceId")
+        }
+        do{
+            _=try await request("/rest/v1/rpc/itamar_push_register",method:"POST",
+                  data:["p_device_id":deviceId!,
+                        "p_provider":"apns","p_token":token])
+            lastPushRegistrationToken=token
+        }catch{
+            status="Chat push token registration failed: "+error.localizedDescription
+        }
+    }
+
+    func unregisterPushDevice() async {
+        guard let deviceId=UserDefaults.standard.string(forKey:"itamaros.push.deviceId"),
+              isSignedIn else {return}
+        _=try? await request("/rest/v1/rpc/itamar_push_unregister",method:"POST",
+                             data:["p_device_id":deviceId])
+        UserDefaults.standard.set(false,forKey:"itamaros.push.enabled")
+        lastPushRegistrationToken=""
+    }
+
     private var lastUpdateIDs = Set<UUID>()
 
     var isSignedIn: Bool { session != nil && userID != nil }
@@ -325,6 +361,8 @@ final class ItamarCloudService: ObservableObject {
         pendingSignupAvatarJPEG = nil
         rooms = []; channels = []; updates = []
         notificationsInitialized = false; lastUpdateIDs = []
+        UserDefaults.standard.set(false,forKey:"itamaros.push.enabled")
+        lastPushRegistrationToken=""
         CloudKeychain.clear()
     }
 
@@ -343,6 +381,7 @@ final class ItamarCloudService: ObservableObject {
         let loadedRooms = try JSONDecoder().decode([ItamarCloudRoom].self, from: await roomsData)
         let loadedUpdates = try JSONDecoder().decode([ItamarCloudUpdate].self, from: await updatesData)
         profile = profiles.first
+        if profile != nil { Task { await registerDeviceForPushIfAvailable() } }
         rooms = loadedRooms
         // Server acknowledges delivery when this signed-in client refreshes its inbox.
         _ = try? await request("/rest/v1/rpc/itamar_ack_inbox",method:"POST",data:[:])
