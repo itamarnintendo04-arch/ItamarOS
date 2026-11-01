@@ -527,7 +527,7 @@ private struct ItamarCloudThreadView: View {
                                 }
                                 await reloadThread()
                             } catch {
-                                error = error.localizedDescription
+                                self.error = error.localizedDescription
                                 draft = toSend
                             }
                         }
@@ -605,23 +605,25 @@ private struct ItamarCloudThreadView: View {
             }
         }
         .toolbar {
-            Button {
-                Task {
-                    do {
-                        try await cloud.setMuted(!muted, roomID: room.id)
-                        muted.toggle()
-                    } catch { self.error = error.localizedDescription }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task {
+                        do {
+                            try await cloud.setMuted(!muted, roomID: room.id)
+                            muted.toggle()
+                        } catch { self.error = error.localizedDescription }
+                    }
+                } label: {
+                    Image(systemName: muted ? "bell.slash.fill" : "bell.fill")
                 }
-            } label: {
-                Image(systemName: muted ? "bell.slash.fill" : "bell.fill")
+                .accessibilityLabel(muted ? "Unmute updates" : "Mute updates")
             }
-            .accessibilityLabel(muted ? "Unmute updates" : "Mute updates")
         }
         .confirmationDialog("Report this message",isPresented:Binding(
             get:{ reportTarget != nil },
             set:{ if !$0 { reportTarget=nil } }
         ),titleVisibility:.visible) {
-            ForEach(["Spam","Harassment","Threats","Other"],id:.self) { reason in
+            ForEach(["Spam","Harassment","Threats","Other"],id:\.self) { reason in
                 Button(reason) {
                     guard let id=reportTarget else { return }
                     reportTarget=nil
