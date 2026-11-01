@@ -119,7 +119,8 @@ class Element{
  pause(){this.paused=true}
  play(){this.paused=false;return Promise.resolve()}
  load(){}
- getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){}}}
+  get isConnected(){return true}
+  getContext(){return {fillRect(){},beginPath(){},arc(){},fill(){},moveTo(){},lineTo(){},stroke(){},ellipse(){},createLinearGradient(){return {addColorStop(){}}}}}
  querySelector(selector){return this.querySelectorAll(selector)[0]||null}
  querySelectorAll(selector){const found=[];const visit=e=>{if(e instanceof Element){if((selector==='[data-game]'&&e.dataset.game)||(selector==='[data-mini]'&&e.dataset.mini))found.push(e);for(const n of e.children)visit(n)}};visit(this);return found}
 }
@@ -133,7 +134,7 @@ function setup(){
  const timers=new Map();let t=0;
  const setInterval=fn=>{timers.set(++t,fn);return t};
  const clearInterval=id=>timers.delete(id);
- const context={window:{},document,localStorage:storage,setInterval,clearInterval,setTimeout:setInterval,clearTimeout:clearInterval,confirm:()=>true,console,URL};
+ const context={window:{},document,localStorage:storage,setInterval,clearInterval,setTimeout:setInterval,clearTimeout:clearInterval,requestAnimationFrame:setInterval,cancelAnimationFrame:clearInterval,confirm:()=>true,console,URL};
  return {content,document,data,timers,context};
 }
 function all(root,pred,results=[]){if(pred(root))results.push(root);for(const node of root.children||[])if(node instanceof Element)all(node,pred,results);return results}
