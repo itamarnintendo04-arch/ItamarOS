@@ -58,6 +58,24 @@ function mount(){
  stopTimers();root=$('content');if(!root)return;root.replaceChildren();
  const wrapper=make('section',undefined,'ios-feature');wrapper.id='itamar-games';root.append(wrapper);
  wrapper.append(make('h2','🎮 ItamarOS Games'));
+ // A hidden discovery code reveals the game's separate installers. All players
+ // can still access the official mobile app game without using the code.
+ const secretSearch=make('input');
+ secretSearch.type='search';secretSearch.placeholder='Search games or enter a discovery code';
+ secretSearch.setAttribute('aria-label','Search ItamarOS Games');
+ secretSearch.style.cssText='max-width:520px;width:100%;display:block;margin:12px 0;padding:12px;border-radius:10px;border:1px solid #8ebde9';
+ const cloudEntry=make('section',undefined,'ios-feature');
+ cloudEntry.hidden=true;
+ cloudEntry.style.cssText='margin:12px 0;padding:18px;border:1px solid #88bcec;border-radius:16px;background:linear-gradient(135deg,#1c376f,#227b99);color:white';
+ cloudEntry.append(make('h3','☁️ Cloud Climb · Secret Game'));
+ cloudEntry.append(make('p','Cloud Climb has a separate Android APK and iPhone unsigned IPA development build. Multiplayer room codes use the same ItamarOS server.','ios-caption'));
+ const download=make('a','Find the matching Cloud Climb download');
+ download.href='/downloads.html#cloud-climb';download.target='_blank';download.rel='noopener noreferrer';
+ download.style.cssText='display:inline-block;background:#b5e5ff;color:#173456;border-radius:9px;padding:10px 14px;text-decoration:none';
+ cloudEntry.append(download);
+ const updateEntry=()=>{cloudEntry.hidden=secretSearch.value.trim()!=='0000'};
+ secretSearch.addEventListener('input',updateEntry);
+ wrapper.append(secretSearch,cloudEntry);
  wrapper.append(make('p','Play instantly with colorful artwork, swipe controls and optional CC0 sound effects. Local scores stay saved on this device.','ios-caption'));
  const sound=button('🔊 Sound: '+(window.ItamarGameAudio?.isEnabled()===false?'Off':'On'),()=>{
   const on=window.ItamarGameAudio?.toggle();
