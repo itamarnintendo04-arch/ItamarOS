@@ -417,9 +417,9 @@ fun AndroidConnectScreen(
     var pendingDesktopRequest by remember{mutableStateOf("")}
     var desktopApprovalStatus by remember{mutableStateOf("")}
     var pendingSignupAvatar by remember{mutableStateOf<Uri?>(null)}
-    val syncOnThisDevice=remember {
-        ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
-            .getBoolean("connectSync",true)
+    var syncOnThisDevice by remember {
+        mutableStateOf(ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
+            .getBoolean("connectSync",true))
     }
     var handle by remember{mutableStateOf("")}
     var displayName by remember{mutableStateOf("")}
@@ -567,7 +567,12 @@ fun AndroidConnectScreen(
 
     if(!syncOnThisDevice){
         Text("Cloud sync is disabled on this tablet/device.")
-        Text("Enable it in ItamarOS Settings to load online conversations and saved contacts. This does not delete cloud messages.")
+        Text("Cloud messages remain on the server while sync is disabled.")
+        Button(onClick={
+            ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
+                .edit().putBoolean("connectSync",true).apply()
+            syncOnThisDevice=true
+        }){Text("Enable sync for this device")}
         Button(onClick={api.token=null;api.userID=null;signed=false;onSignOut()}){Text("Sign out")}
         return
     }
@@ -582,6 +587,11 @@ fun AndroidConnectScreen(
             val clean=handle.lowercase().trim()
             require(Regex("^[a-z0-9_.]{3,24}$").matches(clean)){"Enter a valid username"}
             api.createProfile(displayName.ifBlank{clean},clean)
+            if(pendingSignupAvatar!=null){
+                val path=api.uploadAvatar(ctx,pendingSignupAvatar!!)
+                api.profilePreferences(path,true)
+                pendingSignupAvatar=null
+            }
             onAccountReady(clean)
         }},enabled=Regex("^[a-z0-9_.]{3,24}$").matches(handle)){
             Text("Save username and enter ItamarOS")
