@@ -16,6 +16,10 @@ This folder is a **source recipe**, not a built/tested operating-system installe
 - Original per-app SVG icons and protected system-owned application shortcuts. The Store does not support removing built-ins; a root administrator still controls Linux packages.
 - ItamarOS Games: launch a local browser hub with 16 offline HTML mini-games and browser-stored scores.
 
+## ItamarConnect on the prototype native PC OS
+
+The Linux desktop image includes a protected **ItamarConnect** menu shortcut with the original app icon. It launches `https://itamaros-web-emulator.onrender.com/connect.html` through Chromium app-window mode, or the user's default browser. No browser password is extracted, and no native installer/partition operation is triggered. It needs an internet connection and a configured messaging backend to synchronize users. Inclusion in the *source recipe* does not prove that an ISO is built, boots or is installed.
+
 ## Build prerequisites (Debian 13 amd64 dedicated machine/VM)
 
 Typical packages: `live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin syssystem-common isolinux`. Build needs root privileges, substantial internet access and disk space.
