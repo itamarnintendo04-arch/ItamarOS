@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+#if os(iOS)
+import UserNotifications
+#endif
 
 struct NativeAppManifest: Codable {
     struct Component: Codable {
@@ -20,6 +23,21 @@ final class ReleaseMonitor: ObservableObject {
     @Published var status = "Not checked"
     @Published var availableVersion: String?
     @Published var lastChecked: Date?
+    private var foregroundCheckTask: Task<Void,Never>?
+
+    func startAutomaticChecks() {
+        guard foregroundCheckTask == nil else { return }
+        foregroundCheckTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                if UserDefaults.standard.object(forKey:"itamaros.updates.autoCheck") as? Bool ?? true {
+                    let due = self.lastChecked.map { Date().timeIntervalSince($0) > 1800 } ?? true
+                    if due { await self.check() }
+                }
+                try? await Task.sleep(for: .seconds(1800))
+            }
+        }
+    }
 
     private let manifestURL = URL(string: "https://raw.githubusercontent.com/itamarnintendo04-arch/ItamarOS/main/updates/native-apps.json")!
 
@@ -63,6 +81,18 @@ final class ReleaseMonitor: ObservableObject {
             lastChecked = Date()
             if newerSource && hasInstallableRelease {
                 availableVersion = component.version
+                #if os(iOS)
+                if UserDefaults.standard.bool(forKey:"itamaros.updates.notify"),
+                   UserDefaults.standard.string(forKey:"itamaros.updates.lastNotified") != component.version {
+                    let content = UNMutableNotificationContent()
+                    content.title = "ItamarOS update available"
+                    content.body = "A signed update for version "+component.version+" is available. Open Software Updates to review it."
+                    let request = UNNotificationRequest(identifier:"itamaros-update-"+component.version,
+                                                        content:content,trigger:nil)
+                    try? await UNUserNotificationCenter.current().add(request)
+                    UserDefaults.standard.set(component.version,forKey:"itamaros.updates.lastNotified")
+                }
+                #endif
                 status = "Version \(component.version) is published. Use its official signed distribution channel to update; iOS cannot silently install an IPA."
             } else if newerSource {
                 status = "Source version \(component.version) is newer than your app (\(installed)), but no signed iPhone/iPad update is available for installation."
