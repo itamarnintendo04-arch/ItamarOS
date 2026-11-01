@@ -41,6 +41,22 @@ struct ItamarPartyGamesView: View {
     @State private var pressJump=false
     @State private var landed=false
     @State private var lastPositionUpload=Date.distantPast
+    // Local account progress; remote room positions are not progression sync.
+    @State private var climbLevel=1
+    @State private var climbCoins=0
+    @State private var climbHearts=3
+    @State private var climbBossHealth=3
+    @State private var climbShopDue=0
+    @State private var climbPaused=false
+    @State private var climbGameOver=false
+    @State private var climbMessage=""
+    @State private var lastBossStrike=Date.distantPast
+    private var climbSaveKey:String {
+        "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest")
+    }
+    private var climbStageSeed:Int {(match?.seed ?? 0) &+ (climbLevel &* 2039)}
+    private var climbIsBoss:Bool {climbLevel % 30 == 0}
+    private var climbBossX:CGFloat {platforms(climbStageSeed).last?.midX ?? 200}
     private let gameOptions=[
         ("connect_four","Connect Four · 2 players"),
         ("rock_paper_scissors","Rock Paper Scissors · 2 players"),
@@ -99,7 +115,7 @@ struct ItamarPartyGamesView: View {
                             rockPaperScissors
                         }
                         Button("Leave room view") {
-                            self.match=nil;joinCode="";resetMovement()
+                            saveClimb();self.match=nil;joinCode="";resetMovement()
                         }.buttonStyle(.bordered)
                     } else {
                         Picker("Game",selection:$selectedGame) {
@@ -130,7 +146,7 @@ struct ItamarPartyGamesView: View {
             }
             .navigationTitle("Online")
             .toolbar {ToolbarItem(placement:.topBarTrailing) {
-                Button("Done"){dismiss()}
+                Button("Done"){saveClimb();dismiss()}
             }}
         }
         .task(id:match?.code) {
@@ -210,18 +226,57 @@ struct ItamarPartyGamesView: View {
             Text(match?.status=="waiting" ? "Waiting for at least 2 players to start." :
                  "Climb together! This is an experimental co-op prototype.")
                 .font(.footnote).foregroundStyle(.secondary)
+            Text("Level \(climbLevel) · ❤️ \(climbHearts)/3 · 🪙 \(climbCoins)")
+                .font(.headline)
+            Text(climbIsBoss ? "Boss level: 3 hits!" : "Reach the highest platform to finish the level.")
+                .font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button(climbPaused ? "Resume" : "Pause") {
+                    climbPaused.toggle()
+                    pressLeft=false;pressRight=false;pressJump=false
+                }.disabled(climbGameOver || climbShopDue != 0)
+                Button("Exit to menu") {
+                    saveClimb();match=nil;joinCode="";resetMovement()
+                }
+            }.buttonStyle(.bordered)
+            if climbGameOver {
+                Text("Game over · Retry level \(climbLevel)")
+                Button("Try Again") {
+                    climbHearts=3;climbBossHealth=3;climbGameOver=false
+                    resetMovement();saveClimb()
+                }.buttonStyle(.borderedProminent)
+            } else if climbShopDue != 0 {
+                Text("Level \(climbShopDue) cleared! Buy a missing heart for 100 coins?")
+                HStack {
+                    Button("Buy heart · 100 🪙") {
+                        guard climbCoins>=100 && climbHearts<3 else{return}
+                        climbCoins-=100;climbHearts+=1;climbShopDue=0
+                        climbMessage="1 heart restored";saveClimb()
+                    }.disabled(climbCoins<100 || climbHearts>=3)
+                    Button("Skip") {climbShopDue=0;saveClimb()}
+                }.buttonStyle(.bordered)
+            } else if climbPaused {
+                Text("Paused. Your progress is saved.")
+                Button("Resume") {climbPaused=false}
+            }
             Canvas { ctx,size in
                 let w=size.width,h=size.height
                 ctx.fill(Path(CGRect(origin:.zero,size:size)),
                     with:.linearGradient(Gradient(colors:[.indigo.opacity(0.75),.cyan.opacity(0.35)]),
                                          startPoint:.zero,endPoint:CGPoint(x:w,y:h)))
                 let sx=w/400,sy=h/500
-                let stages=platforms(match?.seed ?? 0)
+                let stages=platforms(climbStageSeed)
                 for (i,platform) in stages.enumerated() {
                     let rect=CGRect(x:platform.minX*sx,y:platform.minY*sy,
                         width:platform.width*sx,height:platform.height*sy)
                     ctx.fill(Path(roundedRect:rect,cornerRadius:4),
                              with:.color(i==0 ? .mint : .white.opacity(0.9)))
+                }
+                if climbIsBoss {
+                    let rect=CGRect(x:(climbBossX-22)*sx,y:43*sy,width:44*sx,height:44*sy)
+                    ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
+                    ctx.draw(Text("★").font(.system(size:24,weight:.bold)),
+                             at:CGPoint(x:climbBossX*sx,y:65*sy))
                 }
                 for player in 1...4 {
                     guard let match else{break}
@@ -240,12 +295,24 @@ struct ItamarPartyGamesView: View {
             .frame(maxWidth:350)
             .clipShape(RoundedRectangle(cornerRadius:16))
             .onReceive(timer) { _ in tickClimb() }
+            if climbIsBoss && !climbPaused && !climbGameOver && climbShopDue==0 {
+                Button("Strike boss · \(climbBossHealth)/3") {strikeClimbBoss()}
+                    .disabled(!landed || posY>=115 || abs(posX-climbBossX)>=85)
+                    .buttonStyle(.borderedProminent)
+            }
+            if !climbPaused && !climbGameOver && climbShopDue==0 {
             HStack(spacing:12) {
                 steerButton("◀",left:true)
                 steerButton("▶",left:false)
                 Button("Jump") {pressJump=true}
                     .buttonStyle(.borderedProminent)
             }
+            }
+            if !climbMessage.isEmpty {
+                Text(climbMessage).font(.footnote).foregroundStyle(.secondary)
+            }
+            Text("Progress auto-saves on this device, per account; it is not cloud-synced.")
+                .font(.caption).foregroundStyle(.secondary)
             Text("Touch controls or a connected Xbox, PlayStation or Switch-compatible controller.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
