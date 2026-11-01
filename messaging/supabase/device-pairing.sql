@@ -7,7 +7,7 @@ create table if not exists public.itamar_device_pairs (
   owner_id uuid not null references auth.users(id) on delete cascade,
   secret_hash text not null unique,
   desktop_name text not null check(char_length(desktop_name) between 1 and 60),
-  phone_name text check(phone_name is null or char_length(phone_name) between 1 and 60)),
+  phone_name text check(phone_name is null or char_length(phone_name) between 1 and 60),
   companion_id uuid,
   sync_chats boolean not null default false,
   sync_contacts boolean not null default false,
