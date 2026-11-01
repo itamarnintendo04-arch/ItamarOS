@@ -396,8 +396,19 @@ struct ItamarPartyGamesView: View {
             .accessibilityLabel(left ? "Move left":"Move right")
     }
     private func tickClimb(){
-        guard match?.game=="cloud_climb",slot>0,!climbPaused,!climbGameOver,climbShopDue==0 else{return}
-        let pad=GCController.controllers().first?.extendedGamepad
+        guard match?.game=="cloud_climb" else{return}
+        let controllers=GCController.controllers()
+        let connected=controllers.contains {$0.extendedGamepad != nil}
+        if climbControllerConnected != connected {climbControllerConnected=connected}
+        let pad=controllers.first(where:{$0.extendedGamepad != nil})?.extendedGamepad
+        let menuPressed=pad?.buttonMenu?.isPressed ?? false
+        if menuPressed && !climbPreviousPauseButton && !climbGameOver && climbShopDue==0 {
+            climbPaused.toggle()
+            pressLeft=false;pressRight=false;pressJump=false
+        }
+        climbPreviousPauseButton=menuPressed
+        guard slot>0,!climbPaused,!climbGameOver,climbShopDue==0 else{return}
+        if pad?.buttonX.isPressed ?? false {strikeClimbBoss()}
         let horizontal=CGFloat(pad?.leftThumbstick.xAxis.value ?? 0)
         let xInput=(pressLeft ? -1.0:0.0)+(pressRight ? 1.0:0.0)+Double(horizontal)
         let jump=pressJump || (pad?.buttonA.isPressed ?? false)
@@ -435,8 +446,15 @@ struct ItamarPartyGamesView: View {
             "bossHealth":climbBossHealth,"shopDue":climbShopDue,
             "gameOver":climbGameOver
         ] as [String:Any],forKey:climbSaveKey)
+        if climbCloudReady {
+            climbPendingUpload=true
+            Task {await uploadClimb()}
+        }
     }
     private func loadClimb(){
+        climbLoaded=false
+        climbCloudReady=false
+        climbRevision=0
         let saved=UserDefaults.standard.dictionary(forKey:climbSaveKey) ?? [:]
         climbLevel=max(1,saved["level"] as? Int ?? 1)
         climbCoins=max(0,saved["coins"] as? Int ?? 0)
@@ -446,6 +464,72 @@ struct ItamarPartyGamesView: View {
         climbGameOver=(saved["gameOver"] as? Bool ?? false) || climbHearts==0
         climbPaused=false;climbMessage="";climbLoaded=true
         resetMovement()
+    }
+    @MainActor private func loadCloudClimb() async {
+        guard cloud.isSignedIn else {
+            climbSyncStatus="Local save · Sign in with verified SMS to sync"
+            return
+        }
+        climbCloudReady=false
+        do {
+            let raw=try await cloud.request("/rest/v1/rpc/itamar_cloud_climb_state",
+                                            method:"POST",data:[:])
+            guard let state=try JSONSerialization.jsonObject(with:raw) as? [String:Any] else {
+                climbSyncStatus="Local save · Cloud response unavailable"
+                return
+            }
+            climbRevision=(state["revision"] as? NSNumber)?.int64Value ?? 0
+            if state["exists"] as? Bool == true {
+                climbLevel=max(1,state["level"] as? Int ?? 1)
+                climbCoins=max(0,state["coins"] as? Int ?? 0)
+                climbHearts=min(3,max(0,state["hearts"] as? Int ?? 3))
+                climbBossHealth=min(3,max(1,state["boss_health"] as? Int ?? 3))
+                climbShopDue=max(0,state["shop_due"] as? Int ?? 0)
+                climbGameOver=(state["game_over"] as? Bool ?? false) || climbHearts==0
+                resetMovement()
+            }
+            climbSyncStatus="Cloud save connected · Same verified number, same account"
+            climbCloudReady=true
+            if state["exists"] as? Bool != true {saveClimb()}
+            else {UserDefaults.standard.set([
+                "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
+                "bossHealth":climbBossHealth,"shopDue":climbShopDue,
+                "gameOver":climbGameOver
+            ] as [String:Any],forKey:climbSaveKey)}
+        }catch {
+            climbSyncStatus="Local save · Cloud sync unavailable"
+        }
+    }
+    @MainActor private func uploadClimb() async {
+        guard !climbCloudSaving && climbCloudReady else{return}
+        climbCloudSaving=true
+        defer {climbCloudSaving=false}
+        while climbCloudReady && climbPendingUpload {
+            climbPendingUpload=false
+            do {
+                let raw=try await cloud.request("/rest/v1/rpc/itamar_cloud_climb_save",
+                    method:"POST",data:[
+                        "p_level":climbLevel,"p_coins":climbCoins,"p_hearts":climbHearts,
+                        "p_boss_health":climbBossHealth,"p_shop_due":climbShopDue,
+                        "p_game_over":climbGameOver,"p_revision":climbRevision])
+                guard let obj=try JSONSerialization.jsonObject(with:raw) as? [String:Any] else {
+                    climbSyncStatus="Local save · Unable to read sync response"
+                    break
+                }
+                if obj["saved"] as? Bool == true {
+                    climbRevision=(obj["revision"] as? NSNumber)?.int64Value ?? climbRevision
+                    climbSyncStatus="Cloud progress saved"
+                }else{
+                    climbPendingUpload=false
+                    climbCloudReady=false
+                    climbSyncStatus="Newer progress on another device · Reloading"
+                    await loadCloudClimb()
+                }
+            }catch{
+                climbSyncStatus="Local save · Cloud upload will retry"
+                break
+            }
+        }
     }
     private func finishClimbLevel(){
         let completed=climbLevel
@@ -482,12 +566,12 @@ struct ItamarPartyGamesView: View {
     }
     private func create() async {
         busy=true;defer{busy=false}
-        do{match=try await api("itamar_party_create",["p_game":selectedGame]);status="";loadClimb()}
+        do{match=try await api("itamar_party_create",["p_game":selectedGame]);status="";loadClimb();await loadCloudClimb()}
         catch{status=error.localizedDescription}
     }
     private func join() async {
         busy=true;defer{busy=false}
-        do{match=try await api("itamar_party_join",["p_code":joinCode]);status="";loadClimb()}
+        do{match=try await api("itamar_party_join",["p_code":joinCode]);status="";loadClimb();await loadCloudClimb()}
         catch{status=error.localizedDescription}
     }
     private func refresh() async {
