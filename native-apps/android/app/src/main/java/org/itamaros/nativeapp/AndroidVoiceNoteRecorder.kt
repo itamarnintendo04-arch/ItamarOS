@@ -14,10 +14,11 @@ class AndroidVoiceNoteRecorder(private val context: Context) {
     var isRecording: Boolean = false
         private set
 
+    @Suppress("DEPRECATION")
     fun start() {
         if(isRecording)return
         val result=File(context.cacheDir,"ItamarOS-Voice-"+UUID.randomUUID()+".m4a")
-        val audio=if(Build.VERSION.SDK_INT>=31)MediaRecorder(context) else @Suppress("DEPRECATION") MediaRecorder()
+        val audio=if(Build.VERSION.SDK_INT>=31)MediaRecorder(context) else MediaRecorder()
         try {
             audio.setAudioSource(MediaRecorder.AudioSource.MIC)
             audio.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
