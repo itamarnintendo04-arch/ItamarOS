@@ -328,7 +328,7 @@ struct ItamarPartyGamesView: View {
             .accessibilityLabel(left ? "Move left":"Move right")
     }
     private func tickClimb(){
-        guard match?.game=="cloud_climb",slot>0 else {return}
+        guard match?.game=="cloud_climb",slot>0,!climbPaused,!climbGameOver,climbShopDue==0 else{return}
         let pad=GCController.controllers().first?.extendedGamepad
         let horizontal=CGFloat(pad?.leftThumbstick.xAxis.value ?? 0)
         let xInput=(pressLeft ? -1.0:0.0)+(pressRight ? 1.0:0.0)+Double(horizontal)
@@ -340,7 +340,8 @@ struct ItamarPartyGamesView: View {
         velocityY=min(10,velocityY+0.38)
         posY+=velocityY
         if velocityY>=0 {
-            for platform in platforms(match?.seed ?? 0) {
+            landed=false
+            for platform in platforms(climbStageSeed) {
                 if posX+11>platform.minX && posX-11<platform.maxX &&
                   oldBottom<=platform.minY && posY+3>=platform.minY {
                     posY=platform.minY-3
@@ -350,12 +351,56 @@ struct ItamarPartyGamesView: View {
                 }
             }
         }
-        if posY>495 {posX=48;posY=430;velocityY=0;landed=true}
+        if posY>495 {loseClimbHeart();return}
+        if landed && posY<110 && !climbIsBoss {finishClimbLevel();return}
         if Date().timeIntervalSince(lastPositionUpload)>0.6,let code=match?.code{
             lastPositionUpload=Date()
             let x=Double(posX*1024/400),y=Double(posY*2048/500)
             Task { _=try? await cloud.request("/rest/v1/rpc/itamar_party_position",method:"POST",
                      data:["p_code":code,"p_x":x,"p_y":y]) }
+        }
+    }
+    private func saveClimb(){
+        UserDefaults.standard.set([
+            "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
+            "bossHealth":climbBossHealth,"shopDue":climbShopDue,
+            "gameOver":climbGameOver
+        ] as [String:Any],forKey:climbSaveKey)
+    }
+    private func loadClimb(){
+        let saved=UserDefaults.standard.dictionary(forKey:climbSaveKey) ?? [:]
+        climbLevel=max(1,saved["level"] as? Int ?? 1)
+        climbCoins=max(0,saved["coins"] as? Int ?? 0)
+        climbHearts=min(3,max(0,saved["hearts"] as? Int ?? 3))
+        climbBossHealth=min(3,max(1,saved["bossHealth"] as? Int ?? 3))
+        climbShopDue=max(0,saved["shopDue"] as? Int ?? 0)
+        climbGameOver=(saved["gameOver"] as? Bool ?? false) || climbHearts==0
+        climbPaused=false;climbMessage=""
+        resetMovement()
+    }
+    private func finishClimbLevel(){
+        let completed=climbLevel
+        climbCoins+=10;climbLevel+=1;climbBossHealth=3
+        climbShopDue=(completed % 10 == 0 && climbHearts<3) ? completed : 0
+        climbMessage="Level \(completed) complete! +10 coins."
+        resetMovement();saveClimb()
+    }
+    private func loseClimbHeart(){
+        climbHearts=max(0,climbHearts-1)
+        climbMessage="You fell. \(climbHearts) hearts remaining."
+        if climbHearts==0 {climbGameOver=true}
+        resetMovement();saveClimb()
+    }
+    private func strikeClimbBoss(){
+        guard climbIsBoss,!climbPaused,!climbGameOver,climbShopDue==0,
+              landed,posY<115,abs(posX-climbBossX)<85,
+              Date().timeIntervalSince(lastBossStrike)>=0.9 else{return}
+        lastBossStrike=Date()
+        if climbBossHealth==1 {finishClimbLevel()}
+        else {
+            climbBossHealth-=1
+            climbMessage="Boss hit! \(climbBossHealth) hits left."
+            saveClimb()
         }
     }
     private func resetMovement(){
@@ -368,12 +413,12 @@ struct ItamarPartyGamesView: View {
     }
     private func create() async {
         busy=true;defer{busy=false}
-        do{match=try await api("itamar_party_create",["p_game":selectedGame]);status="";resetMovement()}
+        do{match=try await api("itamar_party_create",["p_game":selectedGame]);status="";loadClimb()}
         catch{status=error.localizedDescription}
     }
     private func join() async {
         busy=true;defer{busy=false}
-        do{match=try await api("itamar_party_join",["p_code":joinCode]);status="";resetMovement()}
+        do{match=try await api("itamar_party_join",["p_code":joinCode]);status="";loadClimb()}
         catch{status=error.localizedDescription}
     }
     private func refresh() async {
