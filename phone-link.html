@@ -1,0 +1,50 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>ItamarPhone · Link your phone</title>
+<style>
+:root{font:16px system-ui;color:#1a3458;background:#edf4ff}*{box-sizing:border-box}
+body{margin:0}header{padding:16px;background:#133d7e;color:white}h1{margin:0;font-size:23px}
+main{max-width:800px;margin:auto;padding:16px}section{background:white;border-radius:15px;padding:20px;margin:13px 0;box-shadow:0 8px 25px #243c6214}
+input{padding:11px;border:1px solid #b8c9dc;border-radius:9px;font:inherit;max-width:100%}
+button{padding:11px 17px;border:0;border-radius:10px;background:#2265cf;color:white;font:inherit;cursor:pointer;margin:5px}
+button:disabled{opacity:.55}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.note{color:#526782;line-height:1.55}label{display:block;margin:8px 0}
+#qrcode{margin:15px 0;min-height:250px;max-width:280px;display:grid;place-items:center;background:#fff}
+#qrcode img{max-width:250px}#error{color:#bb3030;white-space:pre-wrap}
+[hidden]{display:none!important}</style></head><body>
+<header><h1>📱 ItamarPhone</h1><small>Link this phone to your ItamarOS account by QR</small></header>
+<main>
+<section id="unconfigured"><h2>Cloud pairing is not configured</h2><p class="note">Pairing needs the new ItamarOS Supabase project URL and its public publishable key. No messages, contacts, calls or device data are accessed while the service is unconfigured.</p>
+<a href="/index.html">Back to ItamarOS</a></section>
+<section id="login" hidden><h2>Sign in to your own ItamarOS account</h2>
+<p class="note">Both the computer and the phone must sign in to the same account. A QR code alone never gives another person access to your chats.</p>
+<form id="authForm"><label>Email <input id="email" type="email" autocomplete="email" required></label>
+<label>Password <input id="password" type="password" autocomplete="current-password" minlength="6" required></label>
+<button type="submit">Sign in</button></form>
+<p class="note">If your email account isn't verified yet, complete confirmation first.</p></section>
+<section id="pairedApp" hidden><div class="row"><h2>Device pairing</h2><button id="signOut">Sign out</button></div>
+<p class="note">A device is linked only after QR scanning, signing in to the same account and tapping Accept. Codes expire after 10 minutes and work only once. You can revoke devices below.</p>
+<div id="desktop">
+<h3>Show a QR on this computer</h3><label>Computer name <input id="desktopName" maxlength="60" value="ItamarOS computer"></label>
+<div><label><input type="checkbox" id="wantChats" checked> Sync my ItamarConnect chats</label>
+<label><input type="checkbox" id="wantContacts"> Sync saved ItamarConnect contacts</label>
+<label><input type="checkbox" disabled> Sync selected files (planned, not available)</label></div>
+<button id="startPair">Generate 10-minute QR</button>
+<div id="qrcode" aria-label="QR code to link a phone"></div>
+<div id="linkBox" hidden><p class="note">Use your phone's Camera app to scan the QR. Never share this pairing link publicly.</p>
+<button id="copyLink">Copy private pairing link</button><button id="checkPair">Check pairing status</button></div>
+</div>
+<div id="phone" hidden><h3>Join a trusted computer</h3>
+<p id="pairInfo">Checking pairing request…</p>
+<label>Phone name <input id="phoneName" maxlength="60" value="My phone"></label>
+<button id="approve">Accept and pair</button><button id="decline">Decline</button>
+</div>
+<h3>My paired devices</h3><button id="refresh">Refresh list</button><div id="devices"></div>
+<p class="note">This app does not import your operating system's SMS/iMessage inbox, call history or WhatsApp messages. Those are private platform data. It only authorizes selected ItamarOS account data after the respective feature is configured.</p>
+</section>
+<p id="error" role="status"></p>
+</main>
+<script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="/apps/vendor/qrcode.min.js"></script>
+<script defer src="/apps/phone-link.js"></script>
+</body></html>
