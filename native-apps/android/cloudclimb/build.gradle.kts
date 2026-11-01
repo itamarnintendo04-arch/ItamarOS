@@ -23,7 +23,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            kotlin.directories += "../app/src/main/java"
+            java.srcDir(file("${rootProject.projectDir}/app/src/main/java"))
             res.srcDir("../app/src/main/res")
         }
     }
