@@ -2,6 +2,8 @@ package org.itamaros.nativeapp
 
 import android.os.Build
 import android.net.Uri
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
@@ -54,6 +56,8 @@ fun NativeAppScreen(
     selectedMedia: Uri?,
     selectedApkName: String?,
     onCheckUpdates: () -> Unit,
+    onEnableUpdateAlerts: () -> Unit,
+    onSetAutoUpdateChecks: (Boolean) -> Unit,
     onLaunchService: (String?, String) -> Unit,
     onOpenStoreListing: (String) -> Unit,
     onBrowseStore: () -> Unit,
@@ -155,7 +159,8 @@ fun NativeAppScreen(
                             AndroidLanguageSettings()
                         }
                         NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
-                            onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings)
+                            onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings,
+                            onEnableUpdateAlerts, onSetAutoUpdateChecks)
                     }
                 }
             }
@@ -224,8 +229,13 @@ private fun NativeSettings(
     downloadUpdate: () -> Unit,
     chooseUSB: () -> Unit,
     export: () -> Unit,
-    storageSettings: () -> Unit
+    storageSettings: () -> Unit,
+    enableUpdateAlerts: () -> Unit,
+    setAutoUpdateChecks: (Boolean) -> Unit
 ) {
+    val context=LocalContext.current
+    val prefs=remember { context.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE) }
+    var autoChecking by remember { mutableStateOf(prefs.getBoolean("autoUpdateChecks",true)) }
     var largeText by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium)
@@ -233,6 +243,16 @@ private fun NativeSettings(
         Text("Manufacturer and model: $device")
         Text("Android version: ${Build.VERSION.RELEASE}")
         Text("Release information: $updates")
+        Row(verticalAlignment=Alignment.CenterVertically) {
+            Text("Automatic app update checks (Android chooses schedule)",modifier=Modifier.weight(1f))
+            Switch(checked=autoChecking,onCheckedChange={
+                autoChecking=it
+                setAutoUpdateChecks(it)
+            })
+        }
+        Button(onClick=enableUpdateAlerts) { Text("Enable update notifications") }
+        Text("Android checks roughly every 6 hours when conditions allow. Battery restrictions can delay checks. Notifications require your permission. This app never installs updates automatically.",
+            style=MaterialTheme.typography.bodySmall)
         Button(onClick = check) { Text("Check for app updates") }
         if (updateDownloadAvailable) {
             Button(onClick = downloadUpdate) { Text("Download published APK update") }
