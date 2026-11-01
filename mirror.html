@@ -18,6 +18,16 @@ video{width:100%;max-height:65vh;aspect-ratio:16/9;background:#061629;border-rad
 <div><button id="start">Start screen preview</button><button id="stop" class="secondary" disabled>Stop sharing</button></div>
 <video id="view" autoplay playsinline muted aria-label="Your local screen preview"></video>
 <p id="report" role="status" class="note">Not sharing · no display is being captured.</p></section>
+<section><h2>Cast media to a TV · AirPlay or Google Cast</h2>
+<p class="note">Send a publicly accessible HTTPS video or music file to a compatible TV. This is real media casting through supported platform APIs, not full-device screen mirroring.</p>
+<label for="castMediaUrl">Public HTTPS media URL</label>
+<input id="castMediaUrl" type="url" inputmode="url" style="width:min(100%,650px);padding:12px;border-radius:10px;border:1px solid #b4c9e8" placeholder="https://example.com/my-video.mp4">
+<div><button type="button" id="loadMedia">Load media</button><button type="button" id="airplayPick">AirPlay output</button>
+<span id="googleCastButton" aria-label="Google Cast device picker"></span><button type="button" id="sendCast">Play on Google Cast</button></div>
+<video id="airplayVideo" controls playsinline x-webkit-airplay="allow" webkit-playsinline
+  aria-label="Video with Apple AirPlay media output" style="margin-top:14px"></video>
+<p id="castStatus" role="status" class="note">Load media to begin. Google Cast works in compatible Chrome browsers; AirPlay requires compatible Apple software and a receiver.</p>
+</section>
 <section><h2>Device mirroring protocols</h2>
 <h3>Apple AirPlay</h3><p class="note">On a supported iPhone, iPad or Mac, use the system's Screen Mirroring menu and choose an AirPlay-compatible TV or receiver. Standard third-party webpages do not become AirPlay receivers just by having an AirPlay button.</p>
 <h3>Android / Google Cast</h3><p class="note">On supported Android devices, use the system Cast / Screen Cast controls and choose your Google Cast-compatible display. A full native Cast receiver would require a registered receiver application and compatible device.</p>
@@ -57,4 +67,6 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',reset);
 window.addEventListener('pagehide',reset);
 })();
-</script></body></html>
+</script><script src="/apps/cast-sender.js"></script>
+<script async src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</body></html>
