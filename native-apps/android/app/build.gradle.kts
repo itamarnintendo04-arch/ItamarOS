@@ -15,6 +15,10 @@ android {
         versionName = "1.7.0"
         buildConfigField("String", "ITAMAR_SUPABASE_URL", "\"${providers.gradleProperty("ITAMAR_SUPABASE_URL").orElse("https://slqjkysinhfkqjoigfuz.supabase.co").get()}\"")
         buildConfigField("String", "ITAMAR_SUPABASE_PUBLISHABLE_KEY", "\"${providers.gradleProperty("ITAMAR_SUPABASE_PUBLISHABLE_KEY").orElse("sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts").get()}\"")
+        buildConfigField("String", "ITAMAR_FIREBASE_APP_ID", "\"${providers.gradleProperty("ITAMAR_FIREBASE_APP_ID").orElse("").get()}\"")
+        buildConfigField("String", "ITAMAR_FIREBASE_API_KEY", "\"${providers.gradleProperty("ITAMAR_FIREBASE_API_KEY").orElse("").get()}\"")
+        buildConfigField("String", "ITAMAR_FIREBASE_SENDER_ID", "\"${providers.gradleProperty("ITAMAR_FIREBASE_SENDER_ID").orElse("").get()}\"")
+        buildConfigField("String", "ITAMAR_FIREBASE_PROJECT_ID", "\"${providers.gradleProperty("ITAMAR_FIREBASE_PROJECT_ID").orElse("").get()}\"")
     }
 
     buildFeatures {
@@ -45,5 +49,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("com.google.zxing:core:3.5.4")
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
