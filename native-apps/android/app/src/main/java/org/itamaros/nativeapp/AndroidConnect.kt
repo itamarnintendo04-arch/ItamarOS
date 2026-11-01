@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
@@ -487,7 +488,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
         Button(onClick={chooseSignupAvatar.launch("image/*")}){
             Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
         }
-        OutlinedTextField(password,{password=it},label={Text("Password (optional, minimum 8 characters)")})
+        OutlinedTextField(password,{password=it},label={Text("Password (optional, minimum 8 characters)")},visualTransformation=PasswordVisualTransformation())
         Text("Your photo uploads only after verifying your phone and saving your profile.")
         Button(onClick={perform{
             api.requestSms(signInPhone.trim())
