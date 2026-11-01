@@ -27,7 +27,7 @@ ipcMain.handle('pair:start',async()=>{
  if(!/^[\w-]{20,40}$/.test(requestId)||!/^[\w-]{30,50}$/.test(claimSecret)||
     !approveUrl.startsWith('https://itamaros-web-emulator.onrender.com/connect-approve.html#request='))throw Error('Pairing server returned invalid details');
  ticket={requestId,claimSecret,expiry};
- const qr=await QRCode.toDataURL(approveUrl,{errorCorrectionLevel:'M',margin:2,width:330});
+ const qr=await QRCode.toDataURL(approveUrl,{errorCorrectionLevel:'H',margin:2,width:330});
  return {qr,shortCode:requestId.slice(0,6).toUpperCase(),expiresAt:expiry,approveUrl};
 });
 ipcMain.handle('pair:poll',async()=>{
