@@ -36,6 +36,24 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
 <section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS 1.1 · PC system</h2><p>The bootable edition is being prepared. Its installer reads the processor, manufacturer, model, RAM, boot mode and drives from the computer itself. <strong>A verified installation ISO is not yet published.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
 
+<section class="card" id="cloud-climb">
+<span class="badge">Cloud Climb · Standalone Developer Preview</span>
+<h2>☁️ Cloud Climb — secret download</h2>
+<p>Search <strong>0000</strong> in ItamarOS Games to discover the separate Cloud Climb app. The same online room database is used by both applications. Android and iOS builds are prototypes, not independently security-reviewed releases.</p>
+<label for="climb-reveal">Enter discovery code</label>
+<input id="climb-reveal" type="search" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="Cloud Climb discovery code" style="width:130px;display:block;margin:10px 0;padding:12px;border-radius:8px">
+<div id="climb-download-options" hidden>
+<label for="climb-platform">Choose device platform</label>
+<select id="climb-platform" style="padding:12px;border-radius:8px;background:#fff;color:#162f50;margin:8px 0">
+<option value="android">Android phone · standalone APK</option>
+<option value="ios">iPhone / iPad · unsigned IPA</option>
+</select>
+<p id="climb-platform-status" role="status" aria-live="polite">Checking GitHub build artifacts…</p>
+<a id="climb-build-link" class="btn" href="#" hidden target="_blank" rel="noopener noreferrer">Open verified GitHub build page</a>
+<p>Browser detection identifies Android or iOS where possible; the phone <strong>manufacturer</strong> is not reliably available to websites. You can change the platform above. GitHub Actions artifacts may require a GitHub sign-in and are supplied as ZIP archives containing the APK or IPA.</p>
+<p>Cloud Climb uses local progress for offline previews. QR account login requires a trusted phone already signed in to ItamarOS, and a device-authentication prompt. Do not bypass operating-system security warnings.</p>
+</div>
+</section>
 <section class="card" id="android-download" aria-labelledby="android-heading" style="border-color:#62ac87">
 <span class="badge">Android phones · Tablets · Android TV / Google TV</span>
 <h2 id="android-heading">📱📺 ItamarOS Android 1.3 — APK</h2>
@@ -230,4 +248,57 @@ function label(element,text){element.replaceChildren();const p=document.createEl
   }
  });
 })();
-</script></body></html>
+</script>
+<script>
+(()=>{
+'use strict';
+const input=document.getElementById('climb-reveal');
+const box=document.getElementById('climb-download-options');
+const choose=document.getElementById('climb-platform');
+const info=document.getElementById('climb-platform-status');
+const link=document.getElementById('climb-build-link');
+const ua=navigator.userAgent;
+const isIpad=/iPad|iPhone|iPod/i.test(ua) ||
+    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+choose.value=isIpad?'ios':'android';
+const flows={
+ android:{name:'cloud-climb-standalone.yml',artifact:'CloudClimb-Android-standalone-UNVERIFIED-debug'},
+ ios:{name:'cloud-climb-ios.yml',artifact:'CloudClimb-iOS-standalone-UNSIGNED-IPA'}
+};
+let check=0;
+async function update(){
+ const id=++check;
+ link.hidden=true;link.removeAttribute('href');
+ info.textContent='Checking completed Cloud Climb builds…';
+ const flow=flows[choose.value];
+ try{
+  const base='https://api.github.com/repos/itamarnintendo04-arch/ItamarOS';
+  const runs=await fetch(base+'/actions/workflows/'+flow.name+'/runs?per_page=12',{headers:{'Accept':'application/vnd.github+json'}});
+  if(!runs.ok)throw Error('GitHub cannot be reached');
+  const data=await runs.json();
+  const finished=(data.workflow_runs||[]).filter(x=>x.status==='completed'&&x.conclusion==='success');
+  for(const run of finished){
+   const response=await fetch(base+'/actions/runs/'+run.id+'/artifacts');
+   if(!response.ok)continue;
+   const artifacts=(await response.json()).artifacts||[];
+   if(!artifacts.some(a=>!a.expired&&a.name===flow.artifact))continue;
+   if(id!==check)return;
+   info.textContent='Successful development build found. Open this run, find Artifacts and download its ZIP.';
+   link.href=run.html_url;
+   link.textContent=choose.value==='android'?'Open Android APK artifact':'Open iPhone IPA artifact';
+   link.hidden=false;
+   return;
+  }
+  if(id===check)info.textContent='No successful, unexpired download artifact confirmed yet. Source builds are still under test.';
+ }catch(e){if(id===check)info.textContent='Could not verify a current file. No download is advertised.'}
+}
+function reveal(){
+ box.hidden=input.value.trim()!=='0000';
+ if(!box.hidden)void update();
+}
+input.addEventListener('input',reveal);
+choose.addEventListener('change',()=>{if(!box.hidden)void update()});
+if(location.hash==='#cloud-climb'){input.value='0000';reveal()}
+})();
+</script>
+</body></html>
