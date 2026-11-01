@@ -31,7 +31,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 // Session-only REST client. There is NO upload of the device's address book.
-private class AndroidConnectApi {
+class AndroidConnectApi {
     private val base = BuildConfig.ITAMAR_SUPABASE_URL.trimEnd('/')
     private val key = BuildConfig.ITAMAR_SUPABASE_PUBLISHABLE_KEY
     var token:String?=null
@@ -396,11 +396,18 @@ private fun PublicLinkQR(url:String){
 }
 
 @Composable
-fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null,desktopRequest:String?=null){
-    val api=remember{AndroidConnectApi()}
+fun AndroidConnectScreen(
+    api: AndroidConnectApi,
+    groupInvite:String?=null,
+    contactUsername:String?=null,
+    desktopRequest:String?=null,
+    authOnly:Boolean=false,
+    onAccountReady:(String)->Unit={},
+    onSignOut:()->Unit={}
+){
     val ctx=LocalContext.current
     val scope=rememberCoroutineScope()
-    var signed by remember{mutableStateOf(false)}
+    var signed by remember(api){mutableStateOf(api.token!=null)}
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
     var password by remember{mutableStateOf("")}
@@ -542,6 +549,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null,d
                 val p=api.profile()
                 handle=p?.optString("username").orEmpty()
                 displayName=p?.optString("display_name").orEmpty()
+                if(p!=null && authOnly)onAccountReady(p.optString("username"))
                 if(p!=null && pendingSignupAvatar!=null){
                     profileAvatar=api.uploadAvatar(ctx,pendingSignupAvatar!!)
                     api.profilePreferences(profileAvatar,true)
@@ -560,8 +568,39 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null,d
     if(!syncOnThisDevice){
         Text("Cloud sync is disabled on this tablet/device.")
         Text("Enable it in ItamarOS Settings to load online conversations and saved contacts. This does not delete cloud messages.")
-        Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
+        Button(onClick={api.token=null;api.userID=null;signed=false;onSignOut()}){Text("Sign out")}
         return
+    }
+    if(authOnly){
+        Text("Choose your ItamarOS username to continue",style=MaterialTheme.typography.titleLarge)
+        Text("All app features need a unique username. Use 3–24 lowercase letters, numbers, _ or .")
+        OutlinedTextField(handle,{handle=it.lowercase().removePrefix("@").take(24)},
+            label={Text("Unique @username")},singleLine=true)
+        OutlinedTextField(displayName,{displayName=it.take(70)},
+            label={Text("Display name (optional)")},singleLine=true)
+        Button(onClick={perform {
+            val clean=handle.lowercase().trim()
+            require(Regex("^[a-z0-9_.]{3,24}$").matches(clean)){"Enter a valid username"}
+            api.createProfile(displayName.ifBlank{clean},clean)
+            onAccountReady(clean)
+        }},enabled=Regex("^[a-z0-9_.]{3,24}$").matches(handle)){
+            Text("Save username and enter ItamarOS")
+        }
+        if(notice.isNotBlank())Text(notice,color=MaterialTheme.colorScheme.error)
+        return
+    }
+    LaunchedEffect(api.token) {
+        if(api.token!=null && api.userID!=null) {
+            try {
+                val p=api.profile()
+                if(p!=null){
+                    handle=p.optString("username")
+                    displayName=p.optString("display_name")
+                    profileAvatar=p.optString("avatar_path")
+                    if(syncOnThisDevice)rooms=api.rooms()
+                }
+            } catch(_:Exception) { /* User can retry through Profile. */ }
+        }
     }
     if(pendingDesktopRequest.isNotBlank()){
         Card {
@@ -639,7 +678,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null,d
                 inviteToJoin=""
                 rooms=api.rooms()
             }},enabled=inviteToJoin.length==48){Text("Accept and join invited group")}
-            Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
+            Button(onClick={api.token=null;api.userID=null;signed=false;onSignOut()}){Text("Sign out")}
         }
         "Contacts"->{
             Button(onClick={perform{contacts=api.contacts()}}){Text("Refresh synced contacts")}
