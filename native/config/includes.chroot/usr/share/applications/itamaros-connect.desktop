@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ItamarConnect
+GenericName=Messages, groups and channels
+Comment=Open ItamarOS Connect in a dedicated secure browser window (internet required)
+Exec=/usr/bin/python3 /usr/local/share/itamaros/connect_launcher.py
+Icon=itamaros-connect
+Terminal=false
+Categories=Network;InstantMessaging;
+StartupNotify=true
