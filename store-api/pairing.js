@@ -54,7 +54,7 @@ async function verifiedIdentity(accessToken){
  });
  if(!result.ok)return null;
  const person=await result.json();
- if(!person.id||!person.phone_confirmed_at)return null;
+ if(!person.id||!(person.phone_confirmed_at||person.email_confirmed_at))return null;
  return person;
 }
 export async function handlePairing(req,res,path){
@@ -83,7 +83,7 @@ export async function handlePairing(req,res,path){
   const jwt=authorization.startsWith('Bearer ')?authorization.slice(7):'';
   let person=null;
   try{person=await verifiedIdentity(jwt)}catch{return json(res,503,{error:'Authentication provider unavailable'},origin)}
-  if(!person)return json(res,401,{error:'Verified phone session required'},origin);
+  if(!person)return json(res,401,{error:'An existing verified ItamarOS account session is required'},origin);
   const raw=jwt.split('.')[1];
   let expires=Date.now()+45*60_000;
   try{const payload=JSON.parse(Buffer.from(raw,'base64url').toString());if(Number.isFinite(payload.exp))expires=Math.min(expires,payload.exp*1000)}catch{}
