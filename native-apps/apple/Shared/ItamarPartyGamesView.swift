@@ -52,11 +52,23 @@ struct ItamarPartyGamesView: View {
     @State private var climbGameOver=false
     @State private var climbMessage=""
     @State private var lastBossStrike=Date.distantPast
+    @State private var climbControllerConnected=false
+    @State private var climbPreviousPauseButton=false
+    @State private var climbSettingsPresented=false
+    @AppStorage("cloudClimb.autoHideControls") private var climbAutoHideControls=true
+    @AppStorage("cloudClimb.showTips") private var climbShowTips=true
+    @AppStorage("cloudClimb.twilightSky") private var climbTwilightSky=false
+    @State private var climbCloudReady=false
+    @State private var climbRevision:Int64=0
+    @State private var climbCloudSaving=false
+    @State private var climbPendingUpload=false
+    @State private var climbSyncStatus="Local save"
     private var climbSaveKey:String {
         "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest")
     }
     private var climbStageSeed:Int {(match?.seed ?? 0) &+ (climbLevel &* 2039)}
     private var climbIsBoss:Bool {climbLevel % 30 == 0}
+    private var climbShowTouch:Bool {!climbControllerConnected || !climbAutoHideControls}
     private var climbBossX:CGFloat {platforms(climbStageSeed).last?.midX ?? 200}
     private let gameOptions=[
         ("connect_four","Connect Four · 2 players"),
@@ -223,15 +235,28 @@ struct ItamarPartyGamesView: View {
         return items
     }
     private var cloudClimb:some View {
-        VStack(spacing:12){
-            Text(match?.status=="waiting" ? "Waiting for at least 2 players to start." :
-                 "Climb together! This is an experimental co-op prototype.")
-                .font(.footnote).foregroundStyle(.secondary)
-            Text("Level \(climbLevel) · ❤️ \(climbHearts)/3 · 🪙 \(climbCoins)")
-                .font(.headline)
-            Text(climbIsBoss ? "Boss level: 3 hits!" : "Reach the highest platform to finish the level.")
-                .font(.caption).foregroundStyle(.secondary)
+        VStack(spacing:14){
+            Text("☁️ CLOUD CLIMB")
+                .font(.title.bold()).foregroundStyle(.white)
+                .frame(maxWidth:.infinity,alignment:.leading)
+            if climbShowTips {
+                Text(match?.status=="waiting" ? "Waiting for another player." :
+                     "Climb together! Explore the sky in this original platformer.")
+                    .font(.footnote).foregroundStyle(.white.opacity(0.88))
+            }
             HStack {
+                Text("LEVEL \(climbLevel)").font(.headline).foregroundStyle(.yellow)
+                Spacer()
+                Text("❤️ \(climbHearts)/3  🪙 \(climbCoins)")
+                    .font(.subheadline.bold()).foregroundStyle(.white)
+            }
+            if climbShowTips {
+                Text(climbIsBoss ? "Boss level: 3 hits!" : "Reach the highest platform to finish the level.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.85))
+            }
+            HStack {
+                Button("⚙ Settings") {climbSettingsPresented=true}
+                    .buttonStyle(.bordered)
                 Button(climbPaused ? "Resume" : "Pause") {
                     climbPaused.toggle()
                     pressLeft=false;pressRight=false;pressJump=false
@@ -263,8 +288,16 @@ struct ItamarPartyGamesView: View {
             Canvas { ctx,size in
                 let w=size.width,h=size.height
                 ctx.fill(Path(CGRect(origin:.zero,size:size)),
-                    with:.linearGradient(Gradient(colors:[.indigo.opacity(0.75),.cyan.opacity(0.35)]),
-                                         startPoint:.zero,endPoint:CGPoint(x:w,y:h)))
+                    with:.linearGradient(Gradient(colors:
+                        climbTwilightSky ? [.purple.opacity(0.95),.indigo.opacity(0.85)] :
+                                          [.blue.opacity(0.9),.cyan.opacity(0.65)]),
+                        startPoint:.zero,endPoint:CGPoint(x:w,y:h)))
+                for i in 0..<16 {
+                    let x=CGFloat((i*127+31)%390)/400*w
+                    let y=CGFloat((i*83+47)%420)/500*h
+                    ctx.fill(Path(ellipseIn:CGRect(x:x,y:y,width:4,height:4)),
+                        with:.color(.white.opacity(climbTwilightSky ? 0.7:0.38)))
+                }
                 let sx=w/400,sy=h/500
                 let stages=platforms(climbStageSeed)
                 for (i,platform) in stages.enumerated() {
@@ -296,13 +329,13 @@ struct ItamarPartyGamesView: View {
             .frame(maxWidth:350)
             .clipShape(RoundedRectangle(cornerRadius:16))
             .onReceive(timer) { _ in tickClimb() }
-            if climbIsBoss && !climbPaused && !climbGameOver && climbShopDue==0 {
+            if climbShowTouch && climbIsBoss && !climbPaused && !climbGameOver && climbShopDue==0 {
                 Button("Strike boss · \(climbBossHealth)/3") {strikeClimbBoss()}
                     .disabled(!landed || posY>=115 || abs(posX-climbBossX)>=85)
                     .buttonStyle(.borderedProminent)
             }
-            if !climbPaused && !climbGameOver && climbShopDue==0 {
-            HStack(spacing:12) {
+            if climbShowTouch && !climbPaused && !climbGameOver && climbShopDue==0 {
+                HStack(spacing:12) {
                 steerButton("◀",left:true)
                 steerButton("▶",left:false)
                 Button("Jump") {pressJump=true}
@@ -312,10 +345,44 @@ struct ItamarPartyGamesView: View {
             if !climbMessage.isEmpty {
                 Text(climbMessage).font(.footnote).foregroundStyle(.secondary)
             }
-            Text("Progress auto-saves on this device, per account; it is not cloud-synced.")
-                .font(.caption).foregroundStyle(.secondary)
-            Text("Touch controls or a connected Xbox, PlayStation or Switch-compatible controller.")
-                .font(.footnote).foregroundStyle(.secondary)
+            Text(climbSyncStatus)
+                .font(.caption).foregroundStyle(.yellow)
+            Text(climbControllerConnected ?
+                 "🎮 Controller connected · A: Jump · X: Attack · Menu: Pause" :
+                 "Touch controls · Connect a controller to hide them automatically.")
+                .font(.caption).foregroundStyle(.white.opacity(0.87))
+        }
+        .padding(16)
+        .background(
+            LinearGradient(colors:climbTwilightSky ?
+                [Color(red:0.12,green:0.08,blue:0.32),.purple] :
+                [Color(red:0.10,green:0.23,blue:0.52),.teal],
+                startPoint:.topLeading,endPoint:.bottomTrailing),
+            in:RoundedRectangle(cornerRadius:24)
+        )
+        .sheet(isPresented:$climbSettingsPresented) {climbSettings}
+    }
+    private var climbSettings:some View {
+        NavigationStack {
+            Form {
+                Section("Controls") {
+                    Toggle("Auto-hide touch controls",isOn:$climbAutoHideControls)
+                    Toggle("Show control tips",isOn:$climbShowTips)
+                    Text(climbControllerConnected ? "Controller connected" : "No controller connected")
+                }
+                Section("Appearance") {
+                    Toggle("Twilight sky theme",isOn:$climbTwilightSky)
+                }
+                Section("Account & Progress") {
+                    Text("Sign in with your verified phone number in ItamarOS Connect.")
+                    Text(climbSyncStatus)
+                    Text("Using the same verified phone number on another device signs you into the same Supabase account.")
+                }
+            }
+            .navigationTitle("Cloud Climb Settings")
+            .toolbar {ToolbarItem(placement:.confirmationAction) {
+                Button("Done"){climbSettingsPresented=false}
+            }}
         }
     }
     private func steerButton(_ label:String,left:Bool)->some View {
