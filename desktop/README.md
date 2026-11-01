@@ -2,6 +2,12 @@
 
 Electron/Chromium wrapper around the **browser emulator**, bundled with local assets. This is an ordinary desktop application — it does not flash drives, install an OS, or require admin privileges.
 
+## ItamarConnect
+
+The desktop emulator bundles `connect.html`, `apps/connect.js` and public Connect configuration. Open **ItamarConnect** from the desktop app list or pinned taskbar. The offline bundle does not fabricate conversations: a dedicated, live and validated backend is required for real messages and profile synchronization.
+
+The online Chromium wrapper also displays the same first-party app. No native desktop account secrets are stored in Node/Electron APIs. **Sign in with ItamaRos Hub is not yet enabled**; the future HTTPS callback is only preparatory.
+
 ## Mac package
 
 The Mac emulator installer is a **DMG** for both Intel and Apple Silicon. It is built by [GitHub Actions](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/mac-demo.yml) from the same offline emulator source as Windows. On Mac, open the DMG and drag the app into Applications if allowed by macOS security settings. Test/pre-release builds are **unsigned and not notarized**; do not bypass Gatekeeper or device security protections.
