@@ -13,8 +13,8 @@ android {
         targetSdk = 36
         versionCode = 4
         versionName = "1.7.0"
-        buildConfigField("String", "ITAMAR_SUPABASE_URL", "\"${providers.gradleProperty("ITAMAR_SUPABASE_URL").orElse("").get()}\"")
-        buildConfigField("String", "ITAMAR_SUPABASE_PUBLISHABLE_KEY", "\"${providers.gradleProperty("ITAMAR_SUPABASE_PUBLISHABLE_KEY").orElse("").get()}\"")
+        buildConfigField("String", "ITAMAR_SUPABASE_URL", "\"${providers.gradleProperty("ITAMAR_SUPABASE_URL").orElse("https://slqjkysinhfkqjoigfuz.supabase.co").get()}\"")
+        buildConfigField("String", "ITAMAR_SUPABASE_PUBLISHABLE_KEY", "\"${providers.gradleProperty("ITAMAR_SUPABASE_PUBLISHABLE_KEY").orElse("sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts").get()}\"")
     }
 
     buildFeatures {
