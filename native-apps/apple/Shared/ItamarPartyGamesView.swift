@@ -401,7 +401,7 @@ struct ItamarPartyGamesView: View {
         let connected=controllers.contains {$0.extendedGamepad != nil}
         if climbControllerConnected != connected {climbControllerConnected=connected}
         let pad=controllers.first(where:{$0.extendedGamepad != nil})?.extendedGamepad
-        let menuPressed=pad?.buttonMenu?.isPressed ?? false
+        let menuPressed=pad?.buttonMenu.isPressed ?? false
         if menuPressed && !climbPreviousPauseButton && !climbGameOver && climbShopDue==0 {
             climbPaused.toggle()
             pressLeft=false;pressRight=false;pressJump=false
