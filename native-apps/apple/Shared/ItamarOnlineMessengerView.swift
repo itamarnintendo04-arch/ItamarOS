@@ -540,6 +540,36 @@ private struct ItamarCloudThreadView: View {
                     .accessibilityLabel("Attach photo, video, audio, PDF, file or contact card")
                 }
                 .padding().background(.regularMaterial)
+
+                if voiceRecorder.recording {
+                    HStack(spacing:14) {
+                        Label("Recording voice note…",systemImage:"mic.fill")
+                            .foregroundStyle(.red)
+                        Button("Stop and send") {
+                            if let file=voiceRecorder.finish() {
+                                Task {
+                                    defer { try? FileManager.default.removeItem(at:file) }
+                                    do {
+                                        try await cloud.sendAttachment(file,in:room.id)
+                                        await reloadThread()
+                                    } catch { self.error=error.localizedDescription }
+                                }
+                            }
+                        }
+                        Button("Discard") { voiceRecorder.discard() }
+                    }.font(.caption)
+                } else {
+                    Button {
+                        Task {
+                            do { try await voiceRecorder.start() }
+                            catch { self.error=error.localizedDescription }
+                        }
+                    } label: {
+                        Label("Record voice message (up to 90 seconds)",systemImage:"mic")
+                    }
+                    .font(.caption)
+                }
+
             } else {
                 Text("Only the channel owner can publish updates.")
                     .font(.caption).foregroundStyle(.secondary).padding()
@@ -668,7 +698,11 @@ private struct ItamarCloudThreadView: View {
                 }
             }
         }
-        .onDisappear { poll?.cancel(); poll = nil }
+        .onDisappear {
+            poll?.cancel()
+            poll = nil
+            if voiceRecorder.recording { voiceRecorder.discard() }
+        }
     }
     private func reloadThread() async {
         do {
