@@ -42,6 +42,7 @@ struct ItamarPartyGamesView: View {
     @State private var landed=false
     @State private var lastPositionUpload=Date.distantPast
     // Local account progress; remote room positions are not progression sync.
+    @State private var climbLoaded=false
     @State private var climbLevel=1
     @State private var climbCoins=0
     @State private var climbHearts=3
@@ -361,6 +362,7 @@ struct ItamarPartyGamesView: View {
         }
     }
     private func saveClimb(){
+        guard climbLoaded else{return}
         UserDefaults.standard.set([
             "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
             "bossHealth":climbBossHealth,"shopDue":climbShopDue,
@@ -375,7 +377,7 @@ struct ItamarPartyGamesView: View {
         climbBossHealth=min(3,max(1,saved["bossHealth"] as? Int ?? 3))
         climbShopDue=max(0,saved["shopDue"] as? Int ?? 0)
         climbGameOver=(saved["gameOver"] as? Bool ?? false) || climbHearts==0
-        climbPaused=false;climbMessage=""
+        climbPaused=false;climbMessage="";climbLoaded=true
         resetMovement()
     }
     private func finishClimbLevel(){
