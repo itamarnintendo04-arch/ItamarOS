@@ -210,6 +210,44 @@ private class AndroidConnectApi {
         }
         return delivered to read
     }
+    suspend fun reply(room:String,parent:String,text:String) {
+        request("/rest/v1/rpc/itamar_send_reply","POST",JSONObject()
+            .put("p_room",room).put("p_parent",parent).put("p_body",text))
+    }
+    suspend fun disappearingText(room:String,text:String,seconds:Int) {
+        if(seconds !in listOf(3600,86400,604800))throw IllegalArgumentException("Invalid timer")
+        request("/rest/v1/rpc/itamar_send_disappearing_text","POST",JSONObject()
+            .put("p_room",room).put("p_body",text).put("p_seconds",seconds))
+    }
+    suspend fun react(id:String,emoji:String) {
+        request("/rest/v1/rpc/itamar_react","POST",JSONObject()
+            .put("p_message",id).put("p_emoji",emoji))
+    }
+    suspend fun removeReaction(id:String) {
+        request("/rest/v1/rpc/itamar_remove_reaction","POST",JSONObject().put("p_message",id))
+    }
+    suspend fun reactions(items:JSONArray):Map<String,List<String>>{
+        val ids=(0 until items.length()).mapNotNull{items.optJSONObject(it)?.optString("id")}
+        if(ids.isEmpty())return emptyMap()
+        val response=JSONArray(request("/rest/v1/itamar_reactions?message_id=in.("+
+            ids.takeLast(80).joinToString(",")+")&select=message_id,emoji"))
+        val results=mutableMapOf<String,MutableList<String>>()
+        for(i in 0 until response.length()){
+            val row=response.optJSONObject(i)?:continue
+            results.getOrPut(row.optString("message_id")){mutableListOf()}.add(row.optString("emoji"))
+        }
+        return results
+    }
+    suspend fun report(id:String,reason:String) {
+        request("/rest/v1/rpc/itamar_report_message","POST",JSONObject()
+            .put("p_message",id).put("p_reason",reason).put("p_detail",""))
+    }
+    suspend fun block(id:String) {
+        val mine=userID?:throw IllegalStateException("Sign in first")
+        if(mine==id)return
+        request("/rest/v1/itamar_blocks","POST",JSONObject()
+            .put("blocker_id",mine).put("blocked_id",id))
+    }
     suspend fun uploadAttachment(context:Context,uri:Uri,room:String){
         if(!configured)throw IllegalStateException("Connect is not configured")
         val mime=context.contentResolver.getType(uri)?:throw IllegalStateException("Unknown file type")
@@ -342,6 +380,11 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var viewOnce by remember{mutableStateOf(false)}
     var openedSecret by remember{mutableStateOf("")}
     var receipts by remember{mutableStateOf(mapOf<String,Pair<Int,Int>>())}
+    var reactions by remember{mutableStateOf(mapOf<String,List<String>>())}
+    var reactionTarget by remember{mutableStateOf("")}
+    var replyTarget by remember{mutableStateOf("")}
+    var expiringSeconds by remember{mutableIntStateOf(0)}
+    var reportTarget by remember{mutableStateOf("")}
     var profileAvatar by remember{mutableStateOf<String?>(null)}
     var roomAvatar by remember{mutableStateOf<String?>(null)}
     var readReceiptPreference by remember{mutableStateOf(true)}
@@ -508,6 +551,7 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                             groupDescription=room.optString("description")
                             roomAvatar=room.optString("avatar_path").takeIf{it.isNotEmpty() && it!="null"}
                             messages=api.messages(id)
+                            reactions=api.reactions(messages)
                             api.acknowledge(id,true)
                             if(room.optString("kind")=="group")polls=api.polls(id)
                         }}){Text(room.optString("title"))}
@@ -546,6 +590,54 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                             }){Text("Open shared link")}
                         }
                     }
+                    if(!entry.isNull("reply_to")){
+                        val parentID=entry.optString("reply_to")
+                        val parent=(0 until messages.length()).mapNotNull{messages.optJSONObject(it)}
+                            .firstOrNull{it.optString("id")==parentID}
+                        if(parent!=null)Text("↪ "+parent.optString("body").take(80))
+                    }
+                    if(!entry.isNull("expires_at"))Text("⏳ Disappearing text")
+                    val reactionsHere=reactions[id].orEmpty()
+                    if(reactionsHere.isNotEmpty()){
+                        Text(reactionsHere.groupingBy{it}.eachCount()
+                            .entries.joinToString(" · "){it.key+" "+it.value})
+                    }
+                    if(!deleted){
+                        Row {
+                            Button(onClick={reactionTarget=if(reactionTarget==id)"" else id}){Text("React")}
+                            if(!entry.optBoolean("is_view_once"))
+                                Button(onClick={replyTarget=id}){Text("Reply")}
+                            if(!own){
+                                Button(onClick={reportTarget=id}){Text("Report")}
+                            }
+                        }
+                        if(reactionTarget==id){
+                            Row(modifier=Modifier.horizontalScroll(rememberScrollState())){
+                                listOf("👍","❤️","😂","😮","😢","🙏","🎉").forEach{emoji->
+                                    TextButton(onClick={perform{
+                                        api.react(id,emoji)
+                                        reactions=api.reactions(messages)
+                                        reactionTarget=""
+                                    }}){Text(emoji)}
+                                }
+                            }
+                        }
+                        if(reportTarget==id){
+                            Text("Save a report (human review not yet available)")
+                            Row(modifier=Modifier.horizontalScroll(rememberScrollState())){
+                                listOf("Spam","Harassment","Threats","Other").forEach{reason->
+                                    TextButton(onClick={perform{
+                                        api.report(id,reason)
+                                        reportTarget=""
+                                    }}){Text(reason)}
+                                }
+                            }
+                            if(!own) Button(onClick={perform{
+                                api.block(entry.optString("sender_id"))
+                                reportTarget=""
+                            }}){Text("Block sender")}
+                        }
+                    }
                     if(own && !deleted){
                         Button(onClick={perform{
                             val res=api.receipt(id)
@@ -575,21 +667,37 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
                         text={Text(openedSecret+"\n\nScreenshots cannot be prevented.")},
                         confirmButton={TextButton(onClick={openedSecret=""}){Text("Close")}})
                 }
+                if(replyTarget.isNotEmpty()){
+                    Row {
+                        Text("Reply to message")
+                        TextButton(onClick={replyTarget=""}){Text("Cancel")}
+                    }
+                }
                 if(editingID.isBlank()) {
                     Row {
                         Checkbox(viewOnce,onCheckedChange={viewOnce=it})
                         Text("View once (text only)")
+                    }
+                    Row(modifier=Modifier.horizontalScroll(rememberScrollState())){
+                        listOf(0,3600,86400,604800).forEach{seconds->
+                            val title=when(seconds){3600->"1 hour";86400->"1 day";604800->"7 days";else->"Keep"}
+                            FilterChip(selected=expiringSeconds==seconds,
+                                onClick={expiringSeconds=seconds},label={Text(title)})
+                        }
                     }
                 }else Text("Editing message")
                 OutlinedTextField(message,{message=it},label={Text("Message or link")})
                 Button(onClick={perform{
                     when {
                         editingID.isNotBlank()->{api.edit(editingID,message);editingID=""}
+                        replyTarget.isNotBlank()->{api.reply(selectedRoom,replyTarget,message);replyTarget=""}
                         viewOnce->{api.sendOnce(selectedRoom,message);viewOnce=false}
+                        expiringSeconds>0->api.disappearingText(selectedRoom,message,expiringSeconds)
                         else->api.send(selectedRoom,message)
                     }
                     message=""
                     messages=api.messages(selectedRoom)
+                    reactions=api.reactions(messages)
                 }}){Text(if(editingID.isNotBlank())"Save edit" else "Send")}
                 if(editingID.isNotBlank()) Button(onClick={editingID="";message=""}){Text("Cancel edit")}
                 Button(onClick={chooseAttachment.launch(arrayOf("image/*","video/*","audio/*","application/pdf","text/plain","text/vcard","text/calendar"))}){
