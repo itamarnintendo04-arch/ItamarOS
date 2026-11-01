@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import CoreImage.CIFilterBuiltins
+import GameController
 
 private struct CloudClimbPairStart: Decodable {
     let requestId:String
@@ -182,38 +183,316 @@ struct CloudClimbStandaloneHome:View {
     }
 }
 
-/// Small standalone local demonstration. The shared multiplayer version lives
-/// inside ItamarPartyGamesView and is available after QR account linking.
+/// Offline playable preview. Save data stays on this device only.
+/// Signed-in online play uses the same shared Cloud Climb game as ItamarOS.
 private struct CloudClimbOfflineDemo:View {
     @Environment(\.dismiss) private var dismiss
-    @State private var x:CGFloat=50
-    @State private var score=0
+    @AppStorage("cloudclimb.offline.level") private var level=1
+    @AppStorage("cloudclimb.offline.coins") private var coins=0
+    @AppStorage("cloudclimb.offline.hearts") private var hearts=3
+    @AppStorage("cloudclimb.offline.bossHP") private var bossHP=3
+    @AppStorage("cloudclimb.offline.shop") private var shopDue=0
+    @AppStorage("cloudclimb.offline.world") private var world=1
+    @AppStorage("cloudclimb.offline.blue") private var blueStorage=""
+    @AppStorage("cloudclimb.offline.colored") private var coloredStorage=""
+    @AppStorage("cloudclimb.offline.characters") private var characterStorage=""
+    @AppStorage("cloudclimb.offline.worlds") private var worldStorage=""
+    @State private var x:CGFloat=48
+    @State private var y:CGFloat=430
+    @State private var velocity:CGFloat=0
+    @State private var grounded=true
+    @State private var left=false
+    @State private var right=false
+    @State private var jump=false
+    @State private var paused=false
+    @State private var finished=false
+    @State private var notice="Complete stages to earn game coins and discover blue doors."
+    @State private var orbOpen=false
+    @State private var lastBossHit=Date.distantPast
+    @State private var controllerConnected=false
+    @State private var lastMenuButton=false
+    private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
+
+    private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
+    private var colored:Set<Int> {Set(coloredStorage.split(separator:",").compactMap{Int($0)})}
+    private var characters:Set<String> {Set(characterStorage.split(separator:",").map(String.init))}
+    private var worlds:Set<Int> {Set([1]).union(worldStorage.split(separator:",").compactMap{Int($0)})}
+    private var keys:Int {max(0,(level-1)/100-(worlds.count-1))}
+    private var boss:Bool {level%30==0}
+    private var secret:Bool {colored.count==10}
+    private var stages:[CGRect] {
+        var value=UInt64(UInt32(truncatingIfNeeded:level &* 2039 &+ world &* 1009))
+        func rnd()->CGFloat {
+            value=value &* 6364136223846793005 &+ 1442695040888963407
+            return CGFloat((value>>32)%1000)/1000
+        }
+        var output=[CGRect(x:0,y:472,width:400,height:20)]
+        for row in 0..<6 {
+            output.append(CGRect(x:16+rnd()*205,y:405-CGFloat(row)*61,
+                                 width:130+rnd()*40,height:12))
+        }
+        return output
+    }
+    private var remainingDoors:[Int] {
+        guard (1...10).contains(world) else{return []}
+        return (1...5).filter{!blue.contains("\(world):\($0)")}
+    }
+    private var nearbyDoor:Int? {
+        remainingDoors.first { index in
+            abs(x-stages[index].midX)<60 && abs(y-(stages[index].minY-5))<60
+        }
+    }
+    private var bossX:CGFloat {stages.last?.midX ?? 200}
+
     var body:some View {
-        VStack(spacing:20) {
-            Text("CLOUD CLIMB · OFFLINE DEMO").font(.title2.bold())
-            Text("Moves: \(score)")
-            Canvas {ctx,size in
-                ctx.fill(Path(CGRect(origin:.zero,size:size)),
-                    with:.linearGradient(Gradient(colors:[.indigo,.cyan]),
-                        startPoint:.zero,endPoint:CGPoint(x:size.width,y:size.height)))
-                for row in 0..<6 {
-                    let y=size.height-CGFloat(row+1)*56
-                    ctx.fill(Path(roundedRect:CGRect(x:20+CGFloat(row%2)*38,y:y,width:150,height:13),
-                        cornerRadius:6),with:.color(.white))
-                }
-                ctx.fill(Path(ellipseIn:CGRect(x:x,y:size.height-74,width:24,height:24)),
-                    with:.color(.orange))
+        NavigationStack {
+            ScrollView {
+                VStack(spacing:14) {
+                    Text("☁️ CLOUD CLIMB")
+                        .font(.system(.title,design:.rounded).bold())
+                        .foregroundStyle(.white)
+                    HStack {
+                        Text("LEVEL \(level)").font(.headline).foregroundStyle(.yellow)
+                        Spacer()
+                        Text("❤️ \(hearts)/3   🪙 \(coins)")
+                            .foregroundStyle(.white)
+                    }
+                    Text("World \(world) · 🔑 \(keys) · 💙 \(blue.count)/50 · 🌈 \(colored.count)/10")
+                        .font(.caption.bold()).foregroundStyle(.white)
+                    ScrollView(.horizontal,showsIndicators:false) {
+                        HStack(spacing:8) {
+                            ForEach(1...11,id:\.self) { selected in
+                                let open=worlds.contains(selected)||(selected==11 && secret)
+                                Button(selected==11 ? "SECRET" :
+                                       open ? "World \(selected)" : "🔒 \(selected)") {
+                                    if open {
+                                        world=selected;resetPosition()
+                                    } else if selected<=10 && keys>0 {
+                                        worldStorage=Array(worlds.union([selected]))
+                                            .sorted().map(String.init).joined(separator:",")
+                                        notice="World \(selected) unlocked with a key!"
+                                    }
+                                }.disabled(!open && keys<1)
+                                    .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                    if boss {
+                        Text("BOSS ENCOUNTER · \(bossHP)/3")
+                            .font(.headline).foregroundStyle(.yellow)
+                    }
+                    HStack {
+                        Button(paused ? "Resume" : "Pause") {paused.toggle()}
+                            .disabled(shopDue>0 || finished)
+                        Button("Exit to Menu") {dismiss()}
+                    }.buttonStyle(.bordered)
+                    if finished {
+                        Text("No hearts left · Try Again").foregroundStyle(.white)
+                        Button("Try Again") {
+                            hearts=3;bossHP=3;finished=false;resetPosition()
+                        }.buttonStyle(.borderedProminent)
+                    } else if shopDue>0 {
+                        Text(shopDue%30==0 ?
+                             "Before Boss Level \(shopDue): buy one missing heart?" :
+                             "Heart Shop: restore one missing heart?")
+                            .foregroundStyle(.white)
+                        HStack {
+                            Button("Buy Heart · 100 🪙") {
+                                guard hearts<3 && coins>=100 else{return}
+                                coins-=100;hearts+=1;shopDue=0
+                            }.disabled(hearts==3||coins<100)
+                            Button("Skip") {shopDue=0}
+                        }.buttonStyle(.borderedProminent)
+                    } else if paused {
+                        Text("Paused · Progress saves automatically.")
+                            .foregroundStyle(.white)
+                        Button("Resume") {paused=false}
+                    } else {
+                        Canvas {ctx,size in
+                            let sx=size.width/400,sy=size.height/500
+                            ctx.fill(Path(CGRect(origin:.zero,size:size)),
+                                with:.linearGradient(Gradient(colors:[.indigo,.cyan.opacity(0.9)]),
+                                    startPoint:.zero,
+                                    endPoint:CGPoint(x:size.width,y:size.height)))
+                            for (index,p) in stages.enumerated() {
+                                ctx.fill(Path(roundedRect:CGRect(x:p.minX*sx,y:p.minY*sy,
+                                    width:p.width*sx,height:p.height*sy),cornerRadius:6),
+                                    with:.color(index==0 ? .mint:.white))
+                            }
+                            for door in remainingDoors {
+                                let p=stages[door]
+                                let rect=CGRect(x:(p.midX-12)*sx,y:(p.minY-37)*sy,
+                                                width:24*sx,height:37*sy)
+                                ctx.fill(Path(roundedRect:rect,cornerRadius:7),with:.color(.blue))
+                                ctx.draw(Text("✦").font(.system(size:13)).foregroundColor(.white),
+                                         at:CGPoint(x:p.midX*sx,y:(p.minY-18)*sy))
+                            }
+                            if boss {
+                                let rect=CGRect(x:(bossX-21)*sx,y:45*sy,width:42*sx,height:42*sy)
+                                ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
+                            }
+                            ctx.fill(Path(roundedRect:CGRect(x:(x-12)*sx,y:(y-21)*sy,
+                                width:24*sx,height:24*sy),cornerRadius:7),with:.color(.orange))
+                            ctx.draw(Text("Guest").font(.system(size:12,weight:.bold)),
+                                at:CGPoint(x:x*sx,y:(y-31)*sy))
+                        }
+                        .aspectRatio(4/5,contentMode:.fit)
+                        .clipShape(RoundedRectangle(cornerRadius:16))
+                        .onReceive(clock) {_ in tick()}
+                        if let door=nearbyDoor {
+                            Button("🚪 Enter Blue Door \(door)") {enterDoor(door)}
+                                .buttonStyle(.borderedProminent)
+                        }
+                        if boss {
+                            Button("Strike Boss · \(bossHP) Hits Left") {hitBoss()}
+                                .disabled(!grounded||y>=115||abs(x-bossX)>=85)
+                                .buttonStyle(.borderedProminent)
+                        }
+                        if !controllerConnected {
+                            HStack(spacing:15) {
+                                control("◀",left:true)
+                                control("▶",left:false)
+                                Button("Jump") {jump=true}
+                                    .buttonStyle(.borderedProminent)
+                            }
+                        } else {
+                            Text("🎮 Controller connected · A: Jump · X: Strike · Menu: Pause")
+                                .font(.caption).foregroundStyle(.white)
+                        }
+                    }
+                    Text(notice).font(.caption).foregroundStyle(.white)
+                    Button("🔮 Character Orb · \(characters.count) Characters") {
+                        orbOpen=true
+                    }
+                    .frame(maxWidth:.infinity)
+                    .buttonStyle(.borderedProminent)
+                    Text("Offline preview · Game coins have no real-money value. Signed-in online progress uses the shared ItamarOS database.")
+                        .font(.caption2).foregroundStyle(.white.opacity(0.85))
+                    Button("Back to Menu") {dismiss()}
+                        .buttonStyle(.bordered)
+                }.padding(18)
             }
-            .frame(height:390).clipShape(RoundedRectangle(cornerRadius:18))
-            HStack(spacing:22) {
-                Button("◀") {x=max(0,x-20);score+=1}
-                Button("Jump") {score+=1}
-                Button("▶") {x=min(245,x+20);score+=1}
-            }.buttonStyle(.borderedProminent)
-            Text("This is a basic offline visual demo. Real rooms and saved worlds require the linked account.")
-                .font(.footnote).foregroundStyle(.secondary)
-            Button("Back to Menu") {dismiss()}
-        }.padding()
+            .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
+                startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
+            .navigationTitle("Cloud Climb")
+            .sheet(isPresented:$orbOpen) {
+                NavigationStack {
+                    VStack(spacing:16) {
+                        Text("🔮").font(.system(size:70))
+                        Text("Surprise Character").font(.title2.bold())
+                        Text("Unlock one random new character for 500 earned game coins.")
+                        Text("Owned: \(characters.count) · 🪙 \(coins)")
+                        Button("Unlock · 500 Coins") {buyRandomCharacter()}
+                            .disabled(coins<500 || characters.filter{$0.hasPrefix("sky_")}.count>=12)
+                            .buttonStyle(.borderedProminent)
+                        Text(notice).font(.caption)
+                        Spacer()
+                    }
+                    .padding()
+                    .navigationTitle("Character Orb")
+                    .toolbar {ToolbarItem(placement:.confirmationAction) {
+                        Button("Done"){orbOpen=false}
+                    }}
+                }
+            }
+        }
+    }
+    private func control(_ name:String,left:Bool)->some View {
+        Text(name).font(.title2.bold()).padding(15)
+            .background(.thinMaterial,in:RoundedRectangle(cornerRadius:12))
+            .gesture(DragGesture(minimumDistance:0).onChanged{_ in
+                if left {self.left=true}else{right=true}
+            }.onEnded{_ in
+                if left {self.left=false}else{right=false}
+            })
+    }
+    private func tick() {
+        let pad=GCController.controllers().first?.extendedGamepad
+        controllerConnected=pad != nil
+        let menuPressed=pad?.buttonMenu.isPressed ?? false
+        if menuPressed && !lastMenuButton && shopDue==0 && !finished {
+            paused.toggle()
+        }
+        lastMenuButton=menuPressed
+        guard !paused,!finished,shopDue==0 else{return}
+        if pad?.buttonX.isPressed ?? false {hitBoss()}
+        let axis=CGFloat(pad?.leftThumbstick.xAxis.value ?? 0)
+        let input=(left ? -1.0:0.0)+(right ? 1.0:0.0)+Double(axis)
+        x=min(388,max(12,x+CGFloat(max(-1,min(1,input)))*3.2))
+        if (jump || pad?.buttonA.isPressed == true) && grounded {
+            velocity = -9;grounded=false
+        }
+        jump=false
+        let previousBottom=y+3
+        velocity=min(10,velocity+0.38)
+        y+=velocity
+        if velocity>=0 {
+            grounded=false
+            for platform in stages {
+                if x+11>platform.minX && x-11<platform.maxX &&
+                    previousBottom<=platform.minY && y+3>=platform.minY {
+                    y=platform.minY-3;velocity=0;grounded=true;break
+                }
+            }
+        }
+        if y>495 {
+            hearts=max(0,hearts-1)
+            if hearts==0 {finished=true;notice="No hearts remaining."}
+            resetPosition()
+            return
+        }
+        if grounded && y<110 && !boss {completeLevel()}
+    }
+    private func resetPosition() {
+        x=48;y=430;velocity=0;grounded=true;left=false;right=false;jump=false
+    }
+    private func hitBoss() {
+        guard boss,!paused,!finished,shopDue==0,
+              grounded,y<115,abs(x-bossX)<85,
+              Date().timeIntervalSince(lastBossHit)>=0.9 else{return}
+        lastBossHit=Date()
+        if bossHP==1 {completeLevel()}
+        else {bossHP-=1;notice="Boss hit! \(bossHP) hits remaining."}
+    }
+    private func completeLevel() {
+        let cleared=level
+        coins+=10;level+=1;bossHP=3
+        shopDue=hearts<3 && (level%30==0 ||
+            (cleared%10==0 && cleared%30 != 0)) ? level : 0
+        for index in 1...10 {
+            let due=index*30+1+((index*7+5)%3)
+            if cleared==due && !colored.contains(index) {
+                var updated=colored;updated.insert(index)
+                coloredStorage=updated.sorted().map(String.init).joined(separator:",")
+                notice="🌈 Found a random colored cube after a boss!"
+            }
+        }
+        if notice.isEmpty {notice="Level \(cleared) complete! +10 coins."}
+        if cleared%100==0 {notice+=" 🔑 Earned a new world key!"}
+        resetPosition()
+    }
+    private func enterDoor(_ door:Int) {
+        guard remainingDoors.contains(door),nearbyDoor==door else{return}
+        var updated=blue;updated.insert("\(world):\(door)")
+        blueStorage=updated.sorted().joined(separator:",")
+        if updated.filter({$0.hasPrefix("\(world):")}).count==5 {
+            var unlocked=characters;unlocked.insert("mystery_world_\(world)")
+            characterStorage=unlocked.sorted().joined(separator:",")
+            notice="🔮 Mystery character from World \(world) unlocked!"
+        } else {notice="💙 Found blue cube \(door) in World \(world)!"}
+    }
+    private func buyRandomCharacter() {
+        guard coins>=500 else{return}
+        let options=(1...12).map{String(format:"sky_%02d",$0)}
+                        .filter{!characters.contains($0)}
+        guard let next=options.randomElement() else {
+            notice="All regular characters already unlocked."
+            return
+        }
+        coins-=500
+        var unlocked=characters;unlocked.insert(next)
+        characterStorage=unlocked.sorted().joined(separator:",")
+        notice="🎉 New character: \(next)!"
     }
 }
 #endif
