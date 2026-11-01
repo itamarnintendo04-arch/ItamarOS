@@ -1,0 +1,65 @@
+/* ItamarOS visual refresh. Maintains existing responsive desktop/tablet/TV layouts.
+ * Applies to the browser emulator and packaged Electron web shell only. */
+:root{
+  --it-ink:#172d52;--it-frost:rgba(235,244,255,.9);
+  --it-tint:#256bd4;--it-border:rgba(175,201,233,.54);
+  --it-shadow:0 20px 65px rgba(9,30,68,.23);
+}
+body{background:
+ radial-gradient(ellipse 45vw 35vh at 80% 19%,rgba(102,174,244,.52),transparent 85%),
+ radial-gradient(ellipse 35vw 60vh at 16% 95%,rgba(81,86,193,.35),transparent 85%),
+ linear-gradient(130deg,#06142b 0%,#102b56 52%,#041a37 100%)!important;
+ background-attachment:fixed!important}
+body[data-theme="light"]{background:
+ radial-gradient(ellipse 50vw 45vh at 72% 28%,#9bcafa99,transparent 85%),
+ linear-gradient(140deg,#e4f0ff,#bfd7fb)!important}
+body[data-wallpaper="purple"]{background:
+ radial-gradient(ellipse at 67% 28%,#8b58c78c,transparent 65%),
+ linear-gradient(135deg,#11102b,#2e2059,#10162f)!important}
+body[data-wallpaper="green"]{background:
+ radial-gradient(ellipse at 60% 30%,#20ad9790,transparent 65%),
+ linear-gradient(135deg,#061e27,#155363,#06212c)!important}
+body[data-wallpaper="midnight"]{background:linear-gradient(120deg,#030710,#101a32,#050b1c)!important}
+header{padding-top:15px!important;padding-bottom:12px!important}
+.itamaros-brand-heading{display:flex;align-items:center;gap:10px;letter-spacing:-.5px}
+#device-picker{backdrop-filter:blur(18px);border:1px solid #ffffff88;border-radius:14px!important}
+.desktop .app{transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.desktop .app:hover{transform:translateY(-3px);background:rgba(255,255,255,.16)!important;border-color:#ffffff55!important;box-shadow:0 10px 26px #03152d55}
+.desktop .app:active{transform:scale(.96)}
+.desktop .app-icon{transition:filter .2s ease,transform .2s ease;filter:drop-shadow(0 5px 12px #020a2770)}
+.desktop .app:hover .app-icon{transform:scale(1.09)}
+.taskbar{box-shadow:0 -12px 35px #02132925;backdrop-filter:blur(25px) saturate(1.4)!important}
+.taskbar button{transition:background-color .15s ease,transform .15s ease}
+.taskbar button:hover{transform:translateY(-1px)}
+#appmenu{border:1px solid var(--it-border);border-radius:22px!important;box-shadow:0 24px 75px #0416297a!important;
+ backdrop-filter:blur(28px) saturate(1.32)!important}
+#appresults{gap:8px}
+#appresults button{border:1px solid #c9d9ee80!important;border-radius:13px!important;
+ transition:transform .15s,box-shadow .15s}
+#appresults button:hover{transform:translateY(-2px);box-shadow:0 8px 21px #2b52832a}
+.window{border-radius:18px!important;box-shadow:var(--it-shadow)!important}
+.window .bar{border-radius:17px 17px 0 0}
+.window.maximized,.window.maximized .bar{border-radius:0!important}
+.it-settings{gap:16px!important}
+.it-settings-sidebar{border-radius:17px!important}
+.it-settings-main{border-radius:17px!important}
+.it-settings-panel{background:linear-gradient(130deg,#fff,#f1f7ff)!important;
+ border:1px solid #cbdff5!important;border-radius:16px!important;
+ box-shadow:0 5px 25px #122c5210!important;margin-bottom:12px}
+.it-settings-row{border-bottom:1px solid #e2ecf6!important}
+.it-settings-row:last-child{border-bottom:none!important}
+.it-settings-tabs button{border-radius:11px!important;text-align:left;transition:background-color .16s,transform .16s}
+.it-settings-tabs button:hover{transform:translateX(3px)}
+.it-settings-tabs button.active{box-shadow:inset 3px 0 0 #206bd3}
+.it-settings-toggle{padding:11px;background:#f0f7ff;border-radius:11px;margin:5px 0}
+#ios-update-toast{border:1px solid #abc9ec!important;border-radius:16px!important;box-shadow:0 14px 38px #0717354a}
+:where(button,input,select,textarea,a):focus-visible{outline:3px solid #79b7ff!important;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+ .desktop .app,.desktop .app-icon,.taskbar button,#appresults button,.it-settings-tabs button{transition:none!important;transform:none!important}
+}
+body.it-reduced-motion .desktop .app,body.it-reduced-motion .desktop .app-icon{transition:none!important;transform:none!important}
+@media(max-width:650px){
+ #appmenu{max-height:75dvh;overflow-y:auto}
+ .it-settings{display:block!important}
+ .it-settings-sidebar{max-height:185px;overflow-y:auto;margin-bottom:10px}
+}
