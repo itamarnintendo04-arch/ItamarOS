@@ -8,6 +8,8 @@ import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -72,6 +74,22 @@ fun NativeAppScreen(
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
+    val accountApi=remember { AndroidConnectApi() }
+    var accountUsername by remember { mutableStateOf<String?>(null) }
+    if(accountUsername==null) {
+        Column(
+            modifier=Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement=Arrangement.spacedBy(12.dp)
+        ){
+            Text("Welcome to ItamarOS",style=MaterialTheme.typography.headlineMedium)
+            Text("Sign in and create a unique username before using the app.")
+            AndroidConnectScreen(
+                api=accountApi,authOnly=true,
+                onAccountReady={ accountUsername=it }
+            )
+        }
+        return
+    }
     LaunchedEffect(groupInvite, contactUsername, desktopRequest) {
         if (!isTv && (groupInvite != null || contactUsername != null || desktopRequest != null)) current = "Connect"
     }
@@ -111,10 +129,10 @@ fun NativeAppScreen(
                         }
                     }
                     "Connect" -> if (!isTv) item {
-                        AndroidConnectScreen(groupInvite = groupInvite, contactUsername = contactUsername, desktopRequest = desktopRequest)
+                        AndroidConnectScreen(api=accountApi,groupInvite = groupInvite, contactUsername = contactUsername, desktopRequest = desktopRequest, onSignOut={accountUsername=null})
                     }
                     "Games" -> item {
-                        MobileGamesHub()
+                        MobileGamesHub(accountApi)
                     }
                     "Store" -> if (isTv) item {
                         TVStoreScreen(status, onOpenStoreListing, onBrowseStore)
