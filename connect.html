@@ -34,7 +34,18 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <label for="password">Password</label><input id="password" type="password" minlength="6" required autocomplete="current-password">
 <div class="row" style="margin-top:12px"><button class="primary" type="submit">Continue</button>
 <button id="swapAuth" type="button">Create an account</button></div></form>
-<p class="muted">Sign in using your ItamarConnect account. The future ItamaRos Hub button is disabled until it is ready.</p></section>
+<div class="note"><h3>Or sign in with SMS via Twilio</h3>
+<form id="smsForm">
+<label for="phone">Your phone number (international format)</label>
+<input type="tel" id="phone" placeholder="+972501234567" autocomplete="tel" inputmode="tel" required>
+<button type="submit">Send a one-time SMS code</button>
+</form>
+<form id="smsVerifyForm" hidden>
+<label for="smsCode">SMS verification code</label><input id="smsCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required>
+<button type="submit" class="primary">Verify code and sign in</button>
+</form>
+<p class="muted">SMS delivery works after the project owner configures Twilio in Supabase Auth. Standard message charges and provider limits may apply. Only request a code for a phone you control.</p></div>
+<p class="muted">The future ItamaRos Hub button remains disabled until you enable it.</p></section>
 <div id="app" hidden>
 <nav>
 <button data-tab="chats" data-selected="true">Chats</button>
@@ -42,6 +53,7 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <button data-tab="groups">Groups</button>
 <button data-tab="updates">Updates</button>
 <button data-tab="profile">Profile</button>
+<button data-tab="settings">Settings</button>
 <button id="logout">Sign out</button>
 </nav>
 <div id="tab-chats"><div class="columns">
@@ -62,6 +74,13 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <button id="discover">Discover public channels</button><div id="discovered"></div></section></div>
 <div id="tab-updates" hidden><section><h2>Updates from unmuted rooms</h2><button id="reloadUpdates">Refresh</button><div id="updates"></div>
 <p class="muted">Browser push notifications and background delivery are not configured. This feed refreshes on demand.</p></section></div>
+<div id="tab-settings" hidden><section><h2>Sync & privacy</h2>
+<label class="row" for="deviceSync"><input type="checkbox" id="deviceSync" checked>
+<strong>Sync chats, channels and saved contacts on this device</strong></label>
+<p class="muted">Enabled: show your account's online conversations here. Disabled: don't load account messages or contacts on this device; it remains signed in so you can change this setting. This does not erase previously synced data from other devices or the server. Messages already sent to other people cannot be unsent by disabling sync.</p>
+<p class="muted">Your choice is saved only in this browser or tablet profile. No other device's setting is changed.</p>
+<button id="refreshDevice" type="button">Refresh sync</button>
+</section></div>
 <div id="tab-profile" hidden><section><h2>My profile</h2><form id="profileForm">
 <label for="displayName">Display name</label><input id="displayName" maxlength="70" required>
 <label for="username">Unique username</label><input id="username" minlength="3" maxlength="24" required pattern="[a-z0-9_.]{3,24}">
