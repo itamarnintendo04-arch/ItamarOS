@@ -339,6 +339,27 @@ final class ItamarCloudService: ObservableObject {
         }
     }
 
+    // Cloud Climb standalone: accept only a short-lived access token after
+    // the user approved the QR on a trusted device. Never copy a refresh token.
+    func acceptTemporaryQRSession(access: String, userID: UUID) async throws {
+        guard ItamarCloudConfig.enabled, access.count >= 30 && access.count <= 4096,
+              let url=URL(string:ItamarCloudConfig.url + "/auth/v1/user") else {
+            throw ItamarCloudError.unauthenticated
+        }
+        var req=URLRequest(url:url)
+        req.timeoutInterval=12
+        req.setValue(ItamarCloudConfig.publicKey,forHTTPHeaderField:"apikey")
+        req.setValue("Bearer " + access,forHTTPHeaderField:"Authorization")
+        let (data,response)=try await URLSession.shared.data(for:req)
+        guard let http=response as? HTTPURLResponse,http.statusCode==200,
+              let result=try JSONSerialization.jsonObject(with:data) as? [String:Any],
+              let confirmed=result["id"] as? String,
+              confirmed.lowercased()==userID.uuidString.lowercased() else {
+            throw ItamarCloudError.badResponse("The approved session is invalid or expired.")
+        }
+        setSession(access:access,refresh:"",userID:userID)
+    }
+
     private func setSession(access: String, refresh: String, userID: UUID) {
         let value = CloudStoredToken(access: access, refresh: refresh, userID: userID)
         session = value
