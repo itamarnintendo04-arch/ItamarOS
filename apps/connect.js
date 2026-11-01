@@ -14,11 +14,25 @@ const client=sd.createClient(config.url,config.publishableKey,{
 let user=null,rooms=[],current=null,creating=false,register=false;
 let deviceSync=localStorage.getItem('itamaros-connect-device-sync')!=='off';
 let pendingPhone='';
+let messageChannel=null;
+function stopWatching(){
+ if(messageChannel){void client.removeChannel(messageChannel);messageChannel=null}
+}
+function watchCurrentRoom(){
+ stopWatching();
+ if(!current||!user||!deviceSync)return;
+ const id=current.id;
+ messageChannel=client.channel('itamaros-room-'+id)
+  .on('postgres_changes',{event:'INSERT',schema:'public',table:'itamar_messages',filter:'room_id=eq.'+id},
+    ()=>{if(current?.id===id)safe(loadMessages)();})
+  .subscribe();
+}
 $('deviceSync').checked=deviceSync;
 function requireSync(){
  if(!deviceSync)throw Error('Cloud sync is disabled on this device. Enable it in Settings to open messages.');
 }
 function clearCloudView(){
+ stopWatching();
  rooms=[];current=null;
  for(const id of ['rooms','groups','channels','messages','updates','discovered'])$(id)?.replaceChildren();
  $('threadTitle').textContent='Cloud sync is off';
@@ -68,20 +82,46 @@ async function openRoom(room){
  else selectTab('chats');
  $('sendForm').hidden=room.kind==='channel'&&room.owner_id!==user.id;
  await loadMessages();
+ watchCurrentRoom();
 }
 async function loadMessages(){
  requireSync();
  if(!current)return;
+ const requestedRoom=current.id;
  const {data,error}=await client.from('itamar_messages')
   .select('id,room_id,sender_id,body,created_at,deleted_at,is_view_once')
   .eq('room_id',current.id).order('created_at',{ascending:true}).limit(100);
  if(error)throw error;
+ if(!current||current.id!==requestedRoom)return;
  const root=$('messages');root.replaceChildren();
  for(const m of data||[]){
   const wrap=document.createElement('div');wrap.className='msg'+(m.sender_id===user.id?' mine':'');
   const label=document.createElement('small');label.textContent=(m.sender_id===user.id?'You':'Member')+' · '+new Date(m.created_at).toLocaleString();
   const txt=document.createElement('div');txt.textContent=m.deleted_at?'Message deleted':m.body;
-  wrap.append(label,txt);root.append(wrap)
+  wrap.append(label,txt);
+  if(m.sender_id!==user.id){
+   const controls=document.createElement('div');controls.className='row';
+   const report=document.createElement('button');report.type='button';report.textContent='Report';
+   report.onclick=()=>safe(async()=>{
+    const reason=window.prompt('Reason: Spam, Harassment, Threats or Other','Spam');
+    if(reason===null)return;
+    const choices={spam:'Spam',harassment:'Harassment',threats:'Threats',other:'Other'};
+    const selected=choices[reason.trim().toLowerCase()];
+    if(!selected)throw Error('Choose Spam, Harassment, Threats or Other');
+    const {error}=await client.rpc('itamar_report_message',{p_message:m.id,p_reason:selected,p_detail:''});
+    if(error)throw error;
+    setStatus('Report saved. Moderator review is not yet configured.');
+   })();
+   const block=document.createElement('button');block.type='button';block.textContent='Block';
+   block.onclick=()=>safe(async()=>{
+    if(!window.confirm('Block this account and hide its messages?'))return;
+    const {error}=await client.from('itamar_blocks').insert({blocker_id:user.id,blocked_id:m.sender_id});
+    if(error&&error.code!=='23505')throw error;
+    await loadMessages();await showBlocks();setStatus('Account blocked.');
+   })();
+   controls.append(report,block);wrap.append(controls);
+  }
+  root.append(wrap)
  }
  root.scrollTop=root.scrollHeight;
  const {error:ackError}=await client.rpc('itamar_ack_messages',{p_room:current.id,p_opened:true});
@@ -99,6 +139,25 @@ async function loadUpdates(){
  }
  if(!root.childNodes.length)root.textContent='No unmuted updates yet.';
 }
+async function showBlocks(){
+ if(!user||!deviceSync)return;
+ const root=$('blockedUsers');if(!root)return;
+ const {data,error}=await client.from('itamar_blocks').select('blocked_id').eq('blocker_id',user.id).limit(100);
+ if(error)throw error;
+ root.replaceChildren();
+ if(!data?.length){root.textContent='No blocked accounts.';return}
+ for(const item of data){
+  const line=document.createElement('div');line.className='room';
+  const title=document.createElement('span');title.textContent='Blocked account';
+  const undo=document.createElement('button');undo.type='button';undo.textContent='Unblock';
+  undo.onclick=()=>safe(async()=>{
+   const {error}=await client.from('itamar_blocks').delete().eq('blocker_id',user.id).eq('blocked_id',item.blocked_id);
+   if(error)throw error;
+   await showBlocks();if(current)await loadMessages();
+  })();
+  line.append(title,undo);root.append(line);
+ }
+}
 async function loadProfile(){
  requireSync();
  if(!user)return;
@@ -112,7 +171,7 @@ async function drawSession(){
  const {data,error}=await client.auth.getUser();
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
- if(deviceSync){await refreshRooms();await loadProfile();}
+ if(deviceSync){await refreshRooms();await loadProfile();await showBlocks();await showBlocks();}
  else {clearCloudView();selectTab('settings');}
 }
 $('authForm').addEventListener('submit',safe(async(event)=>{
@@ -162,7 +221,7 @@ $('refreshDevice').onclick=()=>safe(async()=>{
  if(!deviceSync)throw Error('Enable Sync to refresh messages.');
  await refreshRooms();setStatus('Synced room list refreshed.');
 })();
-$('logout').onclick=safe(async()=>{const {error}=await client.auth.signOut();if(error)throw error;current=null;rooms=[];await drawSession();setStatus('Signed out.')});
+$('logout').onclick=safe(async()=>{stopWatching();const {error}=await client.auth.signOut();if(error)throw error;current=null;rooms=[];await drawSession();setStatus('Signed out.')});
 $('sendForm').addEventListener('submit',safe(async(event)=>{
  event.preventDefault();requireSync();if(!current)return;
  const body=$('messageBody').value.trim();if(!body)return;
@@ -206,6 +265,14 @@ $('discover').onclick=safe(async()=>{
 });
 $('reloadUpdates').onclick=()=>safe(loadUpdates)();
 for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>selectTab(button.dataset.tab);
-client.auth.onAuthStateChange((_event,session)=>{if(!session){user=null;$('app').hidden=true;$('auth').hidden=false}});
+client.auth.onAuthStateChange((_event,session)=>{if(!session){stopWatching();user=null;$('app').hidden=true;$('auth').hidden=false}});
+// RLS-protected Realtime is primary; polling heals reconnects and new room invitations.
+window.setInterval(()=>{
+ if(!user||!deviceSync||document.visibilityState!=='visible')return;
+ if(current)safe(loadMessages)();else safe(refreshRooms)();
+},12000);
+window.setInterval(()=>{
+ if(user&&deviceSync&&document.visibilityState==='visible')safe(refreshRooms)();
+},30000);
 safe(drawSession)();
 })();
