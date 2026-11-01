@@ -149,7 +149,11 @@ fun NativeAppScreen(
                         TVServiceScreen(onLaunchService)
                     }
                     "Settings" -> item {
-                        if (!isTv) AndroidLanguageSettings()
+                        if (!isTv) {
+                            AndroidConnectSyncSettings()
+                            HorizontalDivider()
+                            AndroidLanguageSettings()
+                        }
                         NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
                             onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings)
                     }
