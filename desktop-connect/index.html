@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<title>ItamarOS Connect</title>
+<style>
+:root{font:15px system-ui,-apple-system,"Segoe UI",sans-serif;color:#173457;background:#edf4fc}
+*{box-sizing:border-box}body{margin:0}button,input{font:inherit}
+button{background:#e1ebfb;color:#134b95;border:0;border-radius:10px;padding:10px 15px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}.primary{background:#2363c4;color:white}
+h1,h2,h3,p{margin:0 0 10px}h1{font-size:22px}h2{font-size:18px}
+small{color:#55718f}header{padding:17px 23px;background:#123d7b;color:white;display:flex;align-items:center;justify-content:space-between}
+header strong{font-size:21px}header small{color:#c8ddf6}
+main{padding:20px;max-width:1150px;margin:auto}
+.panel{background:white;border-radius:16px;padding:22px;box-shadow:0 4px 18px #10294410}
+#login{max-width:530px;margin:36px auto;text-align:center}
+#qrImage{display:block;margin:20px auto;width:260px;height:260px;border:10px solid #fff;border-radius:14px;box-shadow:0 3px 16px #1e4e8b20}
+#pairCode{letter-spacing:.22em;font-size:22px;font-weight:700;color:#164c92}
+.note{padding:14px;background:#ecf4ff;border-radius:10px;margin:14px 0;line-height:1.55;color:#34536f}
+#layout{display:grid;grid-template-columns:315px 1fr;gap:16px}
+.sidebar{max-height:75vh;overflow-y:auto}.conversation{height:75vh;display:flex;flex-direction:column;min-height:380px}
+#roomList{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.room{display:block;text-align:left;width:100%;background:#f3f7fd}
+.room.active{background:#2363c4;color:white}
+.room small{display:block}
+#messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:#f7faff;border-radius:12px}
+.message{align-self:flex-start;max-width:80%;background:#e5effe;padding:10px 13px;border-radius:13px;overflow-wrap:anywhere;white-space:pre-wrap}
+.message.mine{align-self:flex-end;background:#cde2ff}
+.message small{display:block;margin-top:6px}
+.formrow{display:flex;gap:8px;margin:12px 0}input{min-width:0;padding:10px 11px;border:1px solid #b7cbe5;border-radius:9px;width:100%}
+#status{min-height:27px;color:#a33442;margin-top:14px}
+#profileSetup{max-width:530px;margin:50px auto}
+[hidden]{display:none!important}
+@media(max-width:770px){#layout{grid-template-columns:1fr}.sidebar{max-height:33vh}.conversation{height:55vh}}
+</style></head><body>
+<header><div><strong>💬 ItamarOS Connect</strong><br><small>Independent desktop messenger · Windows &amp; macOS</small></div><button id="logout" hidden>Sign out</button></header>
+<main>
+<section id="login" class="panel">
+<h1>Sign in with your phone</h1>
+<p>Open ItamarConnect on a phone already signed in with a verified number. Scan this QR to approve the computer without paying for another SMS.</p>
+<img id="qrImage" alt="One-time computer pairing QR code" hidden>
+<div id="pairCode"></div>
+<p id="expiry"></p>
+<button id="newQR" class="primary">Generate QR code</button>
+<div class="note">Your QR code expires in 3 minutes. The phone must explicitly approve this computer. Login on your computer is temporary and expires when your phone's current session token expires. No password, SMS code or refresh token is copied.</div>
+</section>
+<section id="profileSetup" class="panel" hidden>
+<h2>Finish your profile</h2>
+<p>A public name and unique username are needed before messaging.</p>
+<form id="profileForm">
+<label>Display name<input id="displayName" maxlength="70" required autocomplete="nickname"></label>
+<label>Username<input id="username" pattern="[a-z0-9_.]{3,24}" minlength="3" maxlength="24" required placeholder="myname"></label>
+<button class="primary" type="submit">Save profile</button>
+</form>
+</section>
+<div id="layout" hidden>
+<aside class="panel sidebar">
+<h2>Conversations</h2>
+<p id="selfUser"></p>
+<button id="refresh">Refresh</button>
+<div id="roomList"></div>
+<h3>New private chat</h3>
+<form id="newChat">
+<input id="chatTitle" placeholder="Conversation name" maxlength="90" required>
+<input id="chatUser" placeholder="@username" maxlength="24" required style="margin-top:6px">
+<button type="submit" class="primary" style="margin-top:6px">Start chat</button>
+</form>
+</aside>
+<section class="panel conversation">
+<h2 id="roomTitle">Choose a conversation</h2>
+<div id="messages" aria-live="polite"></div>
+<form class="formrow" id="sendForm" hidden>
+<input id="messageText" maxlength="4000" placeholder="Type a message" required>
+<button type="submit" class="primary">Send</button>
+</form>
+</section>
+</div>
+<p id="status" role="status" aria-live="polite"></p>
+</main><script src="./renderer.js"></script>
+</body></html>
