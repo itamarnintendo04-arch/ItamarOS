@@ -4,6 +4,16 @@
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
+## November 1: Windows All Apps, Twilio SMS and device sync
+
+**Windows desktop application:** the All apps menu now lists ItamarOS built-ins and, in the packaged Electron edition on Windows, locally installed Start Menu shortcut entries. Programs open only after a user click and are never fabricated or uploaded. Some Microsoft Store apps may not have classic Start Menu shortcuts and may be absent from the native listing. Browser emulators cannot enumerate desktop programs.
+
+**Desktop/tablet login:** the Connect web client has an email login and a phone OTP flow through Supabase Auth using Twilio/Twilio Verify as its server-side SMS provider. The native iPad/iPhone and Android tablet app sources also include SMS OTP support. SMS is **not active** until a new Supabase project and an authorized Twilio sender are configured. See [Twilio and sync setup](messaging/TWILIO_SETUP.md).
+
+**Sync control:** account conversation/contact loading can be turned off in each device's settings. This is a local privacy control, not server-side deletion; already sent or retained server messages remain accessible elsewhere.
+
+**Codebase:** a [ready-to-import ItamarOS project brief](codebase/ItamarOS-project-brief.md) is available. No external Codebase project was created because the owner's Codebase account is not connected to this tool; the existing GitHub repo remains the authoritative source.
+
 ## ItamarConnect in the emulator and native Linux desktop
 
 ItamarConnect now has a [web application](connect.html) and a built-in icon in the [browser emulator](index.html). The same static UI is bundled in the offline Electron desktop emulator; the offline copy correctly reports that cross-device chat is unavailable without cloud configuration. The prototype native Linux ItamarOS system has its own **ItamarConnect** menu launcher that opens the official HTTPS Connect app in a dedicated browser window. This does **not** mean the prototype ISO has been built and boot-tested.
