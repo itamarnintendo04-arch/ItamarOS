@@ -15,7 +15,7 @@ jobs:
           node-version: '22'
       - name: Check JavaScript syntax
         run: |
-          for file in apps/*.js sw.js; do node --check "$file"; done
+          for file in apps/*.js sw.js chatgpt-plugin/server.mjs; do node --check "$file"; done
       - name: Run smoke tests
         run: |
           node tests/smoke.cjs
