@@ -18,7 +18,7 @@ struct ItamarOSApp: App {
     @ViewBuilder
     private var home: some View {
         #if os(iOS)
-        MainScreen()
+        ItamarAccountGate()
             .environmentObject(releases)
             .environmentObject(appleAccounts)
             .environmentObject(messages)
