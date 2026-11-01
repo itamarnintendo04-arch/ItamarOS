@@ -38,7 +38,7 @@ struct ItamarAccountGate: View {
             checking = cloud.isSignedIn
             if cloud.isSignedIn && cloud.deviceSyncEnabled {
                 do { try await cloud.reload(); error = "" }
-                catch { error = error.localizedDescription }
+                catch { self.error = error.localizedDescription }
             }
             checking = false
         }
@@ -50,7 +50,7 @@ struct ItamarAccountGate: View {
                 Task {
                     checking = true
                     do { try await cloud.reload() }
-                    catch { error = error.localizedDescription }
+                    catch { self.error = error.localizedDescription }
                     checking = false
                 }
             }
