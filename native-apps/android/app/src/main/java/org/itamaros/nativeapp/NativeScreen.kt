@@ -47,6 +47,7 @@ fun NativeAppScreen(
     isTv: Boolean,
     groupInvite: String?,
     contactUsername: String?,
+    desktopRequest: String?,
     device: String,
     status: String,
     updateStatus: String,
@@ -71,8 +72,8 @@ fun NativeAppScreen(
     onSaveScore: (Int) -> Unit
 ) {
     var current by remember { mutableStateOf("Home") }
-    LaunchedEffect(groupInvite, contactUsername) {
-        if (!isTv && (groupInvite != null || contactUsername != null)) current = "Connect"
+    LaunchedEffect(groupInvite, contactUsername, desktopRequest) {
+        if (!isTv && (groupInvite != null || contactUsername != null || desktopRequest != null)) current = "Connect"
     }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
@@ -110,7 +111,7 @@ fun NativeAppScreen(
                         }
                     }
                     "Connect" -> if (!isTv) item {
-                        AndroidConnectScreen(groupInvite = groupInvite, contactUsername = contactUsername)
+                        AndroidConnectScreen(groupInvite = groupInvite, contactUsername = contactUsername, desktopRequest = desktopRequest)
                     }
                     "Games" -> item {
                         MobileGamesHub()

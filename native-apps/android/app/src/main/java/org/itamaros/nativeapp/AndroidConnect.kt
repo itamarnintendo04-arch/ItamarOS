@@ -72,6 +72,31 @@ private class AndroidConnectApi {
         token=r.optString("access_token").ifEmpty{throw IllegalStateException("Confirm your email, then sign in")}
         userID=r.optJSONObject("user")?.optString("id")
     }
+    suspend fun approveDesktopPairing(request:String){
+        require(Regex("[A-Za-z0-9_-]{24,40}").matches(request)){"Invalid QR request"}
+        val jwt=token?:throw IllegalStateException("Sign in to Connect first")
+        withContext(Dispatchers.IO){
+            val conn=URL("https://itamaros-store-api.onrender.com/api/connect/pair/approve")
+                .openConnection() as HttpURLConnection
+            try {
+                conn.requestMethod="POST"
+                conn.connectTimeout=10000
+                conn.readTimeout=10000
+                conn.doOutput=true
+                conn.setRequestProperty("Content-Type","application/json")
+                conn.setRequestProperty("Authorization","Bearer "+jwt)
+                val payload=JSONObject().put("requestId",request).toString()
+                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                if(conn.responseCode !in 200..299){
+                    val error=runCatching {
+                        JSONObject(conn.errorStream?.bufferedReader()?.use{it.readText()}.orEmpty())
+                            .optString("error")
+                    }.getOrNull().orEmpty()
+                    throw IllegalStateException(error.ifBlank{"Computer approval rejected"})
+                }
+            } finally { conn.disconnect() }
+        }
+    }
     suspend fun requestSms(phone:String){
         require(Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)) {
             "Enter an international phone number belonging to you"
@@ -371,7 +396,7 @@ private fun PublicLinkQR(url:String){
 }
 
 @Composable
-fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
+fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null,desktopRequest:String?=null){
     val api=remember{AndroidConnectApi()}
     val ctx=LocalContext.current
     val scope=rememberCoroutineScope()
@@ -382,6 +407,8 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
     var signInPhone by remember{mutableStateOf("")}
     var otpInput by remember{mutableStateOf("")}
     var codeRequested by remember{mutableStateOf(false)}
+    var pendingDesktopRequest by remember{mutableStateOf("")}
+    var desktopApprovalStatus by remember{mutableStateOf("")}
     var pendingSignupAvatar by remember{mutableStateOf<Uri?>(null)}
     val syncOnThisDevice=remember {
         ctx.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE)
@@ -425,6 +452,12 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
         if(groupInvite?.matches(Regex("[a-f0-9]{48}"))==true) {
             inviteToJoin=groupInvite
             tab="Profile"
+        }
+    }
+    LaunchedEffect(desktopRequest) {
+        if(desktopRequest?.matches(Regex("[A-Za-z0-9_-]{24,40}"))==true){
+            pendingDesktopRequest=desktopRequest
+            desktopApprovalStatus=""
         }
     }
     LaunchedEffect(contactUsername) {
@@ -530,6 +563,24 @@ fun AndroidConnectScreen(groupInvite:String?=null,contactUsername:String?=null){
         Button(onClick={api.token=null;api.userID=null;signed=false}){Text("Sign out")}
         return
     }
+    if(pendingDesktopRequest.isNotBlank()){
+        Card {
+            Column(modifier=Modifier.padding(14.dp)) {
+                Text("Approve computer login",style=MaterialTheme.typography.titleMedium)
+                Text("Compare this code with the one on your computer: "+pendingDesktopRequest.take(6).uppercase())
+                Text("Only approve your own computer. It receives temporary message access, not your password or SMS code.")
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    Button(onClick={perform{
+                        api.approveDesktopPairing(pendingDesktopRequest)
+                        pendingDesktopRequest=""
+                        desktopApprovalStatus="Computer approved. Return to your PC or Mac."
+                    }}){Text("Approve")}
+                    TextButton(onClick={pendingDesktopRequest=""}){Text("Cancel")}
+                }
+            }
+        }
+    }
+    if(desktopApprovalStatus.isNotBlank())Text(desktopApprovalStatus)
     Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
     Row(modifier=Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
         listOf("Chats","Groups","Channels","Contacts","Updates","Profile").forEach{value->
