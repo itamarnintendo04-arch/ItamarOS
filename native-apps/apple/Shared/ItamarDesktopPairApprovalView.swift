@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import LocalAuthentication
 
 struct ItamarDesktopPairRoute: Identifiable {
     let request: String
@@ -21,7 +22,7 @@ struct ItamarDesktopPairApprovalView: View {
                     Text("Compare this code with the one displayed on your computer:")
                     Text(String(request.prefix(6)).uppercased())
                         .font(.system(.title,design:.monospaced)).bold()
-                    Text("Only approve a computer you are using. It will get temporary access to your messages, not your password or SMS code.")
+                    Text("Only approve a computer you are using. Biometric confirmation is required. Only approve a device you recognize; a pending desktop login can access your account.")
                         .foregroundStyle(.secondary)
                 }
                 Section {
@@ -30,6 +31,22 @@ struct ItamarDesktopPairApprovalView: View {
                             busy = true
                             Task {
                                 do {
+                                    let verifier=LAContext()
+                                    var authError:NSError?
+                                    guard verifier.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                                                                     error:&authError) else {
+                                        throw NSError(domain:"ItamarOSApproval",code:1,userInfo:[
+                                            NSLocalizedDescriptionKey:"Face ID or Touch ID must be set up before approving."
+                                        ])
+                                    }
+                                    let passed=try await verifier.evaluatePolicy(
+                                        .deviceOwnerAuthenticationWithBiometrics,
+                                        localizedReason:"Approve a login on another device using your ItamarOS account")
+                                    guard passed else {
+                                        throw NSError(domain:"ItamarOSApproval",code:2,userInfo:[
+                                            NSLocalizedDescriptionKey:"Biometric authentication was not completed."
+                                        ])
+                                    }
                                     try await cloud.approveDesktopPairing(request:request)
                                     result = "Approved. Return to your computer."
                                 } catch { result = error.localizedDescription }
