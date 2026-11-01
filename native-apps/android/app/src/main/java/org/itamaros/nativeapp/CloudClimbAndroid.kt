@@ -30,7 +30,7 @@ import kotlin.math.abs
 
 /**
  * Original Cloud Climb platformer prototype. Progress is saved on this device,
- * per signed-in account, not synced to Supabase or to other players.
+ * with optional authenticated cloud sync and an offline local demonstration.
  */
 @Composable
 fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onExit: () -> Unit) {
@@ -79,14 +79,24 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     var unlockedWorlds by remember(accountKey) { mutableStateOf(setOf(1)) }
     var collectedCubes by remember(accountKey) { mutableStateOf(emptySet<Pair<Int,Int>>()) }
+    var coloredBosses by remember(accountKey) { mutableStateOf(emptySet<Int>()) }
+    var ownedCharacters by remember(accountKey) {
+        mutableStateOf(prefs.getStringSet("local_characters",emptySet())!!.toSet())
+    }
+    var characterOrbOpen by remember { mutableStateOf(false) }
+    var characterBusy by remember { mutableStateOf(false) }
+    var characterNotice by remember { mutableStateOf("Unlock a surprise character for 500 earned coins.") }
+    var enteringDoor by remember { mutableStateOf(false) }
     var rewardsRefresh by remember(accountKey) { mutableIntStateOf(0) }
     var rewardsStatus by remember(accountKey) { mutableStateOf("World progress loads after sign-in") }
     var slashInput by remember { mutableStateOf("") }
     var slashReply by remember { mutableStateOf("Type /help for Cloud Climb commands") }
     val worldKeys = ((level - 1) / 100 - (unlockedWorlds.size - 1)).coerceAtLeast(0)
-    val secretWorldReady = collectedCubes.size == 50
-    val cubeNumber = (level - 1) % 5 + 1
-    val cubeAlreadyCollected = (activeWorld to cubeNumber) in collectedCubes
+    val secretWorldReady = coloredBosses.size == 10
+    val unopenedDoors = if(activeWorld in 1..10)
+        (1..5).filter { (activeWorld to it) !in collectedCubes } else emptyList()
+    val blueDoorsInWorld = collectedCubes.count { it.first==activeWorld }
+    val nextColoredBoss = ((level - 2) / 30).coerceIn(0,10)
 
     val showTouchControls = !(autoHideControls && controllerConnected)
     val darkBackground = if (nightSky) Color(0xFF151438) else Color(0xFF1C427D)
@@ -117,17 +127,103 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 add(1)
                 if (worlds!=null) for(i in 0 until worlds.length()) add(worlds.optInt(i))
             }
-            val cubes=rewards.optJSONArray("cubes")
+            val cubes=rewards.optJSONArray("blue_cubes")
             collectedCubes=buildSet {
                 if(cubes!=null)for(i in 0 until cubes.length()) {
                     val cube=cubes.optJSONObject(i) ?: continue
                     add(cube.optInt("world") to cube.optInt("cube"))
                 }
             }
-            if(activeWorld !in unlockedWorlds && !(activeWorld==11 && collectedCubes.size==50))
+            val colored=rewards.optJSONArray("colored_bosses")
+            coloredBosses=buildSet {
+                if(colored!=null)for(i in 0 until colored.length())add(colored.optInt(i))
+            }
+            val chars=rewards.optJSONArray("characters")
+            ownedCharacters=buildSet {
+                if(chars!=null)for(i in 0 until chars.length())add(chars.optString(i))
+            }
+            if(activeWorld !in unlockedWorlds && !(activeWorld==11 && coloredBosses.size==10))
                 activeWorld=1
-            rewardsStatus="Collected "+collectedCubes.size+"/50 cubes"
+            rewardsStatus="Blue doors "+collectedCubes.size+"/50 · Colored "+coloredBosses.size+"/10"
         }catch(_:Exception) { rewardsStatus="World rewards temporarily unavailable" }
+    }
+    LaunchedEffect(level,syncRevision,syncReady) {
+        if(!syncReady || nextColoredBoss !in 1..10 ||
+            nextColoredBoss in coloredBosses)return@LaunchedEffect
+        try {
+            val got=JSONObject(api.request("/rest/v1/rpc/itamar_climb_claim_colored",
+                "POST",JSONObject().put("p_boss_index",nextColoredBoss)))
+            if(got.optBoolean("awarded")) {
+                coloredBosses=coloredBosses + nextColoredBoss
+                rewardsRefresh+=1
+                message="✨ You found a rare colored cube after a boss!"
+            }
+        }catch(_:Exception) { }
+    }
+    fun buyCharacter() {
+        if(characterBusy||coins<500)return
+        characterBusy=true
+        scope.launch {
+            try {
+                if(syncReady && !api.userID.isNullOrBlank()){
+                    syncReady=false
+                    val result=JSONObject(api.request("/rest/v1/rpc/itamar_climb_buy_random_character",
+                        "POST",JSONObject()))
+                    if(result.optBoolean("purchased")){
+                        coins=result.getInt("coins")
+                        syncRevision=result.getLong("revision")
+                        val character=result.getString("character")
+                        ownedCharacters=ownedCharacters+character
+                        characterNotice="🎉 New character: "+character.replace('_',' ').uppercase()
+                        rewardsRefresh+=1
+                    } else characterNotice="You already own every regular character!"
+                    syncReady=true
+                } else {
+                    val available=(1..12).map { "sky_"+it.toString().padStart(2,'0') }
+                        .filter { it !in ownedCharacters }
+                    if(available.isEmpty()) characterNotice="You already own every regular character!"
+                    else {
+                        val character=available.random()
+                        coins-=500
+                        ownedCharacters=ownedCharacters+character
+                        prefs.edit().putStringSet("local_characters",ownedCharacters).apply()
+                        characterNotice="🎉 Offline character: "+character.uppercase()
+                    }
+                }
+            }catch(e:Exception){
+                characterNotice=e.localizedMessage?:"Unable to unlock character"
+                syncReady=false
+                syncRefresh+=1
+            }finally {characterBusy=false}
+        }
+    }
+    fun enterBlueDoor(door:Int) {
+        if(enteringDoor || door !in unopenedDoors || activeWorld !in 1..10) return
+        enteringDoor=true
+        val world=activeWorld
+        scope.launch {
+            try {
+                if(syncReady && !api.userID.isNullOrBlank()){
+                    val result=JSONObject(api.request("/rest/v1/rpc/itamar_climb_enter_blue_door",
+                        "POST",JSONObject().put("p_world",world).put("p_cube",door)))
+                    if(result.optInt("blue_collected")==5) {
+                        message="🔮 You unlocked the mystery character for World "+world+"!"
+                    }else message="💙 Blue cube found behind Door "+door+"!"
+                    rewardsRefresh+=1
+                } else {
+                    collectedCubes=collectedCubes+(world to door)
+                    prefs.edit().putStringSet("local_blue_doors",
+                        collectedCubes.map { it.first.toString()+":"+it.second }.toSet()).apply()
+                    if(collectedCubes.count{it.first==world}==5){
+                        val character="mystery_world_"+world
+                        ownedCharacters=ownedCharacters+character
+                        prefs.edit().putStringSet("local_characters",ownedCharacters).apply()
+                        message="🔮 World "+world+" mystery character unlocked!"
+                    }else message="💙 Found a hidden blue cube!"
+                }
+            } catch(e:Exception){message=e.localizedMessage?:"Door unavailable"}
+            finally{enteringDoor=false}
+        }
     }
     // Save after each meaningful change and on room exit; no manual save required.
     LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver) {
@@ -187,26 +283,11 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     fun advanceStage() {
         val completed = level
-        val awardWorld=activeWorld
-        val awardCube=cubeNumber
-        if (!cubeAlreadyCollected && awardWorld in 1..10 && syncReady) {
-            collectedCubes = collectedCubes + (awardWorld to awardCube)
-            scope.launch {
-                try {
-                    api.request("/rest/v1/rpc/itamar_climb_collect_cube",
-                        "POST",JSONObject().put("p_world",awardWorld)
-                            .put("p_cube",awardCube))
-                    rewardsRefresh += 1
-                } catch(e:Exception) {
-                    collectedCubes = collectedCubes - (awardWorld to awardCube)
-                    rewardsStatus=e.localizedMessage ?: "Cube could not be saved"
-                }
-            }
-        }
         coins += 10
         level += 1
         bossHealth = 3
-        shopDue = if (completed % 10 == 0 && hearts < 3) completed else 0
+        shopDue = if(hearts<3 && (level % 30==0 ||
+            (completed % 10==0 && completed % 30!=0))) level else 0
         message = "Level " + completed + " complete! +10 coins." +
             (if (completed % 100 == 0) " A new world key is available!" else "")
         resetPosition()
@@ -311,6 +392,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         Text("👤 " + playerName + "   ·   WORLD " + activeWorld +
             "   ·   🔑 " + worldKeys, color = Color.White)
         Text(rewardsStatus, color=goldAccent,style=MaterialTheme.typography.bodySmall)
+        Text("💙 World "+activeWorld+" doors "+blueDoorsInWorld+"/5 · 🌈 Colored cubes "+
+            coloredBosses.size+"/10",color=Color.White)
         Row(modifier=Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             for(world in 1..11) {
@@ -364,7 +447,9 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 resetPosition()
             }) { Text("Try again") }
         } else if (shopDue != 0) {
-            Text("Level " + shopDue + " cleared! Buy 1 missing heart for 100 coins?")
+            Text(if(shopDue % 30==0)
+                "Before Boss Level "+shopDue+": restore 1 missing heart for 100 coins?"
+                else "Heart Shop · Restore 1 missing heart for 100 coins?")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
                     if (coins >= 100 && hearts < 3) {
@@ -399,12 +484,13 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         size = Size(platform.third * sx, 12f * sy),
                         cornerRadius = CornerRadius(5f))
                 }
-                if (activeWorld in 1..10 && !cubeAlreadyCollected) {
-                    val gemColors=listOf(Color(0xFFFFA35C),Color(0xFFFF64A8),
-                        Color(0xFF71F2E4),Color(0xFFFFDD67),Color(0xFFA68AFF))
-                    drawRoundRect(gemColors[(cubeNumber-1)%gemColors.size],
-                        topLeft=Offset((platforms.last().first+platforms.last().third/2-10)*sx,82f*sy),
-                        size=Size(20f*sx,20f*sy),cornerRadius=CornerRadius(4f))
+                if(activeWorld in 1..10)for(door in unopenedDoors) {
+                    val platform=platforms[door]
+                    val dx=(platform.first+platform.third/2-12f)*sx
+                    val dy=(platform.second-37f)*sy
+                    drawRoundRect(Color(0xFF1558D6),topLeft=Offset(dx,dy),
+                        size=Size(24f*sx,37f*sy),cornerRadius=CornerRadius(8f))
+                    drawCircle(Color(0xFF7DD9FF),3f*sx,Offset(dx+17f*sx,dy+20f*sy))
                 }
                 if (bossStage) {
                     drawCircle(Color(0xFFAF4EF2), 21f * sx, Offset(bossX * sx, 65f * sy))
@@ -440,13 +526,40 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 Button(onClick = { jump = true }) { Text("Jump") }
             }
         }
-        if (message.isNotEmpty() && !gameOver) Text(message, style = MaterialTheme.typography.bodySmall)
+        if(activeWorld in 1..10 && !paused && !gameOver && shopDue==0) {
+            val closeDoor=unopenedDoors.firstOrNull { door ->
+                val p=platforms[door]
+                abs(px-(p.first+p.third/2))<60f && abs(py-(p.second-5f))<60f
+            }
+            if(closeDoor!=null)Button(onClick={enterBlueDoor(closeDoor)},enabled=!enteringDoor) {
+                Text("🚪 Enter Blue Door "+closeDoor)
+            }
+        }
+        if (message.isNotEmpty() && !gameOver) Text(message,
+            color=Color.White,style=MaterialTheme.typography.bodySmall)
         Text(
             if (controllerConnected) "🎮 Controller connected · A: Jump · X: Attack · Start: Pause"
             else if (showControlHints) "Touch controls · Connect a controller to hide them automatically."
             else "",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
         Text(syncStatus, color = goldAccent, style = MaterialTheme.typography.bodySmall)
+        Button(onClick={characterOrbOpen=true},modifier=Modifier.fillMaxWidth(),
+            colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF6651C9))) {
+            Text("🔮 Character Orb · Collection "+ownedCharacters.size)
+        }
+        if(characterOrbOpen)AlertDialog(
+            onDismissRequest={characterOrbOpen=false},
+            title={Text("🔮 Character Orb")},
+            text={Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                Text("Unlock a random NEW character for 500 earned game coins.")
+                Text("No real-money purchases. Owned characters: "+ownedCharacters.size)
+                Text(characterNotice)
+            }},
+            confirmButton={Button(onClick={buyCharacter()},enabled=coins>=500 && !characterBusy){
+                Text(if(characterBusy)"Unlocking..." else "Unlock · 500 🪙")
+            }},
+            dismissButton={TextButton(onClick={characterOrbOpen=false}){Text("Close")}}
+        )
         Text("Cloud Climb Commands", color=Color.White,style=MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             OutlinedTextField(slashInput,{slashInput=it.take(100)},
@@ -456,7 +569,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 val cmd=slashInput.trim().lowercase()
                 slashReply=when {
                     cmd=="/help"->"/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
-                    cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Cubes ${collectedCubes.size}/50 · Keys $worldKeys"
+                    cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue ${collectedCubes.size}/50 · Colored ${coloredBosses.size}/10 · Characters ${ownedCharacters.size} · Keys $worldKeys"
                     cmd=="/pause"->{paused=true;"Game paused."}
                     cmd=="/resume"->{paused=false;"Game resumed."}
                     cmd=="/room"->if(room=="local-cloudclimb")"Offline demo · no room code" else "Room code: $room"
