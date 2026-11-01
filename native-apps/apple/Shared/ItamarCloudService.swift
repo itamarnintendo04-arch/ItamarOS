@@ -147,6 +147,8 @@ final class ItamarCloudService: ObservableObject {
     @Published private(set) var channels: [ItamarCloudRoom] = []
     @Published private(set) var updates: [ItamarCloudUpdate] = []
     @Published var status = ""
+    // Temporarily stored in memory until verified signup completes.
+    var pendingSignupAvatarJPEG: Data?
     private var session: CloudStoredToken?
     private var notificationsInitialized = false
     private var lastUpdateIDs = Set<UUID>()
@@ -249,6 +251,14 @@ final class ItamarCloudService: ObservableObject {
         if deviceSyncEnabled { try await reload() }
     }
 
+    func setOptionalPassword(_ password: String) async throws {
+        guard password.count >= 8 else {
+            throw ItamarCloudError.badResponse("Optional password must be at least 8 characters.")
+        }
+        _ = try await request("/auth/v1/user", method: "PUT",
+                              data: ["password": password])
+    }
+
     func signUp(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/signup", method: "POST", data: body, authorized: false)
@@ -281,6 +291,7 @@ final class ItamarCloudService: ObservableObject {
 
     func signOut() {
         session = nil; userID = nil; profile = nil
+        pendingSignupAvatarJPEG = nil
         rooms = []; channels = []; updates = []
         notificationsInitialized = false; lastUpdateIDs = []
         CloudKeychain.clear()
@@ -342,6 +353,12 @@ final class ItamarCloudService: ObservableObject {
                    "display_name": String(name.prefix(70)), "about": String(about.prefix(160))],
             extraHeaders: ["Prefer": "resolution=merge-duplicates"])
         try await reload()
+        if let jpeg = pendingSignupAvatarJPEG {
+            let path = try await uploadAvatarJPEG(jpeg)
+            try await updateProfilePreferences(avatar: path, receipts: true)
+            pendingSignupAvatarJPEG = nil
+            try await reload()
+        }
     }
 
     func createRoom(kind: String, title: String, username: String? = nil) async throws {

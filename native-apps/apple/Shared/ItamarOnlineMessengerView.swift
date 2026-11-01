@@ -149,79 +149,85 @@ struct ItamarOnlineMessengerView: View {
 
 struct ItamarCloudLoginView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
-    @State private var email = ""
-    @State private var password = ""
-    @State private var signingUp = false
     @State private var phone = ""
     @State private var smsCode = ""
+    @State private var optionalPassword = ""
+    @State private var optionalPhoto: PhotosPickerItem?
     @State private var smsRequested = false
     @State private var processing = false
     @State private var error = ""
 
     var body: some View {
         Form {
-            Section("ItamarOS account") {
-                Text("Sign in to send messages between devices. The account uses Supabase authentication.")
+            Section("Get started with your phone") {
+                Text("A verified phone number is required. Profile photo and password are optional.")
                     .font(.footnote).foregroundStyle(.secondary)
-                TextField("Email", text: $email)
-                    .textInputAutocapitalization(.never).keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                SecureField("Password", text: $password)
-                Toggle("Create a new account", isOn: $signingUp)
-                Button(processing ? "Connecting…" : signingUp ? "Create account" : "Sign in") {
+                TextField("Phone, e.g. +972501234567", text: $phone)
+                    .keyboardType(.phonePad)
+                PhotosPicker(selection: $optionalPhoto, matching: .images) {
+                    Label("Profile photo (optional)", systemImage: "camera")
+                }
+                .onChange(of: optionalPhoto) { _, item in
+                    Task {
+                        do {
+                            guard let data = try await item?.loadTransferable(type: Data.self),
+                                  let picture = UIImage(data: data),
+                                  let jpeg = picture.jpegData(compressionQuality: 0.65),
+                                  jpeg.count <= 3 * 1024 * 1024 else {
+                                error = "Choose an image under 3 MB."
+                                return
+                            }
+                            cloud.pendingSignupAvatarJPEG = jpeg
+                            error = ""
+                        } catch { self.error = error.localizedDescription }
+                    }
+                }
+                SecureField("Password (optional, minimum 8 characters)", text: $optionalPassword)
+                    .textContentType(.newPassword)
+                Text("The photo uploads only after verifying your phone and saving your profile.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button(processing ? "Requesting…" : "Next — send SMS") {
                     processing = true
                     Task {
                         do {
-                            if signingUp {
-                                try await cloud.signUp(email: email, password: password)
-                            } else {
-                                try await cloud.signIn(email: email, password: password)
-                            }
+                            try await cloud.requestSMS(phone: phone)
+                            smsRequested = true
                             error = ""
                         } catch { self.error = error.localizedDescription }
                         processing = false
                     }
                 }
-                .disabled(processing || email.isEmpty || password.count < 6)
-                if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
-                if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
+                .disabled(processing || !phone.hasPrefix("+") ||
+                    (!optionalPassword.isEmpty && optionalPassword.count < 8))
             }
-            Section("Sign in with SMS (Twilio)") {
-                Text("SMS messages are sent through the SMS provider configured in Supabase Auth. You must use a number you control.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                TextField("Phone, e.g. +972501234567",text:$phone)
-                    .keyboardType(.phonePad)
-                Button("Send verification code") {
-                    processing=true
-                    Task {
-                        do {
-                            try await cloud.requestSMS(phone:phone)
-                            smsRequested=true
-                            self.error=""
-                        } catch { self.error=error.localizedDescription }
-                        processing=false
-                    }
-                }
-                .disabled(processing || !phone.hasPrefix("+"))
-                if smsRequested {
-                    TextField("SMS code",text:$smsCode)
-                        .keyboardType(.numberPad)
-                    Button("Verify SMS and sign in") {
-                        processing=true
+            if smsRequested {
+                Section("Verify your phone") {
+                    Text("Enter the SMS code. Never share your verification code.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    TextField("SMS code", text: $smsCode).keyboardType(.numberPad)
+                    Button(processing ? "Verifying…" : "Verify and continue") {
+                        processing = true
                         Task {
                             do {
-                                try await cloud.verifySMS(phone:phone,code:smsCode)
-                                smsCode=""
-                                self.error=""
-                            } catch { self.error=error.localizedDescription }
-                            processing=false
+                                try await cloud.verifySMS(phone: phone, code: smsCode)
+                                if !optionalPassword.isEmpty {
+                                    try await cloud.setOptionalPassword(optionalPassword)
+                                    optionalPassword = ""
+                                }
+                                smsCode = ""
+                                error = ""
+                            } catch { self.error = error.localizedDescription }
+                            processing = false
                         }
                     }
                     .disabled(processing || smsCode.count < 4)
+                    Button("Change phone number") { smsRequested = false; smsCode = "" }
                 }
             }
             Section {
-                Text("Never share your password. Conversations are stored in the connected project's database; end-to-end encryption is not implemented. Use block/report controls before public launch.")
+                if !error.isEmpty { Text(error).foregroundStyle(.red).font(.caption) }
+                if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
+                Text("Twilio Verify must be configured through Supabase Auth for SMS delivery. Charges may apply.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }
