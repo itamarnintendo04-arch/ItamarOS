@@ -96,6 +96,21 @@ struct NativeSettingsView: View {
                 }
                 #endif
                 Section("Software Updates") {
+                    Toggle("Check automatically while the app is active",isOn:$autoCheckUpdates)
+                    #if os(iOS)
+                    Toggle("Notify me when a signed update is available",isOn:$updateNotifications)
+                        .onChange(of:updateNotifications) { _,enabled in
+                            if enabled {
+                                Task {
+                                    let approved = (try? await UNUserNotificationCenter.current()
+                                        .requestAuthorization(options:[.alert,.badge,.sound])) ?? false
+                                    if !approved { updateNotifications=false }
+                                }
+                            }
+                        }
+                    #endif
+                    Text("Checks run about every 30 minutes while the app is active. iOS may suspend background activity; notifications after the app closes require a server and APNs push configuration.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Button("Check for updates") {
                         Task { await updates.check() }
                     }
