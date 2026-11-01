@@ -13,10 +13,10 @@ import org.json.JSONObject
 
 /** Same verified Supabase RPC games as iOS, no copied commercial assets. */
 @Composable
-fun ItamarPartyGamesAndroid(api: AndroidConnectApi){
+fun ItamarPartyGamesAndroid(api: AndroidConnectApi,defaultGame:String="connect_four"){
     val scope=rememberCoroutineScope()
     val context=LocalContext.current
-    var selected by remember { mutableStateOf("connect_four") }
+    var selected by remember { mutableStateOf(defaultGame) }
     var match by remember { mutableStateOf<JSONObject?>(null) }
     var roomInput by remember { mutableStateOf("") }
     var invite by remember { mutableStateOf("") }
