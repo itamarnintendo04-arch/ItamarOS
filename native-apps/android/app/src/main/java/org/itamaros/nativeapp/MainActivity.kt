@@ -174,6 +174,10 @@ class MainActivity : ComponentActivity() {
         } else if (uri.host == "contact") {
             val user = uri.getQueryParameter("username")
             incomingContact = user?.takeIf { it.matches(Regex("[a-z0-9_.]{3,24}")) }
+        } else if (uri.host == "hub-auth") {
+            // Do not treat URL parameters as a verified identity.
+            // Hub ticket redemption is disabled until server integration is configured.
+            status = "ItamaRos Hub sign-in is not enabled yet. No account or profile was imported."
         }
     }
 
