@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { handleMcp } from './mcp.js';
+import { handlePairing } from './pairing.js';
 
 const port=Number(process.env.PORT)||10000;
 const catalog=[
@@ -25,6 +26,13 @@ const allowedOrigins=new Set([
 ]);
 const server=http.createServer((req,res)=>{
   const path=new URL(req.url||'/', 'http://localhost').pathname;
+  if(path.startsWith('/api/connect/pair/')){
+    Promise.resolve(handlePairing(req,res,path)).catch(error=>{
+      console.error('Pairing request failed:',error?.message||'error');
+      if(!res.headersSent)send(res,500,{error:'Pairing unavailable'});
+    });
+    return;
+  }
   if(path==='/mcp'){
     // Read-only public tools. Deny unexpected browser origins.
     if(req.headers.origin && !allowedOrigins.has(req.headers.origin)){
