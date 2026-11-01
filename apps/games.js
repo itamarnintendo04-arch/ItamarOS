@@ -2,7 +2,7 @@
 (()=>{
 'use strict';
 const KEY='itamaros-games-v1';
-let current='2048',root=null,timer=null,flipTimeout=null;
+let current='2048',root=null,timer=null,flipTimeout=null,snakeFrame=null,lastSnakeAt=0,snakeSaveAt=0;
 const icons=['🍀','🌈','⭐','🎯','🎵','🚀','🐱','🌟'];
 const $=id=>document.getElementById(id);
 const make=(tag,txt,cls)=>{const node=document.createElement(tag);if(txt!==undefined)node.textContent=txt;if(cls)node.className=cls;return node};
@@ -52,7 +52,7 @@ function matchControls(area,game,reset){
  return match;
 }
 
-function stopTimers(){clearInterval(timer);timer=null;clearTimeout(flipTimeout);flipTimeout=null}
+function stopTimers(){clearInterval(timer);timer=null;clearTimeout(flipTimeout);flipTimeout=null;if(snakeFrame!==null)cancelAnimationFrame(snakeFrame);snakeFrame=null;lastSnakeAt=0}
 function cleanup(){stopTimers()}
 function mount(){
  stopTimers();root=$('content');if(!root)return;root.replaceChildren();
@@ -110,67 +110,155 @@ function render2048(){
  a.append(button('New 2048 game',()=>{if(confirm('Start a new 2048 game? Your best score remains saved.'))reset2048()}));
  // No on-screen direction buttons; the grid itself is the gesture controller.
 }
-const SIDE=16;
-function randomFood(body){const occupied=new Set(body.map(p=>p.x+','+p.y)),spaces=[];for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++)if(!occupied.has(x+','+y))spaces.push({x,y});return spaces.length?spaces[Math.floor(Math.random()*spaces.length)]:null}
-function snakeReset(){stopTimers();saveData.snake=defaults().snake;save();renderSnake()}
-function snakeDirection(x,y){const g=saveData.snake;if(x===-g.dir.x&&y===-g.dir.y)return;g.next={x,y};save()}
-function snakeTick(){
- const g=saveData.snake;if(!g.running||g.over)return;
- g.dir={...g.next};const head={x:g.body[0].x+g.dir.x,y:g.body[0].y+g.dir.y};
- const eat=head.x===g.food?.x&&head.y===g.food?.y;
- const occupied=eat?g.body:g.body.slice(0,-1);
- if(head.x<0||head.y<0||head.x>=SIDE||head.y>=SIDE||occupied.some(p=>p.x===head.x&&p.y===head.y)){
-  g.over=true;g.running=false;stopTimers();effect('gameover');save();drawSnake();updateSnakeText();return
- }
- g.body.unshift(head);
- if(eat){effect('collect');g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);g.food=randomFood(g.body);if(!g.food){g.over=true;g.running=false;stopTimers()}}else g.body.pop();
- save();drawSnake();updateSnakeText();
+// Pixel-based physics instead of a grid: 60Hz drawing and continuous motion.
+const WORLD=400,SNAKE_SPACING=10,SNAKE_RADIUS=8;
+function freshSnake(){
+ const body=Array.from({length:13},(_,i)=>({x:200-i*SNAKE_SPACING,y:200}));
+ return {smooth:true,body,food:{x:320,y:188},dir:{x:1,y:0},
+  next:{x:1,y:0},score:0,over:false,running:false};
 }
-function startSnake(){const g=saveData.snake;if(g.over){snakeReset();return}g.running=!g.running;if(g.running){timer=setInterval(()=>{if(!$('snake-board')||!document.contains($('snake-board'))||$('window')?.classList.contains('hidden')){stopTimers();g.running=false;save();return}snakeTick()},140)}else stopTimers();save();renderSnake()}
-function updateSnakeText(){const p=$('snake-score');if(p){const g=saveData.snake;p.textContent='Score: '+g.score+' · Best: '+saveData.scores.snake+(g.over?' · Game over':'')}}
+function snakeState(){
+ const current=saveData.snake;
+ if(!current?.smooth||!Array.isArray(current.body)||current.body.length<2){
+  saveData.snake=freshSnake();save();
+ }
+ return saveData.snake;
+}
+function randomSnakeFood(body){
+ for(let i=0;i<250;i++){
+  const point={x:18+Math.random()*(WORLD-36),y:18+Math.random()*(WORLD-36)};
+  if(body.every(p=>Math.hypot(p.x-point.x,p.y-point.y)>25))return point;
+ }
+ return null;
+}
+function snakeReset(){
+ stopTimers();saveData.snake=freshSnake();save();renderSnake();
+}
+function snakeDirection(x,y){
+ const g=snakeState(),length=Math.hypot(x,y);
+ if(length<.01)return;
+ const target={x:x/length,y:y/length};
+ if(target.x*g.dir.x+target.y*g.dir.y<-.8)return;
+ g.next=target;
+}
+function snakeTick(dt){
+ const g=snakeState();if(!g.running||g.over)return;
+ const speed=Math.min(230,76+g.score*11);
+ // Smooth steering means no discrete 16 x 16 cell movement.
+ const blend=Math.min(1,dt*10);
+ let dx=g.dir.x*(1-blend)+g.next.x*blend;
+ let dy=g.dir.y*(1-blend)+g.next.y*blend;
+ const len=Math.hypot(dx,dy)||1;g.dir={x:dx/len,y:dy/len};
+ const travel=speed*dt,parts=Math.max(1,Math.ceil(travel/5));
+ for(let step=0;step<parts;step++){
+  const head=g.body[0],next={x:head.x+g.dir.x*travel/parts,y:head.y+g.dir.y*travel/parts};
+  if(next.x<SNAKE_RADIUS||next.y<SNAKE_RADIUS||
+      next.x>WORLD-SNAKE_RADIUS||next.y>WORLD-SNAKE_RADIUS||
+      g.body.slice(8).some(p=>Math.hypot(next.x-p.x,next.y-p.y)<SNAKE_RADIUS*1.4)){
+   g.over=true;g.running=false;stopTimers();effect('gameover');save();return;
+  }
+  let previous=next;
+  for(let i=0;i<g.body.length;i++){
+   const current=g.body[i];
+   const distance=Math.hypot(current.x-previous.x,current.y-previous.y);
+   if(distance>SNAKE_SPACING){
+    const factor=(distance-SNAKE_SPACING)/distance;
+    g.body[i]={x:current.x+(previous.x-current.x)*factor,
+                y:current.y+(previous.y-current.y)*factor};
+   }
+   previous=g.body[i];
+  }
+  if(g.food&&Math.hypot(next.x-g.food.x,next.y-g.food.y)<19){
+   const end=g.body[g.body.length-1];g.body.push({...end});
+   g.score++;saveData.scores.snake=Math.max(saveData.scores.snake,g.score);
+   effect('collect');g.food=randomSnakeFood(g.body);
+   if(!g.food){g.over=true;g.running=false;stopTimers()}
+   save();
+  }
+ }
+}
+function snakeLoop(now){
+ const g=snakeState();
+ if(!g.running||g.over){snakeFrame=null;return}
+ const canvas=$('snake-board');
+ if(!canvas||!canvas.isConnected||$('window')?.classList.contains('hidden')||document.hidden){
+  g.running=false;stopTimers();save();return;
+ }
+ const dt=lastSnakeAt?Math.min(.035,Math.max(0,(now-lastSnakeAt)/1000)):0;
+ lastSnakeAt=now;snakeTick(dt);drawSnake();updateSnakeText();
+ if(now-snakeSaveAt>1200){save();snakeSaveAt=now}
+ if(g.running)snakeFrame=requestAnimationFrame(snakeLoop);else snakeFrame=null;
+}
+function startSnake(){
+ const g=snakeState();if(g.over){snakeReset();return}
+ g.running=!g.running;stopTimers();save();renderSnake();
+ if(g.running)snakeFrame=requestAnimationFrame(snakeLoop);
+}
+function updateSnakeText(){
+ const p=$('snake-score');if(!p)return;
+ const g=snakeState(),speed=Math.min(230,76+g.score*11);
+ p.textContent='Score: '+g.score+' · Best: '+saveData.scores.snake+
+   ' · Speed: '+Math.round(speed)+' px/s'+(g.over?' · Game over':'');
+}
 function drawSnake(){
  const canvas=$('snake-board');if(!canvas)return;
- const ctx=canvas.getContext('2d');const cell=canvas.width/SIDE;
- const ball=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
- for(let y=0;y<SIDE;y++)for(let x=0;x<SIDE;x++){
-  ctx.fillStyle=(x+y)%2?'#d2f7c5':'#e6ffdb';
-  ctx.fillRect(x*cell,y*cell,cell,cell);
+ const ctx=canvas.getContext('2d');if(!ctx)return;
+ const g=snakeState();
+ const grad=ctx.createLinearGradient(0,0,WORLD,WORLD);
+ grad.addColorStop(0,'#ecffeb');grad.addColorStop(1,'#b8e9dc');
+ ctx.fillStyle=grad;ctx.fillRect(0,0,WORLD,WORLD);
+ // Decorative grass, but NO underlying movement grid.
+ for(let i=0;i<55;i++){
+  const x=(i*79+47)%WORLD,y=(i*137+29)%WORLD;
+  ctx.fillStyle='rgba(37,137,93,.09)';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
  }
- const game=saveData.snake;
- if(game.food){
-  const x=(game.food.x+.5)*cell,y=(game.food.y+.58)*cell;
-  ball(x-5,y,cell*.28,'#e53c62');ball(x+5,y,cell*.28,'#ff547a');
-  ball(x-8,y-5,cell*.08,'#ffd1dc');
-  ctx.fillStyle='#855833';ctx.fillRect(x-1,y-cell*.64,3,cell*.36);
-  ball(x+5,y-cell*.46,cell*.17,'#49b768');
+ if(g.food){
+  const {x,y}=g.food;ctx.fillStyle='#e43f56';
+  for(const n of [-5,5]){ctx.beginPath();ctx.arc(x+n,y+3,8,0,Math.PI*2);ctx.fill()}
+  ctx.strokeStyle='#816344';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x+2,y-15);ctx.stroke();
+  ctx.fillStyle='#58b757';ctx.beginPath();ctx.ellipse(x+7,y-13,7,3,-.4,0,Math.PI*2);ctx.fill();
  }
- game.body.slice().reverse().forEach((p,rev)=>{
-  const head=rev===game.body.length-1;
-  const x=(p.x+.5)*cell,y=(p.y+.5)*cell;
-  ball(x,y,cell*(head?.51:.43),head?'#158e6a':'#338f72');
-  ball(x,y-1,cell*(head?.46:.37),head?'#80e58b':'#71d997');
-  if(!head)ball(x-4,y-5,cell*.09,'#b9f8bd');
- });
- const head=game.body[0],hx=(head.x+.5)*cell,hy=(head.y+.5)*cell;
- // Two oversized eyes and tiny pupils give the snake a cartoon face.
- const dx=game.dir.x,dy=game.dir.y;
- const ox=dy!==0?6:dx*3,oy=dx!==0?6:dy*3;
- for(const sign of [-1,1]){
-  const ex=hx+(dx*3)+(dy!==0?sign*ox:0)+(dx!==0?0:0);
-  const ey=hy+(dy*3)+(dx!==0?sign*oy:0);
-  ball(ex,ey,cell*.145,'#ffffff');ball(ex+dx*2,ey+dy*2,cell*.075,'#263f4d');
+ const body=g.body;
+ if(body.length){
+  ctx.strokeStyle='#248966';ctx.lineWidth=SNAKE_RADIUS*2+3;
+  ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+  ctx.moveTo(body[body.length-1].x,body[body.length-1].y);
+  for(let i=body.length-2;i>=0;i--)ctx.lineTo(body[i].x,body[i].y);
+  ctx.stroke();
+  ctx.strokeStyle='#7de4a0';ctx.lineWidth=SNAKE_RADIUS*1.25;ctx.stroke();
+  const head=body[0],dx=g.dir.x,dy=g.dir.y,nx=-dy,ny=dx;
+  ctx.fillStyle='#7de4a0';ctx.beginPath();ctx.arc(head.x,head.y,11,0,Math.PI*2);ctx.fill();
+  for(const offset of [-5,5]){
+   const x=head.x+dx*4+nx*offset,y=head.y+dy*4+ny*offset;
+   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,3.7,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#243a46';ctx.beginPath();ctx.arc(x+dx*1.2,y+dy*1.2,1.9,0,Math.PI*2);ctx.fill();
+  }
  }
- ball(hx+dx*6,hy+dy*6,cell*.07,'#e76480');
 }
 function renderSnake(){
- const a=$('itamar-game-area');if(!a||current!=='snake')return;a.replaceChildren();
- const g=saveData.snake;
- a.append(make('h3','Snake'));artwork(a,'snake');
- const score=make('p','', 'ios-caption');score.id='snake-score';a.append(score);
- const c=make('canvas',undefined,'ios-snake');c.id='snake-board';c.width=400;c.height=400;c.setAttribute('aria-label','Snake play board');a.append(c);drawSnake();updateSnakeText();
- swipe(c,d=>{const v={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]}[d];snakeDirection(...v)},true);
- a.append(button(g.over?'Try again':'Start / Pause',startSnake),button('New game',()=>{if(confirm('Start a new Snake game?'))snakeReset()}));
- a.append(make('p','Drag your finger along the board to steer the cartoon snake. Keyboard arrows also work.','ios-caption'));
+ const a=$('itamar-game-area');if(!a||current!=='snake')return;
+ a.replaceChildren();const g=snakeState();
+ a.append(make('h3','Snake · Smooth movement'));artwork(a,'snake');
+ const score=make('p','','ios-caption');score.id='snake-score';a.append(score);
+ const c=make('canvas',undefined,'ios-snake');c.id='snake-board';
+ c.width=WORLD;c.height=WORLD;c.setAttribute('aria-label','Continuous Snake game board');
+ c.style.touchAction='none';a.append(c);
+ const steer=e=>{
+  const rect=c.getBoundingClientRect();
+  const target={x:(e.clientX-rect.left)*WORLD/rect.width,
+                y:(e.clientY-rect.top)*WORLD/rect.height};
+  const head=snakeState().body[0];
+  if(head)snakeDirection(target.x-head.x,target.y-head.y);
+ };
+ c.addEventListener('pointerdown',e=>{
+  if(e.button!==undefined&&e.button!==0)return;
+  c.setPointerCapture?.(e.pointerId);steer(e);
+ });
+ c.addEventListener('pointermove',e=>{if(e.buttons||e.pressure>0)steer(e)});
+ a.append(button(g.over?'Try again':g.running?'Pause':'Start',startSnake),
+          button('New game',()=>{if(confirm('Start a new Snake game?'))snakeReset()}));
+ a.append(make('p','Move smoothly anywhere on the board. Drag toward a direction or use arrow keys. Every cherry speeds up the snake.','ios-caption'));
+ drawSnake();updateSnakeText();
 }
 function randomize(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]]}return array}
 let showing=[],memoryToken=0,ticToken=0;
