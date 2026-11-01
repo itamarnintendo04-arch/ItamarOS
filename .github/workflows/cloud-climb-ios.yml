@@ -1,0 +1,46 @@
+name: Build Cloud Climb standalone iOS unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "native-apps/apple/**"
+      - ".github/workflows/cloud-climb-ios.yml"
+concurrency:
+  group: cloud-climb-ios-standalone
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  cloud-climb-ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Compile standalone Cloud Climb iOS app
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj \
+            -scheme CloudClimbiOS -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/CloudClimbBuild" \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          APP="$RUNNER_TEMP/CloudClimbBuild/Build/Products/Release-iphoneos/CloudClimbiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry "$GITHUB_WORKSPACE/output/CloudClimb-iOS-0.1.0-UNSIGNED.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CloudClimb-iOS-standalone-UNSIGNED-IPA
+          path: output/CloudClimb-iOS-0.1.0-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 90
