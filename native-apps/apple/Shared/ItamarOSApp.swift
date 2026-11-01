@@ -11,6 +11,7 @@ struct ItamarOSApp: App {
     @State private var parentRoute: ItamarParentRoute?
     @State private var contactRoute: ItamarContactRoute?
     @State private var groupRoute: ItamarGroupRoute?
+    @State private var hubReturnPending = false
     #endif
 
     @ViewBuilder
@@ -37,7 +38,16 @@ struct ItamarOSApp: App {
                           let token = components?.queryItems?.first(where: { $0.name == "invite" })?.value,
                           token.count == 48, token.allSatisfy({ $0.isHexDigit }) {
                     groupRoute = ItamarGroupRoute(token: token)
+                } else if url.host?.lowercased() == "hub-auth" {
+                    // No unverified URL may sign a user in or populate profile fields.
+                    // A future native Hub client will redeem server-issued one-use tickets.
+                    hubReturnPending = true
                 }
+            }
+            .alert("ItamaRos Hub is coming soon",isPresented: $hubReturnPending) {
+                Button("OK",role:.cancel) { }
+            } message: {
+                Text("The app received a Hub callback, but Hub sign-in has not been enabled. No account was linked or profile imported.")
             }
             .sheet(item: $contactRoute) { route in
                 NavigationStack {
