@@ -284,7 +284,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             if (py > 495f) { loseHeart(); continue }
             if (landed && py < 110f && !bossStage) { advanceStage(); continue }
             val time = SystemClock.elapsedRealtime()
-            if (time - lastSent > 650L) {
+            if (room != "local-cloudclimb" && time - lastSent > 650L) {
                 lastSent = time
                 try {
                     api.request("/rest/v1/rpc/itamar_party_position", "POST",
