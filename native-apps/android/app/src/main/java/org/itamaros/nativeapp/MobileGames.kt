@@ -35,12 +35,17 @@ private val gameLogos = mapOf(
 )
 
 @Composable
-fun MobileGamesHub() {
+fun MobileGamesHub(api: AndroidConnectApi? = null) {
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("ItamarOS Games", style = MaterialTheme.typography.headlineMedium)
         if (selected == null) {
-            Text("Choose one of 11 real offline games to play.")
+            Text("Choose one of 11 offline games or play together online.")
+            if(api?.token!=null){
+                Button(onClick={selected="Online Tic-Tac-Toe"},modifier=Modifier.fillMaxWidth()){
+                    Text("🌐 Online match · Create or join with a code")
+                }
+            }
             gameTitles.chunked(2).forEach { row ->
                 Row(modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -76,6 +81,7 @@ fun MobileGamesHub() {
                 "Word Mix" -> WordGame()
                 "Pattern Memory" -> PatternGame()
                 "Connect Four" -> ConnectFourGame()
+                "Online Tic-Tac-Toe" -> if(api!=null) OnlineTicTacToeAndroid(api)
             }
         }
     }
