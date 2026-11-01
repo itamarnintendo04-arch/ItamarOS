@@ -152,6 +152,18 @@ final class ItamarCloudService: ObservableObject {
     private var lastUpdateIDs = Set<UUID>()
 
     var isSignedIn: Bool { session != nil && userID != nil }
+    var deviceSyncEnabled: Bool {
+        (UserDefaults.standard.object(forKey: "itamaros.connect.syncEnabled") as? Bool) ?? true
+    }
+    func setDeviceSync(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: "itamaros.connect.syncEnabled")
+        if !enabled {
+            profile = nil
+            rooms = []
+            channels = []
+            updates = []
+        }
+    }
 
     init() {
         session = CloudKeychain.load()
@@ -207,6 +219,36 @@ final class ItamarCloudService: ObservableObject {
         try await reload()
     }
 
+    // Twilio is configured as Supabase Auth's SMS provider on the server.
+    // There are NO Twilio credentials in this iOS binary.
+    func requestSMS(phone: String) async throws {
+        let clean = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard clean.range(of: #"^\+[1-9][0-9]{7,14}$"#,
+                          options: .regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter your own phone number in international format.")
+        }
+        _ = try await request("/auth/v1/otp", method: "POST",
+            data: ["phone":clean], authorized:false)
+        status = "Verification SMS requested. Do not share your code."
+    }
+
+    func verifySMS(phone: String, code: String) async throws {
+        let clean = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard clean.range(of: #"^\+[1-9][0-9]{7,14}$"#,
+                          options:.regularExpression) != nil,
+              code.range(of: #"^[0-9]{4,8}$"#,options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter the phone number and SMS code.")
+        }
+        let raw = try await request("/auth/v1/verify",method:"POST",
+            data:["phone":clean,"token":code,"type":"sms"],authorized:false)
+        let result = try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard let uid = result.user?.id else {
+            throw ItamarCloudError.badResponse("The SMS code could not be verified.")
+        }
+        setSession(access:result.access_token,refresh:result.refresh_token,userID:uid)
+        if deviceSyncEnabled { try await reload() }
+    }
+
     func signUp(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/signup", method: "POST", data: body, authorized: false)
@@ -245,6 +287,10 @@ final class ItamarCloudService: ObservableObject {
     }
 
     func reload() async throws {
+        guard deviceSyncEnabled else {
+            profile=nil;rooms=[];channels=[];updates=[]
+            return
+        }
         guard let userID else { return }
         async let profileData = request("/rest/v1/itamar_profiles",
             query: [URLQueryItem(name: "id", value: "eq.\(userID.uuidString.lowercased())"),
