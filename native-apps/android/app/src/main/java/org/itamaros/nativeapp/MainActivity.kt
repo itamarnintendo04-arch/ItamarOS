@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         processIncomingLink(intent)
+        ItamarUpdateWorker.schedule(this,prefs.getBoolean("autoUpdateChecks",true))
         val uiMode = getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         isTv = uiMode.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
             packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
