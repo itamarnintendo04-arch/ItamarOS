@@ -78,8 +78,20 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         mutableIntStateOf(prefs.getInt("active_world",1).coerceIn(1,11))
     }
     var unlockedWorlds by remember(accountKey) { mutableStateOf(setOf(1)) }
-    var collectedCubes by remember(accountKey) { mutableStateOf(emptySet<Pair<Int,Int>>()) }
-    var coloredBosses by remember(accountKey) { mutableStateOf(emptySet<Int>()) }
+    var collectedCubes by remember(accountKey) {
+        mutableStateOf(prefs.getStringSet("local_blue_doors",emptySet())!!.mapNotNull {
+            val parts=it.split(":")
+            if(parts.size==2) {
+                val world=parts[0].toIntOrNull()
+                val cube=parts[1].toIntOrNull()
+                if(world!=null && cube!=null)world to cube else null
+            } else null
+        }.toSet())
+    }
+    var coloredBosses by remember(accountKey) {
+        mutableStateOf(prefs.getStringSet("local_colored_bosses",emptySet())!!
+            .mapNotNull{it.toIntOrNull()}.filter{it in 1..10}.toSet())
+    }
     var ownedCharacters by remember(accountKey) {
         mutableStateOf(prefs.getStringSet("local_characters",emptySet())!!.toSet())
     }
@@ -148,8 +160,21 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         }catch(_:Exception) { rewardsStatus="World rewards temporarily unavailable" }
     }
     LaunchedEffect(level,syncRevision,syncReady) {
-        if(!syncReady || nextColoredBoss !in 1..10 ||
+        if(nextColoredBoss !in 1..10 ||
             nextColoredBoss in coloredBosses)return@LaunchedEffect
+        if(api.userID.isNullOrBlank() || !syncReady) {
+            if(api.userID.isNullOrBlank()) {
+                val claimAt=nextColoredBoss*30+1+
+                    Math.floorMod((accountKey+nextColoredBoss).hashCode(),3)
+                if(level>claimAt) {
+                    coloredBosses=coloredBosses+nextColoredBoss
+                    prefs.edit().putStringSet("local_colored_bosses",
+                        coloredBosses.map{it.toString()}.toSet()).apply()
+                    message="✨ An offline colored cube appeared after a boss!"
+                }
+            }
+            return@LaunchedEffect
+        }
         try {
             val got=JSONObject(api.request("/rest/v1/rpc/itamar_climb_claim_colored",
                 "POST",JSONObject().put("p_boss_index",nextColoredBoss)))
