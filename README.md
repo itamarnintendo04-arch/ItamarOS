@@ -4,6 +4,15 @@
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
+## ItamarMirror casting, richer settings and ChatGPT plugin (development)
+
+- [ItamarMirror](mirror.html) now has a working **Google Cast Web Sender integration** for user-provided public HTTPS videos/audio, using Google's Default Media Receiver, and an **AirPlay media output picker** on supported Apple browsers. This is **media playback casting**, not a full AirPlay 2 receiver or Google Cast full-screen mirroring receiver. The browser screen capture preview is still local-only. 4K/60 FPS is a best-effort target, not a verified result.
+- [ItamarOS web emulator](index.html) has a refreshed responsive visual theme, richer About and Settings pages, and background-style **periodic update checks while the web app is running** with optional browser notifications. It never silently installs or restarts a native OS.
+- iOS source includes periodic **foreground** release checks and opt-in local alerts if an official signed update exists. iOS will suspend inactive apps; **APNs would be needed for reliable alerts while closed**.
+- Android source includes [WorkManager](native-apps/android/app/src/main/java/org/itamaros/nativeapp/ItamarUpdateWorker.kt) periodic update checks, permission-based Android release notifications, and a toggle in native Settings. Android decides actual wakeup times; no silent APK installation.
+- [ItamarOS ChatGPT Plugin source](chatgpt-plugin/README.md) is a **read-only MCP server** with public repository, releases and GitHub Actions status tools. The server must be deployed and added by the user in ChatGPT Plugins; it is **not installed, hosted or published yet**.
+- All new features are **experimental source** and require real device/security testing before broad distribution.
+
 ## November 1: Windows All Apps, Twilio SMS and device sync
 
 **Windows desktop application:** the All apps menu now lists ItamarOS built-ins and, in the packaged Electron edition on Windows, locally installed Start Menu shortcut entries. Programs open only after a user click and are never fabricated or uploaded. Some Microsoft Store apps may not have classic Start Menu shortcuts and may be absent from the native listing. Browser emulators cannot enumerate desktop programs.
