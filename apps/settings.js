@@ -17,6 +17,9 @@ const CATEGORIES=[
  {id:'accessibility',icon:'♿',name:'Accessibility'},
  {id:'time',icon:'🕒',name:'Time & Language'},
  {id:'power',icon:'🔋',name:'Power & Battery'},
+ {id:'connect',icon:'💬',name:'Connect & Sync'},
+ {id:'mirroring',icon:'📡',name:'Casting & Displays'},
+ {id:'plugins',icon:'🧩',name:'Plugins & Developer'},
  {id:'updates',icon:'🔄',name:'Software Updates'},
  {id:'backup',icon:'📁',name:'Backup & Restore'},
  {id:'about',icon:'ℹ️',name:'About'}
@@ -153,9 +156,36 @@ function renderCategory(){
   if(navigator.getBattery)navigator.getBattery().then(b=>{if(output.isConnected)output.textContent='Battery: '+Math.round(b.level*100)+'% · '+(b.charging?'Charging':'Not charging')}).catch(()=>{});
   area.append(p);break
  }
+ case 'connect':{
+  const p=wrap('Connect & Device Sync','Privacy-preserving ItamarOS communication and pairing. External SMS and phone history are not collected.');
+  p.append(row('Cloud messaging','Requires a configured, tested ItamarConnect server'));
+  p.append(row('Device pairing','10-minute QR with explicit approval and revocation'));
+  p.append(buttonRow(createButton('Open ItamarConnect',()=>window.launch?.('connect')),
+    createButton('Pair your phone',()=>window.launch?.('phonelink'))));
+  p.append(info('On each device you can turn cloud synchronization off from ItamarConnect Settings. This does not erase messages already sent or stored on other devices.'));
+  area.append(p);break
+ }
+ case 'mirroring':{
+  const p=wrap('Casting & Displays','Cast media with the official Google Cast sender or Apple AirPlay output where supported. Full-screen receiver support is a separate future implementation.');
+  p.append(row('Media casting','AirPlay media output / Google Cast Default Media Receiver'));
+  p.append(row('Screen sharing','Local browser preview with user permission; receiver not implemented'));
+  p.append(row('Resolution target','Up to 3840 × 2160 at 60 FPS when supported; not guaranteed'));
+  p.append(buttonRow(createButton('Open ItamarMirror',()=>window.launch?.('mirror'))));
+  area.append(p);break
+ }
+ case 'plugins':{
+  const p=wrap('Plugins & Developer','Custom ChatGPT integration is provided as source code; it is not installed or published.');
+  p.append(row('ItamarOS ChatGPT plugin','Read-only MCP server source'));
+  p.append(buttonRow(createButton('Open plugin source',()=>window.open('https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/chatgpt-plugin','_blank','noopener,noreferrer')),
+  createButton('Open ItamarCODE',()=>window.open('https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/itamarcode','_blank','noopener,noreferrer'))));
+  p.append(info('Do not put Twilio tokens, service role keys or Apple ID passwords in any public client.'));
+  area.append(p);break
+ }
  case 'updates':{
   const p=wrap('Software Updates','GitHub stable version checks for the web demo; native app installation is handled by native systems.');
-  p.append(buttonRow(createButton('Check for updates',()=>window.ItamarUpdates?.check?.(true)),createButton('Open update details',()=>window.ItamarUpdates?.openSettings?.())));
+  p.append(buttonRow(createButton('Check for updates',()=>window.ItamarUpdates?.check?.(true)),
+   createButton('Configure auto-checks and alerts',()=>window.ItamarUpdates?.openSettings?.())));
+  p.append(info('Choose every 15, 30 or 60 minutes and opt into browser notifications. When the app is closed, OS push setup is required for reliable alerts.'));
   area.append(p);break
  }
  case 'backup':{
@@ -167,7 +197,20 @@ function renderCategory(){
  case 'about':{
   const p=wrap('About ItamarOS','Version 1.1 · Native app projects for iOS, tvOS, Android and Android TV are separate from this browser demo.');
   const img=node('img');img.src='/assets/branding/itamaros-mark-512.png';img.alt='ItamarOS';img.className='it-settings-logo';p.prepend(img);
-  p.append(row('Browser app','1.1.0'),row('Type','Demo / simulation'),row('OS controls','Limited to browser permissions'));
+  p.append(row('Browser app','1.1.0 (released manifest; additional features are source previews)'),
+     row('Type','Interactive emulator — not a replacement for Windows'),
+     row('Platform',navigator.userAgentData?.platform||navigator.platform||'Browser'),
+     row('Layout',document.body.dataset.device||'Auto-detected'),
+     row('Local storage',typeof localStorage==='object'?'Available':'Not available'),
+     row('Connected',navigator.onLine?'Online':'Offline'),
+     row('Privacy','No automatic upload of your device contacts, SMS, or call logs'),
+     row('Update source','Public GitHub release manifest'));
+  const footer=node('div',undefined,'it-settings-actions');
+  const sources=[['Source code','https://github.com/itamarnintendo04-arch/ItamarOS'],
+    ['Official downloads','/downloads.html'],['Security and privacy','https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/SECURITY.md'],
+    ['Report an issue','/feedback.html']];
+  for(const [name,url] of sources)footer.append(createButton(name,()=>window.open(url,'_blank','noopener,noreferrer')));
+  p.append(footer);
   p.append(info('The true PC operating system source is a Debian/KDE build prototype and is not a verified universal installer.'));
   area.append(p);break
  }
