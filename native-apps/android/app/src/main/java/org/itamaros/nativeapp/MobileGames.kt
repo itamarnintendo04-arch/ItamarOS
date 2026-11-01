@@ -43,7 +43,13 @@ fun MobileGamesHub(api: AndroidConnectApi? = null) {
             Text("Choose one of 11 offline games or play together online.")
             if(api?.token!=null){
                 Button(onClick={selected="Online Tic-Tac-Toe"},modifier=Modifier.fillMaxWidth()){
-                    Text("🌐 Online match · Create or join with a code")
+                    Text("🌐 Tic-Tac-Toe online · 2 players")
+                }
+                Button(onClick={selected="Online Party Games"},modifier=Modifier.fillMaxWidth()){
+                    Text("🌐 Connect Four / Rock Paper Scissors · 2 players")
+                }
+                Button(onClick={selected="Online Party Games"},modifier=Modifier.fillMaxWidth()){
+                    Text("🏰 Cloud Climb · original 4-player game (code-only)")
                 }
             }
             gameTitles.chunked(2).forEach { row ->
@@ -82,6 +88,7 @@ fun MobileGamesHub(api: AndroidConnectApi? = null) {
                 "Pattern Memory" -> PatternGame()
                 "Connect Four" -> ConnectFourGame()
                 "Online Tic-Tac-Toe" -> if(api!=null) OnlineTicTacToeAndroid(api)
+                "Online Party Games" -> if(api!=null) ItamarPartyGamesAndroid(api)
             }
         }
     }
