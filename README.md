@@ -4,6 +4,14 @@
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
+## ItamarConnect in the emulator and native Linux desktop
+
+ItamarConnect now has a [web application](connect.html) and a built-in icon in the [browser emulator](index.html). The same static UI is bundled in the offline Electron desktop emulator; the offline copy correctly reports that cross-device chat is unavailable without cloud configuration. The prototype native Linux ItamarOS system has its own **ItamarConnect** menu launcher that opens the official HTTPS Connect app in a dedicated browser window. This does **not** mean the prototype ISO has been built and boot-tested.
+
+The **Sign in with ItamaRos Hub** button is **intentionally not present yet**. The site has a reserved [Hub OAuth callback](hub/callback.html) and [integration contract](hub/README.md), but no real account is authenticated or imported until Hub's issuer and server-side exchange are supplied and explicitly enabled.
+
+The iPhone [IPA signer WebView](native-apps/apple/Shared/EmbeddedIPASignerView.swift) is already implemented separately. It processes a user-selected IPA with the user's own Apple-issued signing certificate/provisioning profile; this is NOT the login browser, an Apple Account password collector or an app installer.
+
 ## ItamarOS Connect — cross-device messaging preview
 
 Native iOS and Android source now includes profile usernames/photos, groups with optional description/photo, time-limited invite links and QR, chats, channels, synced selected contacts, opt-in verified phone discovery, room media, polls, message edit/delete, delivery/read receipts with an opt-out, and one-time **text** viewing. These are **unverified source features**: internet chat is not live until the Supabase backend is deployed and security-tested. There is no complete WhatsApp parity, background push or end-to-end encryption. One-time media is not implemented.
