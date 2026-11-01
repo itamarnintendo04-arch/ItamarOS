@@ -7,6 +7,7 @@ const config=window.ITAMAR_CONNECT||{};
 const setStatus=(message)=>{$('status').textContent=message};
 if(!request){setStatus('Invalid or missing QR request. Scan the code again.');return}
 $('pairCode').textContent=request.slice(0,6).toUpperCase();
+$('nativeLink').href='itamaros://desktop?request='+encodeURIComponent(request);
 const supabase=window.supabase.createClient(config.url,config.publishableKey,{
  auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false,storageKey:'itamaros-connect-web-auth'}
 });

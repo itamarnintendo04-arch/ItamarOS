@@ -211,6 +211,29 @@ final class ItamarCloudService: ObservableObject {
         return result
     }
 
+    func approveDesktopPairing(request: String, retry: Bool = true) async throws {
+        guard (24...40).contains(request.count),
+              request.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }),
+              let token = session?.access else { throw ItamarCloudError.unauthenticated }
+        let url = URL(string: "https://itamaros-store-api.onrender.com/api/connect/pair/approve")!
+        var req = URLRequest(url:url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 15
+        req.setValue("application/json",forHTTPHeaderField:"Content-Type")
+        req.setValue("Bearer " + token,forHTTPHeaderField:"Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject:["requestId":request])
+        let (data,response) = try await URLSession.shared.data(for:req)
+        guard let http=response as? HTTPURLResponse else { throw ItamarCloudError.unavailable }
+        if http.statusCode==401 && retry {
+            try await refreshSession()
+            return try await approveDesktopPairing(request:request,retry:false)
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let reason=(try? JSONSerialization.jsonObject(with:data) as? [String:Any])?["error"] as? String
+            throw ItamarCloudError.badResponse(reason ?? "Cannot approve this desktop")
+        }
+    }
+
     func signIn(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/token", method: "POST", data: body,

@@ -11,6 +11,7 @@ struct ItamarOSApp: App {
     @State private var parentRoute: ItamarParentRoute?
     @State private var contactRoute: ItamarContactRoute?
     @State private var groupRoute: ItamarGroupRoute?
+    @State private var desktopRoute: ItamarDesktopPairRoute?
     @State private var hubReturnPending = false
     #endif
 
@@ -38,6 +39,11 @@ struct ItamarOSApp: App {
                           let token = components?.queryItems?.first(where: { $0.name == "invite" })?.value,
                           token.count == 48, token.allSatisfy({ $0.isHexDigit }) {
                     groupRoute = ItamarGroupRoute(token: token)
+                } else if url.host?.lowercased() == "desktop",
+                          let request = components?.queryItems?.first(where: { $0.name == "request" })?.value,
+                          (24...40).contains(request.count),
+                          request.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) {
+                    desktopRoute = ItamarDesktopPairRoute(request:request)
                 } else if url.host?.lowercased() == "hub-auth" {
                     // No unverified URL may sign a user in or populate profile fields.
                     // A future native Hub client will redeem server-issued one-use tickets.
@@ -68,6 +74,10 @@ struct ItamarOSApp: App {
                     ContentUnavailableView("Cloud unavailable",systemImage:"person.3",
                         description:Text("An online account is needed to join a group."))
                 }
+            }
+            .sheet(item: $desktopRoute) { route in
+                ItamarDesktopPairApprovalView(request: route.request)
+                    .environmentObject(cloud)
             }
             .sheet(item: $parentRoute) { route in
                 if ItamarCloudConfig.enabled {
