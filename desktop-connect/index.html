@@ -14,7 +14,9 @@ header strong{font-size:21px}header small{color:#c8ddf6}
 main{padding:20px;max-width:1150px;margin:auto}
 .panel{background:white;border-radius:16px;padding:22px;box-shadow:0 4px 18px #10294410}
 #login{max-width:530px;margin:36px auto;text-align:center}
-#qrImage{display:block;margin:20px auto;width:260px;height:260px;border:10px solid #fff;border-radius:14px;box-shadow:0 3px 16px #1e4e8b20}
+#qrWrap{position:relative;width:260px;height:260px;margin:20px auto}
+#qrImage{display:block;margin:0;width:260px;height:260px;border:10px solid #fff;border-radius:14px;box-shadow:0 3px 16px #1e4e8b20}
+#qrLogo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;border:7px solid white;border-radius:13px;background:white;pointer-events:none}
 #pairCode{letter-spacing:.22em;font-size:22px;font-weight:700;color:#164c92}
 .note{padding:14px;background:#ecf4ff;border-radius:10px;margin:14px 0;line-height:1.55;color:#34536f}
 #layout{display:grid;grid-template-columns:315px 1fr;gap:16px}
@@ -38,7 +40,7 @@ main{padding:20px;max-width:1150px;margin:auto}
 <section id="login" class="panel">
 <h1>Sign in with your phone</h1>
 <p>Open ItamarConnect on a phone already signed in with a verified number. Scan this QR to approve the computer without paying for another SMS.</p>
-<img id="qrImage" alt="One-time computer pairing QR code" hidden>
+<div id="qrWrap"><img id="qrImage" alt="One-time ItamarOS pairing QR code" hidden><img id="qrLogo" src="./itamaros-logo.svg" alt="ItamarOS symbol"></div>
 <div id="pairCode"></div>
 <p id="expiry"></p>
 <button id="newQR" class="primary">Generate QR code</button>
