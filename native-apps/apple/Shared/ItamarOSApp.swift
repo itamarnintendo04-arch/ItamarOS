@@ -8,6 +8,7 @@ struct ItamarOSApp: App {
     @StateObject private var appleAccounts = LocalAppleAccountStore()
     @StateObject private var messages = ItamarMessagesStore()
     @StateObject private var cloud = ItamarCloudService()
+    @UIApplicationDelegateAdaptor(ItamarPushAppDelegate.self) private var pushDelegate
     @State private var parentRoute: ItamarParentRoute?
     @State private var contactRoute: ItamarContactRoute?
     @State private var groupRoute: ItamarGroupRoute?
@@ -23,6 +24,9 @@ struct ItamarOSApp: App {
             .environmentObject(appleAccounts)
             .environmentObject(messages)
             .environmentObject(cloud)
+            .onReceive(NotificationCenter.default.publisher(for:.itamarPushTokenUpdated)) {_ in
+                Task { await cloud.registerDeviceForPushIfAvailable() }
+            }
             .onOpenURL { url in
                 guard url.scheme?.lowercased() == "itamaros" else { return }
                 let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
