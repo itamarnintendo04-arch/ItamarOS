@@ -30,17 +30,23 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <p>Sign in with ItamaRos Hub will be available only when the integration is explicitly enabled later.</p>
 </section>
 <section id="auth" hidden>
-<h2 id="authTitle">Get started with your phone</h2>
-<p class="muted">A verified phone number is required. Profile photo and password are optional. A code is sent only after you tap Next.</p>
+<h2 id="authTitle">Create your ItamarOS account</h2>
+<p id="authHelp" class="muted">Choose a unique username, verify your phone and choose a profile picture or a default avatar. Passwords are optional.</p>
+<div class="row"><button id="signupMode" type="button" class="primary">Create account</button><button id="signinMode" type="button">Sign in</button></div>
 <form id="smsForm">
 <label for="phone">Mobile number (required)</label>
 <input type="tel" id="phone" placeholder="+972501234567" autocomplete="tel" inputmode="tel" pattern="\+[1-9][0-9]{7,14}" required>
-<label for="signupAvatar">Profile photo (optional)</label>
+<div id="signupFields">
+<label for="signupUsername">Username (required)</label>
+<input id="signupUsername" autocomplete="username" required minlength="3" maxlength="24" pattern="[a-z0-9_.]{3,24}" placeholder="3–24 lowercase letters, numbers, _ or .">
+<label for="signupAvatar">Profile picture — upload a photo or choose the default avatar</label>
 <input type="file" id="signupAvatar" accept="image/jpeg,image/png,image/webp">
 <img id="avatarPreview" alt="Selected profile picture" hidden style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin-top:7px">
+<label class="row" for="useDefaultAvatar"><input type="checkbox" id="useDefaultAvatar" checked>Use a default avatar instead of uploading a photo</label>
 <label for="signupPassword">Password (optional, at least 8 characters)</label>
-<input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS only">
-<p class="muted">A password can be saved after SMS verification. You'll still verify your phone on this screen. Your photo is publicly visible if you add one.</p>
+<input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS codes">
+<p class="muted">Your username and uploaded photo are public. You never have to use your real face. Your phone number stays private.</p>
+</div>
 <button class="primary" type="submit">Next — send SMS</button>
 </form>
 <form id="smsVerifyForm" hidden>
@@ -51,7 +57,7 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <div class="row"><button type="submit" class="primary">Verify and continue</button>
 <button type="button" id="changePhone">Change number</button></div>
 </form>
-<p class="muted">SMS is delivered by the provider configured in Supabase Auth (Twilio Verify). Provider charges and rate limits apply. Only use a number you control.</p>
+<p class="muted">SMS uses the Twilio Programmable Messaging provider configured in Supabase Auth, not Twilio Verify. SMS delivery still costs money; rate limits apply. Only use a phone number you control.</p>
 </section>
 <div id="app" hidden>
 <nav>
