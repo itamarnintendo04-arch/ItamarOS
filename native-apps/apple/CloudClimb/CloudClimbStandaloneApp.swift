@@ -31,6 +31,38 @@ struct CloudClimbStandaloneApp: App {
     }
 }
 
+private struct CloudClimbSkyIntro:View {
+    var body:some View {
+        ZStack {
+            Circle()
+                .fill(Color.cyan.opacity(0.18))
+                .frame(width:215,height:150)
+                .blur(radius:24)
+            Image(systemName:"cloud.fill")
+                .font(.system(size:120,weight:.ultraLight))
+                .foregroundStyle(.white.opacity(0.22))
+                .offset(x:-65,y:14)
+            Image(systemName:"cloud.fill")
+                .font(.system(size:93,weight:.ultraLight))
+                .foregroundStyle(.white.opacity(0.45))
+                .offset(x:82,y:-19)
+            Image("BrandMark")
+                .resizable().scaledToFit()
+                .frame(width:104,height:104)
+                .padding(16)
+                .background(Color.white.opacity(0.93),in:RoundedRectangle(cornerRadius:32))
+                .shadow(color:.cyan.opacity(0.4),radius:20,y:10)
+            Image(systemName:"sparkle")
+                .font(.system(size:25,weight:.bold))
+                .foregroundStyle(.yellow)
+                .offset(x:91,y:-66)
+        }
+        .frame(maxWidth:.infinity)
+        .frame(height:175)
+        .accessibilityHidden(true)
+    }
+}
+
 struct CloudClimbStandaloneHome:View {
     @EnvironmentObject private var cloud:ItamarCloudService
     @Environment(\.openURL) private var openURL
@@ -47,12 +79,21 @@ struct CloudClimbStandaloneHome:View {
         NavigationStack {
             ScrollView {
                 VStack(spacing:16) {
-                    Image("BrandMark").resizable().scaledToFit()
-                        .frame(width:82,height:82)
-                    Text("CLOUD CLIMB")
-                        .font(.system(size:32,weight:.black,design:.rounded))
-                    Text("Original platform adventure · Standalone Preview")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                    CloudClimbSkyIntro()
+                    Text("Cloud Climb By ItamarOS")
+                        .font(.system(size:36,weight:.black,design:.rounded))
+                        .tracking(-0.8)
+                        .minimumScaleFactor(0.7)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
+                        .shadow(color:.blue.opacity(0.5),radius:8,y:4)
+                    Text("A sky-high platform adventure")
+                        .font(.system(size:16,weight:.semibold,design:.rounded))
+                        .foregroundStyle(Color(red:0.72,green:0.96,blue:1))
+                    Text("Sign in to play online, or explore the offline demo.")
+                        .font(.system(size:14,weight:.medium,design:.rounded))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .multilineTextAlignment(.center)
                     if cloud.isSignedIn {
                         Text("Your ItamarOS account is connected")
                             .foregroundStyle(.green)
@@ -66,14 +107,49 @@ struct CloudClimbStandaloneHome:View {
                         Text("Your approved session is temporary. Reconnect if it expires.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Button("Play Offline Demo") {offlineDemo=true}
-                            .buttonStyle(.borderedProminent)
-                        Button(working ? "Connecting…" : "Continue with ItamarOS · No QR") {
+                        Button {
                             Task {await startPair(openInApp:true)}
-                        }.buttonStyle(.borderedProminent).disabled(working || pair != nil)
-                        Button("Use QR Code Instead") {
+                        } label: {
+                            HStack(spacing:12) {
+                                Image("BrandMark")
+                                    .resizable().scaledToFit()
+                                    .frame(width:30,height:30)
+                                    .padding(5)
+                                    .background(.white,in:RoundedRectangle(cornerRadius:10))
+                                Text(working ? "Connecting…" : "Sign in with ItamarOS")
+                                    .font(.system(size:18,weight:.bold,design:.rounded))
+                                Spacer(minLength:3)
+                                Image(systemName:"arrow.right")
+                            }
+                            .foregroundStyle(.white)
+                            .padding(14)
+                            .background(
+                                LinearGradient(colors:[Color(red:0.18,green:0.47,blue:1),
+                                    Color(red:0.33,green:0.22,blue:0.81)],
+                                    startPoint:.leading,endPoint:.trailing),
+                                in:RoundedRectangle(cornerRadius:20)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(working || pair != nil)
+                        Button {offlineDemo=true} label: {
+                            Label("Play Offline Demo",systemImage:"gamecontroller.fill")
+                                .font(.system(size:18,weight:.bold,design:.rounded))
+                                .frame(maxWidth:.infinity)
+                                .foregroundStyle(.white)
+                                .padding(17)
+                                .background(.white.opacity(0.13),
+                                    in:RoundedRectangle(cornerRadius:20))
+                                .overlay(RoundedRectangle(cornerRadius:20)
+                                    .stroke(.white.opacity(0.35),lineWidth:1))
+                        }
+                        .buttonStyle(.plain)
+                        Button("Use a QR code instead") {
                             Task {await startPair(openInApp:false)}
-                        }.buttonStyle(.bordered).disabled(working || pair != nil)
+                        }
+                        .font(.system(size:14,weight:.semibold,design:.rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .disabled(working || pair != nil)
                         if let pair {
                             if qrVisible,let image=makeQRCode(pair.approveUrl) {
                                 ZStack {
@@ -100,18 +176,23 @@ struct CloudClimbStandaloneHome:View {
                     }
                     if !info.isEmpty {
                         Text(info).font(.footnote).multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.88))
                     }
                     Text("No SMS or QR is required when both apps are installed on the same device. You must approve this login in your signed-in ItamarOS app.")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.caption2).foregroundStyle(.white.opacity(0.65))
+                        .multilineTextAlignment(.center)
                 }
-                .padding(20)
+                .padding(.horizontal,24)
+                .padding(.vertical,28)
                 .frame(maxWidth:.infinity)
             }
             .background(
-                LinearGradient(colors:[Color(red:0.08,green:0.17,blue:0.36),.cyan.opacity(0.27)],
-                    startPoint:.top,endPoint:.bottom).ignoresSafeArea()
+                LinearGradient(colors:[Color(red:0.05,green:0.11,blue:0.3),
+                    Color(red:0.12,green:0.31,blue:0.68),
+                    Color(red:0.23,green:0.65,blue:0.86)],
+                    startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
-            .navigationTitle("Cloud Climb")
+            .toolbar(.hidden,for:.navigationBar)
             .sheet(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
                     .environmentObject(cloud)
