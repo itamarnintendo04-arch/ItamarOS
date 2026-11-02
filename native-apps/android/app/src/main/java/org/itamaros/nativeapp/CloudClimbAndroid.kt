@@ -28,6 +28,11 @@ import kotlinx.coroutines.delay
 import org.json.JSONObject
 import kotlin.math.abs
 
+private data class CloudClimbChatUndo(
+    val world:Int, val hero:String, val night:Boolean, val auto:Boolean,
+    val tips:Boolean, val paused:Boolean
+)
+
 /**
  * Original Cloud Climb platformer prototype. Progress is saved on this device,
  * with optional authenticated cloud sync and an offline local demonstration.
@@ -108,6 +113,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var rewardsStatus by remember(accountKey) { mutableStateOf("World progress loads after sign-in") }
     var slashInput by remember { mutableStateOf("") }
     var slashReply by remember { mutableStateOf("Type /help for Cloud Climb commands") }
+    var gameChat by remember { mutableStateOf(listOf("Game: Welcome to Cloud Climb! Type /help.")) }
+    var gameChatUndo by remember { mutableStateOf<CloudClimbChatUndo?>(null) }
     val worldKeys = ((level - 1) / 100 - (unlockedWorlds.size - 1)).coerceAtLeast(0)
     val secretWorldReady = coloredBosses.size == 10
     val unopenedDoors = if(activeWorld in 1..10)
@@ -641,33 +648,66 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             }},
             dismissButton={TextButton(onClick={characterOrbOpen=false}){Text("Close")}}
         )
-        Text("Cloud Climb Commands", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Text("💬 Game Chat", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
+            gameChat.forEach{line->
+                Text(line,color=Color.White,style=MaterialTheme.typography.bodySmall)
+            }
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            OutlinedTextField(slashInput,{slashInput=it.take(100)},
+            OutlinedTextField(slashInput,{slashInput=it.take(140)},
                 modifier=Modifier.weight(1f),singleLine=true,
-                label={Text("Enter /command")})
+                label={Text("Message game: /help, /undo…")})
             Button(onClick={
-                val cmd=slashInput.trim().lowercase()
+                val typed=slashInput.trim()
+                val cmd=(if(typed.startsWith("/"))typed else "/"+typed).lowercase()
+                val previous=CloudClimbChatUndo(activeWorld,equippedHero,nightSky,
+                    autoHideControls,showControlHints,paused)
                 slashReply=when {
                     cmd=="/help" || cmd=="/commands" ->
-                        "/stats · /account · /room · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /controls auto|show · /tips on|off · /pause · /resume · /reset-position · /save · /sync"
-                    cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue ${collectedCubes.size}/50 · Colored ${coloredBosses.size}/10 · Characters ${ownedCharacters.size} · Keys $worldKeys"
+                        "/stats · /where · /account · /room · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /controls auto|show|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save · /sync"
+                    cmd=="/stats" || cmd=="/status"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue "+collectedCubes.size+"/50 · Colored "+coloredBosses.size+"/10 · Characters "+ownedCharacters.size+" · Keys $worldKeys"
+                    cmd=="/where" || cmd=="/world current"->"World $activeWorld, stage $level. Use /world N to enter an unlocked world."
                     cmd=="/account"->if(api.userID.isNullOrBlank())"Offline demo · Save stays on this device"
                         else "Linked to your ItamarOS account · $syncStatus"
-                    cmd=="/pause"->{paused=true;"Game paused."}
-                    cmd=="/resume"->{paused=false;"Game resumed."}
-                    cmd=="/reset-position"->{resetPosition();"Returned to the start of this stage; progress kept."}
+                    cmd=="/pause"->{paused=true;"Game paused. Type /resume to continue."}
+                    cmd=="/resume" || cmd=="/unpause"->{paused=false;"Game resumed."}
+                    cmd=="/reset-position" || cmd=="/position reset"->{resetPosition();"Returned to stage start; progress kept. Position reset cannot be undone."}
                     cmd=="/room"->if(room=="local-cloudclimb")"Offline demo · no room code" else "Room code: $room"
-                    cmd=="/theme day"->{nightSky=false;"Day theme enabled"}
+                    cmd=="/theme day" || cmd=="/theme reset"->{nightSky=false;"Day theme enabled"}
                     cmd=="/theme twilight"->{nightSky=true;"Twilight theme enabled"}
-                    cmd=="/controls auto"->{autoHideControls=true;"Touch controls now hide with a controller"}
+                    cmd=="/controls auto" || cmd=="/controls reset"->{autoHideControls=true;"Touch controls hide with controller"}
                     cmd=="/controls show"->{autoHideControls=false;"Touch controls always shown"}
-                    cmd=="/tips on"->{showControlHints=true;"Gameplay tips enabled"}
+                    cmd=="/tips on" || cmd=="/tips reset"->{showControlHints=true;"Gameplay tips enabled"}
                     cmd=="/tips off"->{showControlHints=false;"Gameplay tips disabled"}
                     cmd=="/hero list"->"Unlocked: starter"+if(ownedCharacters.isEmpty())"" else ", "+ownedCharacters.sorted().joinToString(", ")
+                    cmd=="/hero reset"->{equippedHero="starter";"Equipped default hero"}
+                    cmd=="/world back"->{
+                        val back=gameChatUndo
+                        if(back!=null && back.world!=activeWorld &&
+                            (back.world in unlockedWorlds || (back.world==11 && secretWorldReady))){
+                            activeWorld=back.world;resetPosition();gameChatUndo=null
+                            "Returned to World $activeWorld"
+                        }else "No previous world change to reverse. Use /undo right after switching worlds."
+                    }
+                    cmd=="/undo" || cmd=="/cancel" || cmd=="/revert"->{
+                        val back=gameChatUndo
+                        if(back==null) "Nothing to undo; only game-chat setting changes can be reversed."
+                        else {
+                            if(back.world!=activeWorld && (back.world in unlockedWorlds ||
+                                 (back.world==11 && secretWorldReady))){
+                                activeWorld=back.world;resetPosition()
+                            }
+                            if(back.hero=="starter" || back.hero in ownedCharacters)equippedHero=back.hero
+                            nightSky=back.night;autoHideControls=back.auto
+                            showControlHints=back.tips;paused=back.paused
+                            gameChatUndo=null
+                            "Last game-chat setting change undone."
+                        }
+                    }
                     cmd=="/save"->{
                         manualSaveRequest+=1
-                        if(syncReady)"Account progress save requested" else "Saved on this device (offline)"
+                        if(syncReady)"Account progress save requested" else "Saved on this device"
                     }
                     cmd=="/sync"->{
                         if(api.userID.isNullOrBlank())"Sign in with ItamarOS first; offline saves stay separate"
@@ -683,15 +723,21 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         val chosen=cmd.removePrefix("/hero ")
                         if(chosen=="starter" || chosen in ownedCharacters){
                             equippedHero=chosen
-                            "Equipped ${CloudHeroes.get(chosen).name}"
+                            "Equipped "+CloudHeroes.get(chosen).name
                         }else "Hero locked. Use /hero list."
                     }
                     else->"Unknown command. Type /help."
                 }
+                val changed=previous.world!=activeWorld || previous.hero!=equippedHero ||
+                    previous.night!=nightSky || previous.auto!=autoHideControls ||
+                    previous.tips!=showControlHints || previous.paused!=paused
+                if(changed && cmd !in setOf("/undo","/cancel","/revert","/world back")){
+                    gameChatUndo=previous
+                }
+                gameChat=(gameChat+listOf("You: "+typed,"Game: "+slashReply)).takeLast(12)
                 slashInput=""
-            },enabled=slashInput.startsWith("/")){Text("Send")}
+            },enabled=slashInput.isNotBlank()){Text("Send")}
         }
-        Text(slashReply,color=Color.White,style=MaterialTheme.typography.bodySmall)
         if (settingsOpen) AlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Cloud Climb Settings") },
