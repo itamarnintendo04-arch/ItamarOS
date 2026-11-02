@@ -35,7 +35,7 @@ function requireSync(){
 function clearCloudView(){
  stopWatching();
  rooms=[];current=null;
- for(const id of ['rooms','groups','channels','messages','updates','discovered'])$(id)?.replaceChildren();
+ for(const id of ['rooms','groups','channels','messages','updates','officialNotices','discovered'])$(id)?.replaceChildren();
  $('threadTitle').textContent='Cloud sync is off';
  $('sendForm').hidden=true;
 }
@@ -53,7 +53,7 @@ function selectTab(name){
  if(!deviceSync&&name!=='settings'&&!(name==='profile'&&!profileReady)){name='settings';setStatus('Sync is off on this device. Turn it on to show cloud conversations.');}
  for(const el of document.querySelectorAll('[id^="tab-"]'))el.hidden=el.id!=='tab-'+name;
  for(const el of document.querySelectorAll('[data-tab]'))el.dataset.selected=el.dataset.tab===name?'true':'false';
- if(name==='updates')safe(loadUpdates)();
+ if(name==='updates'){safe(loadUpdates)();safe(loadOfficialNotices)();}
 }
 function requireProfile(){
  if(!user)throw Error('Sign in to use Connect.');
@@ -142,6 +142,23 @@ async function loadUpdates(){
  }
  if(!root.childNodes.length)root.textContent='No unmuted updates yet.';
 }
+async function loadOfficialNotices(){
+ if(!user||!deviceSync)return;
+ const root=$('officialNotices');root.replaceChildren();
+ const {data,error}=await client.from('itamar_admin_notices')
+  .select('id,sender_id,body,created_at,read_at')
+  .eq('recipient_id',user.id).order('created_at',{ascending:false}).limit(40);
+ if(error)throw error;
+ for(const note of data||[]){
+  const wrap=document.createElement('div');wrap.className='room';
+  const message=document.createElement('div');
+  message.append(document.createElement('strong'),document.createElement('p'));
+  message.querySelector('strong').textContent='Official ItamarOS message · '+new Date(note.created_at).toLocaleString();
+  message.querySelector('p').textContent=note.body;
+  wrap.append(message);root.append(wrap);
+ }
+ if(!data?.length)root.textContent='No official messages yet.';
+}
 async function showBlocks(){
  if(!user||!deviceSync)return;
  const root=$('blockedUsers');if(!root)return;
@@ -175,6 +192,8 @@ async function drawSession(){
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  if(!data.user.email_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('Confirm your email before signing in.',true);return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
+ $('myProfileID').textContent=user.id;
+ $('myProfileQR').href='/profile.html?id='+encodeURIComponent(user.id);
  $('adminLink').hidden=!(data.user.email_confirmed_at && data.user.app_metadata?.itamaros_admin===true);
  const {data:profile,error:profileError}=await client.from('itamar_profiles').select('id').eq('id',user.id).maybeSingle();
  if(profileError)throw profileError;
@@ -381,6 +400,10 @@ $('discover').onclick=safe(async()=>{
  })());
 });
 $('reloadUpdates').onclick=()=>safe(loadUpdates)();
+$('reloadOfficial').onclick=()=>safe(loadOfficialNotices)();
+$('copyMyID').onclick=()=>{if(user&&navigator.clipboard)navigator.clipboard.writeText(user.id)
+ .then(()=>setStatus('Your ID was copied.'))
+ .catch(()=>setStatus('Clipboard unavailable. Your ID is shown above.',true));};
 for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>selectTab(button.dataset.tab);
 client.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){$('passwordRecovery').hidden=false;}
