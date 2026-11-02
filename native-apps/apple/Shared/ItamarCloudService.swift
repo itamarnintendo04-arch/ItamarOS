@@ -339,6 +339,23 @@ final class ItamarCloudService: ObservableObject {
         }
     }
 
+    /// Email confirmation uses Supabase Auth. Configure its email template with
+    /// {{ .Token }} so users receive a numeric code rather than only a link.
+    func verifySignupEmail(email: String, code: String) async throws {
+        let clean = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard code.range(of: #"^[0-9]{6,8}$"#, options: .regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter the verification code sent to your email.")
+        }
+        let raw = try await request("/auth/v1/verify", method: "POST",
+            data: ["email": clean, "token": code, "type": "signup"], authorized: false)
+        let result = try JSONDecoder().decode(CloudToken.self, from: raw)
+        guard let uid = result.user?.id else {
+            throw ItamarCloudError.badResponse("Email verification failed.")
+        }
+        setSession(access: result.access_token, refresh: result.refresh_token, userID: uid)
+        if deviceSyncEnabled { try await reload() }
+    }
+
     // Cloud Climb standalone: accept only a short-lived access token after
     // the user approved the QR on a trusted device. Never copy a refresh token.
     func acceptTemporaryQRSession(access: String, userID: UUID) async throws {
