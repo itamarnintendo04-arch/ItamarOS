@@ -36,10 +36,16 @@ jobs:
           gradle-version: '9.3.1'
       - name: Compile Android phone/tablet and TV native APK (unverified debug only)
         working-directory: native-apps/android
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
+        run: gradle :app:assembleDebug :cloudclimb:assembleDebug --stacktrace --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: ItamarOS-UNVERIFIED-Android-debug
           path: native-apps/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CloudClimb-UNVERIFIED-Android-debug
+          path: native-apps/android/cloudclimb/build/outputs/apk/debug/*.apk
           retention-days: 7
           if-no-files-found: error
