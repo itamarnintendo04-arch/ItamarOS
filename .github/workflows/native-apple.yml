@@ -68,6 +68,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Compile and package unsigned Cloud Climb IPA for physical iPhone / iPad
+        working-directory: native-apps/apple
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme CloudClimbiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$PWD/CloudClimbDeviceBuild" CODE_SIGNING_ALLOWED=NO build
+          APP="CloudClimbDeviceBuild/Build/Products/Release-iphoneos/CloudClimbiOS.app"
+          test -d "$APP"
+          mkdir -p cloudclimb-unsigned/Payload
+          ditto "$APP" cloudclimb-unsigned/Payload/CloudClimbiOS.app
+          (cd cloudclimb-unsigned && /usr/bin/zip -qry "../CloudClimb-iOS-UNSIGNED.ipa" Payload)
+          unzip -t CloudClimb-iOS-UNSIGNED.ipa >/dev/null
+      - name: Upload Cloud Climb unsigned development IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloudClimb-iPhone-iPad-UNSIGNED-IPA
+          path: native-apps/apple/CloudClimb-iOS-UNSIGNED.ipa
+          retention-days: 14
+          if-no-files-found: error
+
   publish-personal-signing-preview:
     name: Publish iOS unsigned IPA and AltStore source
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
