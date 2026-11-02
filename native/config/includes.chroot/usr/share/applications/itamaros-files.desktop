@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Files · File Manager
+Comment=Browse and manage your files with Dolphin
+Exec=dolphin %U
+Icon=system-file-manager
+Terminal=false
+Categories=System;FileManager;
+StartupNotify=true

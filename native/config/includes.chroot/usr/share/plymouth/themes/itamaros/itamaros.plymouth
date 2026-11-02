@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ItamarOS Boot Progress
+Description=ItamarOS logo and a ring driven by Plymouth's reported boot progress
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/itamaros
+ScriptFile=/usr/share/plymouth/themes/itamaros/itamaros.script

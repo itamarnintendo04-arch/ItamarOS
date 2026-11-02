@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+# Set the boot splash inside the ISO filesystem before the live initramfs is built.
+test -s /usr/share/plymouth/themes/itamaros/logo.png
+test -f /usr/share/plymouth/themes/itamaros/segment-0.png
+plymouth-set-default-theme itamaros
+update-initramfs -u -k all

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=CMD · Terminal
+GenericName=Command-line terminal
+Comment=Open the native Linux command prompt (Konsole)
+Exec=konsole
+Icon=utilities-terminal
+Terminal=false
+Categories=System;TerminalEmulator;
+StartupNotify=true

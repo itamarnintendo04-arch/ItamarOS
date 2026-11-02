@@ -1,0 +1,34 @@
+# Plymouth script plugin: no fake timer or automatic percentage.
+# The boot_progress callback reports estimated boot completion (0..1).
+Window.SetBackgroundTopColor(0.035, 0.071, 0.160);
+Window.SetBackgroundBottomColor(0.016, 0.032, 0.096);
+theme.logo = Image("logo.png").Scale(136, 136);
+theme.logo_sprite = Sprite(theme.logo);
+theme.logo_sprite.SetPosition(Window.GetWidth()/2-68, Window.GetHeight()/2-70, 3);
+
+theme.label = Image.Text("Starting ItamarOS", 0.77, 0.92, 1);
+theme.label_sprite = Sprite(theme.label);
+theme.label_sprite.SetPosition(Window.GetWidth()/2-theme.label.GetWidth()/2,
+                               Window.GetHeight()/2+160, 4);
+
+theme.ring_sprites = [];
+theme.ring_images = [];
+for (i = 0; i < 36; i++) {
+    theme.ring_images[i] = Image("segment-" + i + ".png");
+    theme.ring_sprites[i] = Sprite(theme.ring_images[i]);
+    theme.ring_sprites[i].SetPosition(Window.GetWidth()/2-160,
+                                      Window.GetHeight()/2-160, 2);
+    theme.ring_sprites[i].SetOpacity(0.16);
+}
+fun update_progress(duration, progress) {
+    amount = Math.Clamp(progress, 0, 1);
+    filled = Math.Int(amount * 36);
+    for (i = 0; i < 36; i++) {
+        if (i < filled) {
+            theme.ring_sprites[i].SetOpacity(1.0);
+        } else {
+            theme.ring_sprites[i].SetOpacity(0.16);
+        }
+    }
+}
+Plymouth.SetBootProgressFunction(update_progress);

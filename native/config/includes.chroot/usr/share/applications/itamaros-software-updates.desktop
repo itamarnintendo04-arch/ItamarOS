@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Software Updates
+Comment=Open KDE Discover for signed Debian package updates
+Exec=plasma-discover
+Icon=system-software-update
+Terminal=false
+Categories=Settings;System;
+StartupNotify=true

@@ -53,3 +53,9 @@ system-config-printer
 plasma-systemmonitor
 xdg-desktop-portal-kde
 chromium
+
+# Original ItamarOS boot splash, complete desktop and native CMD
+plymouth
+plymouth-themes
+konsole
+dolphin

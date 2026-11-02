@@ -2,7 +2,7 @@
 Type=Application
 Name=Power · Sleep / Restart / Shut down
 Comment=Show system-managed power dialog; requires confirmation and suitable privileges
-Exec=xfce4-session-logout
+Exec=/usr/bin/python3 /usr/local/share/itamaros/power_menu.py
 Icon=system-shutdown
 Terminal=false
 Categories=System;

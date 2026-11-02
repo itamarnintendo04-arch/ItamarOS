@@ -18,6 +18,7 @@ lb config \
   --architectures amd64 \
   --binary-images iso-hybrid \
   --bootloaders "grub-efi syslinux" \
+  --bootappend-live "boot=live components quiet splash" \
   --archive-areas "main contrib non-free-firmware" \
   --debian-installer none \
   --iso-application "ItamarOS Live Desktop $VERSION" \
@@ -26,6 +27,19 @@ lb config \
   --image-name "ItamarOS-$VERSION-amd64" \
   --memtest none
 cp -a "$SCRIPT_DIR/config/." config/
+# Brand the boot animation with the project's original ItamarOS icon.
+THEME_DIR="config/includes.chroot/usr/share/plymouth/themes/itamaros"
+mkdir -p "$THEME_DIR"
+cp "config/includes.chroot/usr/share/pixmaps/itamaros.png" "$THEME_DIR/logo.png"
+python3 "$SCRIPT_DIR/tools/generate_boot_ring.py" "$THEME_DIR"
+# KDE uses ~/Desktop for Folder View. Seed every bundled ItamarOS launcher
+# for the Live session and future users without changing Windows partitions.
+DESKTOP_DIR="config/includes.chroot/etc/skel/Desktop"
+mkdir -p "$DESKTOP_DIR"
+for shortcut in config/includes.chroot/usr/share/applications/itamaros-*.desktop; do
+  cp -- "$shortcut" "$DESKTOP_DIR/"
+done
+chmod 0755 "$DESKTOP_DIR/"*.desktop
 # GitHub contents API files are not executable by default; make live-build hooks executable.
 find config/hooks -type f -name "*.hook.chroot" -exec chmod 0755 {} +
 # Bundle the already-reviewed web games assets for the native offline games hub.

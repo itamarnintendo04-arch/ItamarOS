@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ItamarOS Store (web preview)
+Comment=Open ItamarOS online apps and downloads portal; native store is experimental
+Exec=xdg-open https://itamaros-web-emulator.onrender.com/
+Icon=itamaros-store
+Terminal=false
+Categories=Network;Utility;
+StartupNotify=true
