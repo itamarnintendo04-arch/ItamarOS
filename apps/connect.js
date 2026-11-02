@@ -192,6 +192,10 @@ async function drawSession(){
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  if(!data.user.email_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('Confirm your email before signing in.',true);return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
+ $('privateEmail').value=user.email||'';
+ $('recoveryPhoneStatus').textContent=(user.phone && user.phone_confirmed_at)
+    ? 'Verified recovery phone: '+user.phone
+    : 'No verified recovery phone connected. An optional signup number is not verified.';
  $('myProfileID').textContent=user.id;
  $('myProfileQR').href='/profile.html?id='+encodeURIComponent(user.id);
  $('adminLink').hidden=!(data.user.email_confirmed_at && data.user.app_metadata?.itamaros_admin===true);
@@ -313,6 +317,10 @@ async function applyPendingAvatar(){
  pendingAvatar=null;$('signupAvatar').value='';$('avatarPreview').hidden=true;
  if(avatarPreviewURL){URL.revokeObjectURL(avatarPreviewURL);avatarPreviewURL=null}
 }
+$('recoverPhone').onclick=()=>{
+ $('phoneRecoveryBox').hidden=!$('phoneRecoveryBox').hidden;
+ $('forgotPasswordForm').hidden=true;
+};
 $('forgotPassword').onclick=()=>{
  $('forgotPasswordForm').hidden=false;
  $('recoveryEmail').value=$('signinIdentifier').value.trim();
@@ -336,6 +344,104 @@ $('resetPasswordForm').addEventListener('submit',safe(async e=>{
  if(error)throw error;
  $('newPassword').value='';$('passwordRecovery').hidden=true;
  setStatus('Password updated successfully.');
+}));
+let pendingRecoveryPhone='',pendingAttachPhone='';
+const validPhone=phone=>/^\+[1-9]\d{7,14}$/.test(phone);
+$('phoneRecoveryRequest').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ pendingRecoveryPhone=$('recoveryPhone').value.trim();
+ if(!validPhone(pendingRecoveryPhone))throw Error('Use +country-code international number format.');
+ // Only existing verified phone identities: never create a new account here.
+ // If the SMS provider is disabled, show the provider error; email recovery remains available.
+ const {error}=await client.auth.signInWithOtp({
+  phone:pendingRecoveryPhone,options:{shouldCreateUser:false}
+ });
+ if(error)throw error;
+ $('phoneRecoveryVerify').hidden=false;
+ setStatus('If this number belongs to an existing verified ItamarOS account, a code has been requested. Do not share it.');
+}));
+$('phoneRecoveryVerify').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ if(!validPhone(pendingRecoveryPhone))throw Error('Request a code first.');
+ const token=$('recoveryPhoneCode').value.trim();
+ const {data,error}=await client.auth.verifyOtp({
+  phone:pendingRecoveryPhone,token,type:'sms'
+ });
+ if(error)throw error;
+ const {data:verified,error:userError}=await client.auth.getUser();
+ const actual=verified?.user;
+ if(userError||!actual?.id||actual.phone!==pendingRecoveryPhone||
+    !actual.phone_confirmed_at||!actual.email_confirmed_at){
+  await client.auth.signOut();
+  throw Error('Phone verification did not match a verified ItamarOS account.');
+ }
+ // Email only appears AFTER successful phone OTP verification.
+ $('phoneRecoveredEmail').textContent='Account recovered: '+actual.email;
+ $('phoneRecoveryNewPassword').hidden=false;
+ $('phoneRecoveryVerify').hidden=true;
+ $('recoveryPhoneCode').value='';
+ setStatus('Identity verified by your registered phone. You can now choose a new password.');
+}));
+$('phoneRecoveryNewPassword').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ const password=$('phoneRecoveredPassword').value;
+ if(password.length<8)throw Error('Use a new password of at least 8 characters.');
+ const {data,error}=await client.auth.updateUser({password});
+ if(error)throw error;
+ $('phoneRecoveredPassword').value='';
+ $('phoneRecoveryNewPassword').hidden=true;
+ $('phoneRecoveryBox').hidden=true;
+ pendingRecoveryPhone='';
+ await drawSession();
+ setStatus('New password saved after verified phone recovery.');
+}));
+$('changePasswordForm').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ if(!user?.email)throw Error('Sign in with a verified email account first.');
+ const old=$('oldPassword').value;
+ const replacement=$('updatedPassword').value;
+ const repeat=$('repeatPassword').value;
+ if(replacement.length<8||replacement!==repeat)throw Error('New passwords must match and contain at least 8 characters.');
+ if(old===replacement)throw Error('Choose a different password.');
+ // Re-authentication verifies that the signed-in account owns the current password.
+ const {data:recheck,error:checkError}=await client.auth.signInWithPassword({
+  email:user.email,password:old
+ });
+ if(checkError||recheck?.user?.id!==user.id)throw Error('Current password verification failed.');
+ const {error}=await client.auth.updateUser({password:replacement});
+ if(error)throw error;
+ $('oldPassword').value='';$('updatedPassword').value='';$('repeatPassword').value='';
+ setStatus('Your password was changed after verifying your current password.');
+}));
+$('attachRecoveryPhone').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ if(!user?.id||!user.email_confirmed_at)throw Error('Sign in with your verified email first.');
+ pendingAttachPhone=$('attachPhone').value.trim();
+ if(!validPhone(pendingAttachPhone))throw Error('Use +country-code international phone format.');
+ if(user.phone_confirmed_at && user.phone===pendingAttachPhone){
+  setStatus('This phone is already verified.');return;
+ }
+ // Sends a phone-change OTP to the new number. Never treat signup metadata as verified.
+ const {error}=await client.auth.updateUser({phone:pendingAttachPhone});
+ if(error)throw error;
+ $('confirmRecoveryPhone').hidden=false;
+ setStatus('If SMS service is available, a verification code has been sent to your number.');
+}));
+$('confirmRecoveryPhone').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ if(!validPhone(pendingAttachPhone))throw Error('Request a phone verification code first.');
+ const code=$('attachPhoneCode').value.trim();
+ const {error}=await client.auth.verifyOtp({phone:pendingAttachPhone,token:code,type:'phone_change'});
+ if(error)throw error;
+ const {data,error:lookupError}=await client.auth.getUser();
+ if(lookupError||data?.user?.id!==user?.id||data.user.phone!==pendingAttachPhone||
+    !data.user.phone_confirmed_at){
+  throw Error('Phone ownership could not be confirmed for this account.');
+ }
+ $('recoveryPhoneStatus').textContent='Verified recovery phone: '+pendingAttachPhone;
+ $('attachPhoneCode').value='';$('confirmRecoveryPhone').hidden=true;
+ pendingAttachPhone='';
+ setStatus('This phone can now be used for account recovery, subject to SMS availability.');
 }));
 $('deviceSync').addEventListener('change',safe(async e=>{
  deviceSync=Boolean(e.target.checked);
