@@ -150,7 +150,11 @@ struct ItamarPhoneSettingsView: View {
     var body: some View {
         Form {
             Section("Verify my phone (optional)") {
-                TextField("+972501234567", text: $phone).keyboardType(.phonePad)
+                TextField("+972501234567", text: $phone)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                Text("Use an iOS phone-number suggestion if offered, or enter the number manually.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Button("Send verification SMS") {
                     Task {
                         do {
@@ -160,7 +164,9 @@ struct ItamarPhoneSettingsView: View {
                     }
                 }
                 .disabled(!phone.hasPrefix("+"))
-                TextField("Verification code", text: $otp).keyboardType(.numberPad)
+                TextField("Verification code", text: $otp)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
                 Button("Verify my number") {
                     Task {
                         do {
