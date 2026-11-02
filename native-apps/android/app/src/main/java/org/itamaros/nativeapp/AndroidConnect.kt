@@ -520,10 +520,12 @@ fun AndroidConnectScreen(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val selected = runCatching {
-                Identity.getSignInClient(ctx).getPhoneNumberFromIntent(result.data)
-                    .replace(Regex("[\\s()-]"), "")
-            }.getOrNull()
+            val selected = result.data?.let { returnedIntent ->
+                runCatching {
+                    Identity.getSignInClient(ctx).getPhoneNumberFromIntent(returnedIntent)
+                        .replace(Regex("[\\s()-]"), "")
+                }.getOrNull()
+            }
             if (selected != null && Regex("^\\+[1-9][0-9]{7,14}$").matches(selected)) {
                 if (hintForProfile) ownPhone = selected else signInPhone = selected
                 notice = "Number suggested by your device. Confirm it before sending an SMS."
