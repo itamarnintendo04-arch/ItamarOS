@@ -37,6 +37,8 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -113,6 +115,12 @@ private fun CloudClimbStandaloneHome(){
     var expiry by remember { mutableLongStateOf(0L) }
     var status by remember { mutableStateOf("Choose Play Offline or Link ItamarOS Account") }
     var connecting by remember { mutableStateOf(false) }
+    var manualLogin by remember { mutableStateOf(false) }
+    var manualIdentifier by remember { mutableStateOf("") }
+    var manualPassword by remember { mutableStateOf("") }
+    var manualCode by remember { mutableStateOf("") }
+    var manualCodeRequested by remember { mutableStateOf(false) }
+    val scope= rememberCoroutineScope()
 
     LaunchedEffect(wantQR) {
         if(!wantQR)return@LaunchedEffect
@@ -265,6 +273,107 @@ private fun CloudClimbStandaloneHome(){
                         Text(if(connecting)"Connecting…" else "Sign in with ItamarOS",
                             fontWeight=FontWeight.Bold,fontSize=17.sp,
                             fontFamily=FontFamily(Font(R.font.fredoka)))
+                    }
+                    OutlinedButton(
+                        onClick={
+                            manualLogin=!manualLogin
+                            manualCodeRequested=false;manualCode=""
+                        },
+                        enabled=!connecting && !wantQR,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {
+                        Text(if(manualLogin)"Hide manual login" else "Sign in manually",
+                            color=Color.White)
+                    }
+                    if(manualLogin && !wantQR){
+                        Column(Modifier.fillMaxWidth(),
+                            verticalArrangement=Arrangement.spacedBy(9.dp)){
+                            OutlinedTextField(
+                                value=manualIdentifier,
+                                onValueChange={manualIdentifier=it.take(254)},
+                                label={Text("Email or phone number")},
+                                singleLine=true,
+                                modifier=Modifier.fillMaxWidth(),
+                                colors=OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor=Color.White,
+                                    unfocusedTextColor=Color.White,
+                                    focusedLabelColor=Color.White,
+                                    unfocusedLabelColor=Color.White
+                                )
+                            )
+                            OutlinedTextField(
+                                value=manualPassword,
+                                onValueChange={manualPassword=it.take(256)},
+                                label={Text("Password (optional)")},
+                                singleLine=true,
+                                visualTransformation=PasswordVisualTransformation(),
+                                modifier=Modifier.fillMaxWidth(),
+                                colors=OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor=Color.White,
+                                    unfocusedTextColor=Color.White,
+                                    focusedLabelColor=Color.White,
+                                    unfocusedLabelColor=Color.White
+                                )
+                            )
+                            Button(
+                                onClick={
+                                    scope.launch {
+                                        connecting=true
+                                        try{
+                                            api.loginManually(manualIdentifier,manualPassword)
+                                            manualPassword="";manualCode=""
+                                            manualCodeRequested=false;manualLogin=false
+                                            isAuthenticated=true
+                                            status="Signed in with your ItamarOS account."
+                                        }catch(e:Exception){
+                                            status=e.localizedMessage ?: "Manual login failed"
+                                        }finally{connecting=false}
+                                    }
+                                },
+                                enabled=!connecting && manualIdentifier.isNotBlank()
+                                    && manualPassword.isNotBlank()
+                            ){Text("Sign in with password")}
+                            OutlinedButton(
+                                onClick={
+                                    scope.launch {
+                                        connecting=true
+                                        try{
+                                            api.requestExistingSms(manualIdentifier.trim())
+                                            manualCodeRequested=true
+                                            status="Check your registered phone for a login SMS."
+                                        }catch(e:Exception){
+                                            status=e.localizedMessage ?: "Could not send SMS"
+                                        }finally{connecting=false}
+                                    }
+                                },
+                                enabled=!connecting && manualIdentifier.isNotBlank()
+                            ){Text("Send SMS login code instead",color=Color.White)}
+                            if(manualCodeRequested){
+                                OutlinedTextField(
+                                    value=manualCode,onValueChange={manualCode=it.take(8)},
+                                    label={Text("SMS verification code")},singleLine=true,
+                                    modifier=Modifier.fillMaxWidth()
+                                )
+                                Button(onClick={
+                                    scope.launch{
+                                        connecting=true
+                                        try{
+                                            api.verifySms(manualIdentifier.trim(),manualCode.trim())
+                                            manualPassword="";manualCode=""
+                                            manualCodeRequested=false;manualLogin=false
+                                            isAuthenticated=true
+                                            status="Your ItamarOS account is connected."
+                                        }catch(e:Exception){
+                                            status=e.localizedMessage ?: "Invalid SMS code"
+                                        }finally{connecting=false}
+                                    }
+                                },enabled=!connecting && manualCode.isNotBlank()){
+                                    Text("Verify SMS and sign in")
+                                }
+                            }
+                            Text("Without a password, use SMS or approve a QR code in an already signed-in ItamarOS app. SMS may have a cost.",
+                                color=Color.White.copy(alpha=0.77f),fontSize=12.sp)
+                        }
                     }
                     OutlinedButton(
                         onClick={localPlay=true},
