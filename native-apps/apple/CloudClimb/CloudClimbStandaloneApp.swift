@@ -468,6 +468,10 @@ private struct CloudClimbOfflineDemo:View {
                         }
                     }
                     Text(notice).font(.caption).foregroundStyle(.white)
+                    if showTips {
+                        Text("Tip: Land on clouds, collect blue cubes, and finish a stage to earn coins.")
+                            .font(.caption2).foregroundStyle(.white.opacity(0.82))
+                    }
                     VStack(alignment:.leading,spacing:8){
                         Text("Cloud Climb Commands")
                             .font(.subheadline.bold()).foregroundStyle(.white)
