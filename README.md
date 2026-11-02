@@ -17,7 +17,7 @@
 
 **Windows desktop application:** the All apps menu now lists ItamarOS built-ins and, in the packaged Electron edition on Windows, locally installed Start Menu shortcut entries. Programs open only after a user click and are never fabricated or uploaded. Some Microsoft Store apps may not have classic Start Menu shortcuts and may be absent from the native listing. Browser emulators cannot enumerate desktop programs.
 
-**Desktop/tablet login:** the Connect web client has an email login and a phone OTP flow through Supabase Auth using Twilio/Twilio Verify as its server-side SMS provider. The native iPad/iPhone and Android tablet app sources also include SMS OTP support. SMS is **not active** until a new Supabase project and an authorized Twilio sender are configured. See [Twilio and sync setup](messaging/TWILIO_SETUP.md).
+**Desktop/tablet login:** the Connect web client now offers account creation with a required unique username, a verified phone number, a profile image or default avatar, and an optional password. Existing users can log in with phone OTP or phone + password. The backend uses Supabase Auth with **Twilio Programmable Messaging (not Twilio Verify)** as the SMS provider. Native iPad/iPhone and Android tablet app sources already have SMS OTP support, but their signup screens still need to be brought in line with the new web UI. SMS is **not active** until a new Supabase project and an authorized Twilio sender are configured, and it is not free. See [Twilio and sync setup](messaging/TWILIO_SETUP.md).
 
 **Sync control:** account conversation/contact loading can be turned off in each device's settings. This is a local privacy control, not server-side deletion; already sent or retained server messages remain accessible elsewhere.
 
