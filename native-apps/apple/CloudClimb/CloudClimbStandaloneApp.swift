@@ -31,35 +31,49 @@ struct CloudClimbStandaloneApp: App {
     }
 }
 
-private struct CloudClimbSkyIntro:View {
-    var body:some View {
+private struct CloudClimbSkyIntro: View {
+    var body: some View {
         ZStack {
-            Circle()
-                .fill(Color.cyan.opacity(0.18))
-                .frame(width:215,height:150)
-                .blur(radius:24)
-            Image(systemName:"cloud.fill")
-                .font(.system(size:120,weight:.ultraLight))
-                .foregroundStyle(.white.opacity(0.22))
-                .offset(x:-65,y:14)
-            Image(systemName:"cloud.fill")
-                .font(.system(size:93,weight:.ultraLight))
-                .foregroundStyle(.white.opacity(0.45))
-                .offset(x:82,y:-19)
-            Image("BrandMark")
-                .resizable().scaledToFit()
-                .frame(width:104,height:104)
-                .padding(16)
-                .background(Color.white.opacity(0.93),in:RoundedRectangle(cornerRadius:32))
-                .shadow(color:.cyan.opacity(0.4),radius:20,y:10)
-            Image(systemName:"sparkle")
-                .font(.system(size:25,weight:.bold))
-                .foregroundStyle(.yellow)
-                .offset(x:91,y:-66)
+            RoundedRectangle(cornerRadius: 28)
+                .fill(LinearGradient(colors: [.cyan, Color(red:0.13,green:0.52,blue:0.98),
+                    Color(red:0.03,green:0.29,blue:0.73)], startPoint: .top, endPoint: .bottom))
+            Circle().fill(.white.opacity(0.20)).frame(width:210).blur(radius:35).offset(x:120,y:-60)
+            Image(systemName:"cloud.fill").font(.system(size:105))
+                .foregroundStyle(.white.opacity(0.70)).offset(x:-115,y:35)
+            Image(systemName:"cloud.fill").font(.system(size:90))
+                .foregroundStyle(.white.opacity(0.9)).offset(x:120,y:-30)
+            VStack(spacing:3) {
+                Text("☁️ CLOUD").font(.system(size:38,weight:.black,design:.rounded))
+                    .foregroundStyle(.white).shadow(color:.blue,radius:4,x:3,y:5)
+                Text("CLIMB 🚩").font(.system(size:38,weight:.black,design:.rounded))
+                    .foregroundStyle(.yellow).shadow(color:.orange,radius:4,x:3,y:5)
+                Text("☁️   🏃🏻‍♂️   🪙  🪙   🏝️")
+                    .font(.system(size:35)).padding(.top,8)
+            }.minimumScaleFactor(0.65)
         }
-        .frame(maxWidth:.infinity)
-        .frame(height:175)
-        .accessibilityHidden(true)
+        .frame(height:215)
+        .overlay(RoundedRectangle(cornerRadius:28).stroke(.white.opacity(0.65),lineWidth:2))
+        .shadow(color:.blue.opacity(0.5),radius:16,y:8)
+        .accessibilityLabel("Cloud Climb colorful sky adventure")
+    }
+}
+
+private struct CloudClimbMenuButton: View {
+    let title:String
+    let symbol:String
+    let colors:[Color]
+    let action:()->Void
+    var body:some View {
+        Button(action:action) {
+            Label(title,systemImage:symbol)
+                .font(.system(size:21,weight:.black,design:.rounded))
+                .frame(maxWidth:.infinity).padding(.vertical,15)
+                .foregroundStyle(.white)
+                .background(LinearGradient(colors:colors,startPoint:.top,endPoint:.bottom),
+                            in:RoundedRectangle(cornerRadius:22))
+                .overlay(RoundedRectangle(cornerRadius:22).stroke(.white.opacity(0.8),lineWidth:2))
+                .shadow(color:colors.last?.opacity(0.65) ?? .blue,radius:5,y:5)
+        }.buttonStyle(.plain)
     }
 }
 
@@ -73,6 +87,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var showOnline=false
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
+    @State private var selectedMenu:String?
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -80,6 +95,37 @@ struct CloudClimbStandaloneHome:View {
             ScrollView {
                 VStack(spacing:16) {
                     CloudClimbSkyIntro()
+                    HStack {
+                        Label(cloud.profile?.username ?? "Player",systemImage:"person.crop.circle.fill")
+                        Spacer()
+                        Label("0",systemImage:"circle.fill").foregroundStyle(.yellow)
+                        Image(systemName:"gearshape.fill")
+                    }
+                    .font(.system(size:15,weight:.bold,design:.rounded))
+                    .foregroundStyle(.white)
+                    .padding(13)
+                    .background(.blue.opacity(0.55),in:RoundedRectangle(cornerRadius:17))
+                    CloudClimbMenuButton(title:"PLAY",symbol:"play.fill",
+                        colors:[.green,Color(red:0,green:0.6,blue:0.1)]) {
+                        if cloud.isSignedIn {showOnline=true} else {offlineDemo=true}
+                    }
+                    CloudClimbMenuButton(title:"LEVELS",symbol:"square.grid.2x2.fill",
+                        colors:[.cyan,.blue]) { selectedMenu="Levels" }
+                    CloudClimbMenuButton(title:"CUSTOMIZE",symbol:"tshirt.fill",
+                        colors:[.purple,.indigo]) { selectedMenu="Customize" }
+                    CloudClimbMenuButton(title:"SHOP",symbol:"cart.fill",
+                        colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { selectedMenu="Shop" }
+                    HStack(spacing:8) {
+                        ForEach(["🏆 Achievements","🥇 Leaderboard","🎁 Daily Reward",
+                                 "🎯 Challenges"],id: \\.self) { title in
+                            Button(title) {selectedMenu=title}
+                                .font(.system(size:11,weight:.bold,design:.rounded))
+                                .frame(maxWidth:.infinity,minHeight:47)
+                                .foregroundStyle(.white)
+                                .background(.blue.opacity(0.8),in:RoundedRectangle(cornerRadius:12))
+                        }
+                    }
+
                     Text("Cloud Climb By ItamarOS")
                         .font(.custom("Fredoka",size:38).weight(.bold))
                         .tracking(-0.8)
@@ -193,6 +239,13 @@ struct CloudClimbStandaloneHome:View {
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
             .toolbar(.hidden,for:.navigationBar)
+            .alert("Cloud Climb",isPresented:Binding(
+                get:{selectedMenu != nil},set:{if !$0 {selectedMenu=nil}}
+            )) {
+                Button("OK") {selectedMenu=nil}
+            } message: {
+                Text("\\(selectedMenu ?? "Feature") is being prepared. Play the offline demo now.")
+            }
             .sheet(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
                     .environmentObject(cloud)
