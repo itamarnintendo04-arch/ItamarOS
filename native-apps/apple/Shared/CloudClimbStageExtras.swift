@@ -50,7 +50,7 @@ enum CloudClimbStageExtras {
             let x=enemyX(p,index:index,time:time)*sx,y=(p.minY-13)*sy
             ctx.fill(Path(ellipseIn:CGRect(x:x-13*sx,y:y-13*sy,
                 width:26*sx,height:26*sy)),with:.color(.purple))
-            for delta in [-4.0,4.0] {
+            for delta in [CGFloat(-4), CGFloat(4)] {
                 ctx.fill(Path(ellipseIn:CGRect(x:x+delta*sx-3*sx,y:y-4*sy,
                     width:6*sx,height:6*sy)),with:.color(.white))
             }
