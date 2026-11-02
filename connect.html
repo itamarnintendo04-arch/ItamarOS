@@ -31,38 +31,44 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 </section>
 <section id="auth" hidden>
 <h2 id="authTitle">Create your ItamarOS account</h2>
-<p id="authHelp" class="muted">Choose a unique username, verify your phone and choose a profile picture or a default avatar. Passwords are optional.</p>
+<p id="authHelp" class="muted">Username, email and phone number are required (*). You can use a default avatar; a password is optional.</p>
 <div class="row"><button id="signupMode" type="button" class="primary">Create account</button><button id="signinMode" type="button">Sign in</button></div>
 <form id="smsForm">
-<label for="phone">Mobile number (required)</label>
+<div id="signupPhoneField">
+<label for="phone">Phone number *</label>
 <input type="tel" id="phone" placeholder="+972501234567" autocomplete="tel" inputmode="tel" pattern="\+[1-9][0-9]{7,14}" required>
+</div>
 <div id="signupFields">
-<label for="signupUsername">Username (required)</label>
+<label for="signupUsername">Username *</label>
 <input id="signupUsername" autocomplete="username" required minlength="3" maxlength="24" pattern="[a-z0-9_.]{3,24}" placeholder="3–24 lowercase letters, numbers, _ or .">
+<label for="signupEmail">Email *</label>
+<input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email" required maxlength="254">
 <label for="signupAvatar">Profile picture — upload a photo or choose the default avatar</label>
 <input type="file" id="signupAvatar" accept="image/jpeg,image/png,image/webp">
 <img id="avatarPreview" alt="Selected profile picture" hidden style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin-top:7px">
 <label class="row" for="useDefaultAvatar"><input type="checkbox" id="useDefaultAvatar" checked>Use a default avatar instead of uploading a photo</label>
 <label for="signupPassword">Password (optional, at least 8 characters)</label>
 <input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS codes">
-<p class="muted">Your username and uploaded photo are public. You never have to use your real face. Your phone number stays private.</p>
+<p class="muted">We'll verify your phone by SMS and send a confirmation email. The username and uploaded photo are public; your email and phone are private. A real face isn't required.</p>
 </div>
 <div id="signinFields" hidden>
+<label for="signinIdentifier">Email or phone number *</label>
+<input id="signinIdentifier" type="text" autocomplete="username" placeholder="you@example.com or +972501234567">
 <label for="signinPassword">Password (optional)</label>
-<input id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter your password, or leave blank to get an SMS code">
-<p class="muted">Sign in with your password to avoid an SMS charge, or leave it blank to request a one-time code.</p>
+<input id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter a password, or leave blank for a login code">
+<p class="muted">With no password, an email login link or SMS code is sent. Email login has no SMS charge.</p>
 </div>
 <button id="authSubmit" class="primary" type="submit">Next — send SMS</button>
 </form>
 <form id="smsVerifyForm" hidden>
-<h3>Enter your SMS code</h3>
-<p class="muted">The code was requested for <strong id="phoneDestination"></strong>. Never share your code.</p>
-<label for="smsCode">Verification code</label>
+<h3 id="verifyTitle">Enter your SMS code</h3>
+<p class="muted">A code was requested for <strong id="phoneDestination"></strong>. Never share your code.</p>
+<label for="smsCode">Verification code (SMS or email OTP)</label>
 <input id="smsCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required>
 <div class="row"><button type="submit" class="primary">Verify and continue</button>
 <button type="button" id="changePhone">Change number</button></div>
 </form>
-<p class="muted">SMS uses the Twilio Programmable Messaging provider configured in Supabase Auth, not Twilio Verify. SMS delivery still costs money; rate limits apply. Only use a phone number you control.</p>
+<p class="muted">SMS uses Twilio Programmable Messaging, which may cost money. Email login uses your configured Supabase email service. QR account linking is supported in Cloud Climb using approval in an already signed-in ItamarOS app.</p>
 </section>
 <div id="app" hidden>
 <nav>
