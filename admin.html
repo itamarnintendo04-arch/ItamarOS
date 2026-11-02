@@ -21,7 +21,11 @@ small{color:#59687d}
 <form id="invite"><label for="email">Email to invite</label><input id="email" type="email" maxlength="254" required placeholder="user@example.com">
 <button type="submit">Generate one-time invitation</button></form>
 <p><small>This generates a link without sending an email. Send it privately to the intended recipient. Do not post invitation links publicly.</small></p>
-<div id="invitation" hidden><p id="link"></p><button id="copy" type="button">Copy invitation link</button></div>
+<div id="invitation" hidden><p id="link"></p>
+<label for="invitationMessage">Invitation message to email manually</label>
+<textarea id="invitationMessage" readonly rows="7" style="box-sizing:border-box;width:100%;font:inherit;border:1px solid #becde0;border-radius:8px;padding:10px"></textarea>
+<button id="copyMessage" type="button">Copy invitation email</button>
+<button id="copy" type="button">Copy link only</button></div>
 </section>
 <p id="status" role="status" aria-live="polite"></p>
 </main>
