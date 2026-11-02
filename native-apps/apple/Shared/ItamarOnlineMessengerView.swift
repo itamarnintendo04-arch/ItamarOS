@@ -249,6 +249,21 @@ struct ItamarCloudLoginView: View {
                 .disabled(processing || !email.contains("@") ||
                           password.count<8 || (registering &&
                           username.trimmingCharacters(in:.whitespacesAndNewlines).count<3))
+                if !registering {
+                    Button("Forgot password? Send email reset link") {
+                        processing=true
+                        Task {
+                            do {try await cloud.sendPasswordResetEmail(email:email);error=""}
+                            catch {self.error=error.localizedDescription}
+                            processing=false
+                        }
+                    }
+                    .disabled(processing || !email.contains("@"))
+                    Link("Recover with a previously verified phone (SMS)",
+                         destination:URL(string:"https://itamaros-web-emulator.onrender.com/connect.html")!)
+                    Text("Phone recovery is possible only after verifying ownership of the number. SMS delivery must be enabled.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             Section {
                 if !error.isEmpty {Text(error).foregroundStyle(.red).font(.caption)}
@@ -275,6 +290,12 @@ struct ItamarCloudProfileView: View {
     @State private var avatarPath: String?
     @State private var readReceipts = true
     @State private var accountBadge:String? = nil
+    @State private var privateAccountEmail=""
+    @State private var currentPassword=""
+    @State private var replacementPassword=""
+    @State private var confirmReplacement=""
+    @State private var changingPassword=false
+    @State private var passwordStatus=""
 
     var body: some View {
         Form {
@@ -335,6 +356,37 @@ struct ItamarCloudProfileView: View {
                 if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
             }
             if !required {
+                Section("Private account and security") {
+                    LabeledContent("Email",value:privateAccountEmail.isEmpty ? "Loading…" : privateAccountEmail)
+                    LabeledContent("Password",value:"••••••••")
+                    Text("Your actual password cannot be displayed. Enter the current password to verify your identity and choose a new one.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    SecureField("Current password",text:$currentPassword)
+                        .textContentType(.password)
+                    SecureField("New password (8+ characters)",text:$replacementPassword)
+                        .textContentType(.newPassword)
+                    SecureField("Confirm new password",text:$confirmReplacement)
+                        .textContentType(.newPassword)
+                    Button(changingPassword ? "Verifying…" : "Verify identity and change password") {
+                        changingPassword=true
+                        Task {
+                            do {
+                                guard replacementPassword==confirmReplacement else {
+                                    throw ItamarCloudError.badResponse("New passwords do not match.")
+                                }
+                                try await cloud.changePasswordAfterVerification(
+                                    current:currentPassword,replacement:replacementPassword)
+                                currentPassword="";replacementPassword="";confirmReplacement=""
+                                passwordStatus="Password updated successfully."
+                            } catch {passwordStatus=error.localizedDescription}
+                            changingPassword=false
+                        }
+                    }.disabled(changingPassword || currentPassword.isEmpty ||
+                               replacementPassword.count<8 || confirmReplacement.isEmpty)
+                    if !passwordStatus.isEmpty {Text(passwordStatus).font(.caption)}
+                    Text("If you forgot your password, use the email reset link or your previously verified recovery phone.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Section("Chats and notifications") {
                     Toggle("Send and receive read receipts",isOn:$readReceipts)
                         .onChange(of:readReceipts) { _,enabled in
@@ -402,6 +454,9 @@ struct ItamarCloudProfileView: View {
             readReceipts = cloud.profile?.read_receipts_enabled ?? true
         }
         .task {
+            if cloud.isSignedIn {
+                privateAccountEmail=(try? await cloud.privateAccountEmail()) ?? ""
+            }
             if let id=cloud.userID {
                 let target=id.uuidString.lowercased()
                 if let data=try? await cloud.request("/rest/v1/itamar_profile_badges",
