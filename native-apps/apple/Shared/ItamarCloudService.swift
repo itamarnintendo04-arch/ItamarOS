@@ -270,6 +270,47 @@ final class ItamarCloudService: ObservableObject {
         }
     }
 
+    // Private account data requires an existing authenticated session.
+    // The server never returns the account's current password.
+    func privateAccountEmail() async throws -> String {
+        let raw=try await request("/auth/v1/user")
+        guard let body=try JSONSerialization.jsonObject(with:raw) as? [String:Any],
+              let email=body["email"] as? String, !email.isEmpty else {
+            throw ItamarCloudError.badResponse("Account email is unavailable.")
+        }
+        return email
+    }
+
+    func changePasswordAfterVerification(current: String, replacement: String) async throws {
+        guard replacement.count>=8, !current.isEmpty,
+              current != replacement, let expected=userID else {
+            throw ItamarCloudError.badResponse("Enter the current password and a different new password (8+ characters).")
+        }
+        let email=try await privateAccountEmail()
+        let raw=try await request("/auth/v1/token",method:"POST",
+                                  data:["email":email,"password":current],authorized:false,
+                                  query:[URLQueryItem(name:"grant_type",value:"password")])
+        let verified=try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard verified.user?.id==expected else {
+            throw ItamarCloudError.badResponse("Password verification failed.")
+        }
+        _=try await request("/auth/v1/user",method:"PUT",
+                            data:["password":replacement])
+        status="Password changed. No existing password was displayed."
+    }
+
+    func sendPasswordResetEmail(email: String) async throws {
+        let clean=email.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard clean.contains("@"),clean.contains(".") else {
+            throw ItamarCloudError.badResponse("Enter your email to receive a reset link.")
+        }
+        _=try await request("/auth/v1/recover",method:"POST",
+                            data:["email":clean],authorized:false,
+                            query:[URLQueryItem(name:"redirect_to",
+                              value:"https://itamaros-web-emulator.onrender.com/connect.html")])
+        status="If an account exists, a password-reset link will be sent."
+    }
+
     func signIn(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/token", method: "POST", data: body,
