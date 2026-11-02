@@ -68,8 +68,12 @@ class AndroidConnectApi {
             val text=(if(success)conn.inputStream else conn.errorStream)
                 ?.bufferedReader()?.use{it.readText()}.orEmpty()
             if(!success){
-                val reason=runCatching{JSONObject(text).optString("message")}.getOrNull().orEmpty()
-                throw IllegalStateException(if(reason.isNotEmpty())reason else "HTTP "+conn.responseCode)
+                val detail=runCatching { JSONObject(text) }.getOrNull()
+                val reason=listOf("msg","error_description","message","error")
+                    .firstNotNullOfOrNull { name ->
+                        detail?.optString(name)?.takeIf { it.isNotBlank() }
+                    }.orEmpty()
+                throw IllegalStateException(reason.ifEmpty { "Request failed (HTTP "+conn.responseCode+")" })
             }
             text
         }finally{conn.disconnect()}
@@ -638,7 +642,11 @@ fun AndroidConnectScreen(
     }
 
     fun perform(action:suspend()->Unit){
-        scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
+        scope.launch {
+            notice = ""
+            try { action() }
+            catch(e:Exception) { notice=e.localizedMessage ?: "Operation failed" }
+        }
     }
     val chooseSignupAvatar=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ uri ->
         pendingSignupAvatar=uri
@@ -743,18 +751,22 @@ fun AndroidConnectScreen(
             Button(onClick={perform{
                 api.login(email.trim(),password,register=false)
                 password=""
-                val p=api.profile()
-                handle=p?.optString("username").orEmpty()
-                if(p==null){handle=api.requestedUsername();tab="Profile"}
-                displayName=p?.optString("display_name").orEmpty()
+                // Authentication and profile/chat loading fail independently.
                 signed=true
+                val p=runCatching { api.profile() }.getOrNull()
+                handle=p?.optString("username").orEmpty()
+                if(p==null){
+                    handle=runCatching { api.requestedUsername() }.getOrDefault("")
+                    tab="Profile"
+                }
+                displayName=p?.optString("display_name").orEmpty()
                 if(p!=null && authOnly)onAccountReady(p.optString("username"))
                 if(p!=null && pendingSignupAvatar!=null){
                     profileAvatar=api.uploadAvatar(ctx,pendingSignupAvatar!!)
                     api.profilePreferences(profileAvatar,true)
                     pendingSignupAvatar=null
                 }
-                if(syncOnThisDevice&&p!=null){rooms=api.rooms()}
+                if(syncOnThisDevice&&p!=null){rooms=runCatching { api.rooms() }.getOrDefault(JSONArray())}
             }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
                 && password.isNotEmpty()){
                 Text("Sign in")

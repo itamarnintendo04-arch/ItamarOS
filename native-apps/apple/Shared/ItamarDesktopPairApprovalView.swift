@@ -68,7 +68,9 @@ struct ItamarDesktopPairApprovalView: View {
                             }
                         }.disabled(busy || result.hasPrefix("Approved"))
                     } else {
-                        Text("Sign in to ItamarOS Connect on this phone first.")
+                        Text("Sign in to ItamarOS to approve this Cloud Climb request.")
+                        ItamarCloudLoginView()
+                            .environmentObject(cloud)
                     }
                     if !result.isEmpty { Text(result).font(.caption) }
                     if isCloudClimb && result.hasPrefix("Approved") {

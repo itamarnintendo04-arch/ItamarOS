@@ -203,6 +203,19 @@ struct CloudClimbStandaloneHome:View {
                                 ? "Scan the QR with a trusted ItamarOS phone, then verify and approve."
                                 : "Confirm this code in ItamarOS on this phone, then return to Cloud Climb. No QR is needed.")
                                 .font(.caption).foregroundStyle(.secondary)
+                            if !qrVisible {
+                                Button("Open ItamarOS again") {
+                                    guard let destination=URL(string:"itamaros://cloud-climb?request="+pair.requestId) else{return}
+                                    openURL(destination) { accepted in
+                                        if !accepted {
+                                            activeRequest=nil
+                                            self.pair=nil
+                                            showManualLogin=true
+                                            info="Could not open ItamarOS. Sign in with email and password instead."
+                                        }
+                                    }
+                                }.buttonStyle(.borderedProminent)
+                            }
                             Button("Cancel") {activeRequest=nil;self.pair=nil;qrVisible=false}
                         }
                     }
@@ -290,7 +303,9 @@ struct CloudClimbStandaloneHome:View {
                 // password, claim secret or access token is shared via deep link.
                 openURL(destination) { accepted in
                     if !accepted {
-                        info="ItamarOS could not be opened. Install it or cancel and use QR linking."
+                        activeRequest=nil;pair=nil;qrVisible=false
+                         showManualLogin=true
+                         info="ItamarOS could not be opened. Sign in with email/password or install ItamarOS."
                     }
                 }
             }

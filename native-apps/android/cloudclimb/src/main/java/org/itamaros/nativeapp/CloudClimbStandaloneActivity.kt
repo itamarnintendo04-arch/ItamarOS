@@ -142,7 +142,9 @@ private fun CloudClimbStandaloneHome(){
                     context.startActivity(Intent(Intent.ACTION_VIEW,deepLink)
                         .setPackage("org.itamaros.nativeapp"))
                 }catch(_:Exception){
-                    status="Could not open ItamarOS. Install the current app or use QR linking."
+                    requestId="";claimSecret="";qrUrl="";wantQR=false
+                    manualLogin=true
+                    status="Could not open ItamarOS. Sign in with your email below, or install ItamarOS and retry."
                 }
             }
         }catch(e:Exception){status=e.localizedMessage?:"QR unavailable";wantQR=false}
@@ -284,6 +286,10 @@ private fun CloudClimbStandaloneHome(){
                             color=Color.White)
                     }
                     if(manualLogin && !wantQR){
+                        if(status.contains("failed",ignoreCase=true) ||
+                           status.contains("could not",ignoreCase=true) ||
+                           status.contains("error",ignoreCase=true))
+                            Text(status,color=Color(0xFFFFDAA3),fontSize=13.sp)
                         Column(Modifier.fillMaxWidth(),
                             verticalArrangement=Arrangement.spacedBy(9.dp)){
                             OutlinedTextField(

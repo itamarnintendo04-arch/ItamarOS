@@ -2,7 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
  <uses-permission android:name="android.permission.INTERNET" />
  <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
- <application android:label="Cloud Climb" android:icon="@drawable/cloud_climb_icon"
+ <queries>
+      <package android:name="org.itamaros.nativeapp" />
+    </queries>
+    <application android:label="Cloud Climb" android:icon="@drawable/cloud_climb_icon"
               android:allowBackup="false" android:supportsRtl="true"
               android:theme="@android:style/Theme.Material.NoActionBar">
    <activity android:name=".CloudClimbStandaloneActivity"

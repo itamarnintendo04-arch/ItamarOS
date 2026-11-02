@@ -13,6 +13,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,16 +106,44 @@ fun NativeAppScreen(
     }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
-    Scaffold { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Bottom tab bar on phones/tablets; top D-pad controls remain on TV.
+    Scaffold(bottomBar = {
+        if (!isTv) {
+            NavigationBar(tonalElevation = 3.dp) {
                 tabs.forEach { tab ->
-                    FilledTonalButton(onClick = { current = tab }, modifier = Modifier.weight(1f)) {
-                        Text(AndroidLanguage.tab(tab), maxLines = 1)
+                    val symbol = when(tab) {
+                        "Connect" -> Icons.Filled.Chat
+                        "Games" -> Icons.Filled.SportsEsports
+                        "Player" -> Icons.Filled.PlayCircle
+                        "Apps" -> Icons.Filled.Apps
+                        "Settings" -> Icons.Filled.Settings
+                        else -> Icons.Filled.Home
                     }
+                    NavigationBarItem(
+                        selected = current == tab,
+                        onClick = { current = tab },
+                        icon = { Icon(symbol, contentDescription = null) },
+                        label = { Text(AndroidLanguage.tab(tab), fontSize = 10.sp,
+                            maxLines = 1, softWrap = false) },
+                        alwaysShowLabel = true
+                    )
                 }
             }
-            HorizontalDivider()
+        }
+    }) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (isTv) {
+                Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tabs.forEach { tab ->
+                        FilledTonalButton(onClick = { current = tab },
+                            modifier = Modifier.weight(1f)) {
+                            Text(AndroidLanguage.tab(tab), maxLines = 1)
+                        }
+                    }
+                }
+                HorizontalDivider()
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(22.dp),
