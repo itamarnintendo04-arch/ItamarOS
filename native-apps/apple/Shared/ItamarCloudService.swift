@@ -280,6 +280,43 @@ final class ItamarCloudService: ObservableObject {
         try await reload()
     }
 
+    /// Cloud Climb manual login reuses the existing ItamarOS account; no new user is created.
+    /// The identifier may be the verified email or verified international phone number.
+    func signInManually(identifier: String, password: String) async throws {
+        let clean=identifier.trimmingCharacters(in:.whitespacesAndNewlines)
+        let isPhone=clean.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                                options:.regularExpression) != nil
+        let isEmail=clean.contains("@") && clean.contains(".") && !clean.contains(" ")
+        guard isPhone || isEmail, !password.isEmpty else {
+            throw ItamarCloudError.badResponse("Enter your registered email or phone and password.")
+        }
+        let body:[String:String]=isPhone
+            ? ["phone":clean,"password":password]
+            : ["email":clean,"password":password]
+        let raw=try await request("/auth/v1/token",method:"POST",data:body,
+                                  authorized:false,
+                                  query:[URLQueryItem(name:"grant_type",value:"password")])
+        let session=try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard let userID=session.user?.id else {
+            throw ItamarCloudError.badResponse("Sign-in failed.")
+        }
+        setSession(access:session.access_token,refresh:session.refresh_token,userID:userID)
+        try await reload()
+    }
+
+    /// Existing user only: never create an incomplete account from the login form.
+    func requestExistingSMS(phone: String) async throws {
+        let clean=phone.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard clean.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                          options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter a registered international phone number.")
+        }
+        _=try await request("/auth/v1/otp",method:"POST",data:[
+            "phone":clean,"create_user":false
+        ],authorized:false)
+        status="Code requested. Enter the SMS to finish signing in."
+    }
+
     // Twilio is configured as Supabase Auth's SMS provider on the server.
     // There are NO Twilio credentials in this iOS binary.
     func requestSMS(phone: String) async throws {
