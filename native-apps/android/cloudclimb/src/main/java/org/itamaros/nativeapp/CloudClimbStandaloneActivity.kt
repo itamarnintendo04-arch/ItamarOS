@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.style.TextAlign
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
@@ -210,13 +211,14 @@ private fun CloudClimbStandaloneHome(){
                 Text(
                     "Cloud Climb By ItamarOS",
                     fontSize=34.sp, fontWeight=FontWeight.Black,
-                    fontFamily=FontFamily.SansSerif, letterSpacing=(-0.5).sp,
+                    fontFamily=FontFamily(Font(R.font.fredoka)), letterSpacing=(-0.5).sp,
                     color=Color.White, textAlign=TextAlign.Center,
                     lineHeight=39.sp
                 )
                 Text(
                     "A sky-high platform adventure",
                     fontSize=16.sp, fontWeight=FontWeight.SemiBold,
+                    fontFamily=FontFamily(Font(R.font.fredoka)),
                     color=Color(0xFFC5F5FF), textAlign=TextAlign.Center
                 )
                 Text(
@@ -261,7 +263,8 @@ private fun CloudClimbStandaloneHome(){
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(if(connecting)"Connecting…" else "Sign in with ItamarOS",
-                            fontWeight=FontWeight.Bold,fontSize=17.sp)
+                            fontWeight=FontWeight.Bold,fontSize=17.sp,
+                            fontFamily=FontFamily(Font(R.font.fredoka)))
                     }
                     OutlinedButton(
                         onClick={localPlay=true},
