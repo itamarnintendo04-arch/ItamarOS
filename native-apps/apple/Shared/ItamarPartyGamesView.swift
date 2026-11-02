@@ -422,6 +422,7 @@ struct ItamarPartyGamesView: View {
                         guard CloudClimbHeroes.unlocked(value,owned:climbCharacters) else{return}
                         climbEquippedHero=value
                         UserDefaults.standard.set(value,forKey:climbSaveKey+".hero")
+                        saveClimbPreferences()
                     }))
             Button("🔮 Character Orb · \(climbCharacters.count) characters") {
                 climbCharacterOrbOpen=true
@@ -468,17 +469,26 @@ struct ItamarPartyGamesView: View {
         NavigationStack {
             Form {
                 Section("Controls") {
-                    Toggle("Auto-hide touch controls",isOn:$climbAutoHideControls)
-                    Toggle("Show control tips",isOn:$climbShowTips)
+                    Toggle("Auto-hide touch controls",isOn:Binding(
+                        get:{climbAutoHideControls},
+                        set:{climbAutoHideControls=$0;saveClimbPreferences()}
+                    ))
+                    Toggle("Show control tips",isOn:Binding(
+                        get:{climbShowTips},
+                        set:{climbShowTips=$0;saveClimbPreferences()}
+                    ))
                     Text(climbControllerConnected ? "Controller connected" : "No controller connected")
                 }
                 Section("Appearance") {
-                    Toggle("Twilight sky theme",isOn:$climbTwilightSky)
+                    Toggle("Twilight sky theme",isOn:Binding(
+                        get:{climbTwilightSky},
+                        set:{climbTwilightSky=$0;saveClimbPreferences()}
+                    ))
                 }
                 Section("Account & Progress") {
-                    Text("Sign in with your verified phone number in ItamarOS Connect.")
+                    Text("Your game is tied to your authenticated ItamarOS account.")
                     Text(climbSyncStatus)
-                    Text("Using the same verified phone number on another device signs you into the same Supabase account.")
+                    Text("Levels, rewards and game preferences sync across signed-in devices. Offline demo saves stay local.")
                 }
             }
             .navigationTitle("Cloud Climb Settings")
@@ -594,31 +604,96 @@ struct ItamarPartyGamesView: View {
             saveClimb()
         }
     }
+    // Player-visible commands only alter normal gameplay and cosmetic settings.
+    // Progress rewards are still awarded by the existing gameplay / server RPCs.
     private func runClimbCommand() {
         let command=climbSlashInput.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        defer {climbSlashInput=""}
         switch command {
-        case "/help":
-            climbSlashReply="/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
+        case "/help", "/commands":
+            climbSlashReply="/stats · /account · /room · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /controls auto|show · /tips on|off · /pause · /resume · /reset-position · /save · /sync"
         case "/stats":
-            climbSlashReply="Level \(climbLevel) · World \(climbWorld) · Coins \(climbCoins) · Blue \(climbBlueCubes.count)/50 · Colored \(climbColoredBosses.count)/10 · Heroes \(climbCharacters.count)"
+            climbSlashReply="Level \(climbLevel) · World \(climbWorld) · Coins \(climbCoins) · Hearts \(climbHearts)/3 · Blue \(climbBlueCubes.count)/50 · Colored \(climbColoredBosses.count)/10 · Heroes \(climbCharacters.count)"
+        case "/account":
+            climbSlashReply=cloud.isSignedIn ? "Connected to your ItamarOS account. "+climbSyncStatus : "Offline demo · Progress stays on this device."
         case "/pause":
             climbPaused=true;climbSlashReply="Game paused."
         case "/resume":
             climbPaused=false;climbSlashReply="Game resumed."
+        case "/reset-position":
+            resetMovement();climbSlashReply="Moved back to the stage start. Progress was kept."
         case "/room":
             climbSlashReply="Room: \(match?.code ?? "offline")"
         case "/theme day":
-            climbTwilightSky=false;climbSlashReply="Day theme enabled."
+            climbTwilightSky=false;saveClimbPreferences();climbSlashReply="Day theme enabled."
         case "/theme twilight":
-            climbTwilightSky=true;climbSlashReply="Twilight theme enabled."
+            climbTwilightSky=true;saveClimbPreferences();climbSlashReply="Twilight theme enabled."
+        case "/controls auto":
+            climbAutoHideControls=true;saveClimbPreferences();climbSlashReply="Touch controls hide when a controller is connected."
+        case "/controls show":
+            climbAutoHideControls=false;saveClimbPreferences();climbSlashReply="Touch controls always visible."
+        case "/tips on":
+            climbShowTips=true;saveClimbPreferences();climbSlashReply="Gameplay tips enabled."
+        case "/tips off":
+            climbShowTips=false;saveClimbPreferences();climbSlashReply="Gameplay tips disabled."
+        case "/hero list":
+            climbSlashReply="Unlocked hero IDs: starter"+(climbCharacters.isEmpty ? "" : ", "+climbCharacters.sorted().joined(separator:", "))
+        case "/save":
+            saveClimb();saveClimbPreferences()
+            climbSlashReply=climbCloudReady ? "Account save requested." : "Saved on this device. Cloud sync is not connected."
+        case "/sync":
+            if cloud.isSignedIn {
+                Task {await loadCloudClimb()}
+                climbSlashReply="Reloading your ItamarOS account save."
+            } else {climbSlashReply="Sign in with ItamarOS to sync. Offline progress is kept separate."}
         default:
             if command.hasPrefix("/world "),let number=Int(command.dropFirst(7)),
-                climbWorlds.contains(number) || (number==11 && climbSecretAvailable) {
-                climbWorld=number;resetMovement();saveClimb()
+               climbWorlds.contains(number) || (number==11 && climbSecretAvailable) {
+                climbWorld=number;resetMovement();saveClimb();saveClimbPreferences()
                 climbSlashReply="Entered World \(number)."
-            } else {climbSlashReply="Unknown command or locked world. Try /help."}
+            } else if command.hasPrefix("/hero ") {
+                let requested=String(command.dropFirst(6))
+                if CloudClimbHeroes.unlocked(requested,owned:climbCharacters) {
+                    climbEquippedHero=requested
+                    UserDefaults.standard.set(requested,forKey:climbSaveKey+".hero")
+                    saveClimbPreferences()
+                    climbSlashReply="Equipped \(CloudClimbHeroes.get(requested).name)."
+                } else {climbSlashReply="Hero is locked. Use /hero list to see your characters."}
+            } else {climbSlashReply="Unknown command or locked world. Type /help."}
         }
-        climbSlashInput=""
+    }
+    @MainActor private func loadClimbPreferences() async {
+        guard cloud.isSignedIn,climbCloudReady else{return}
+        do {
+            let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_get_preferences",
+                                            method:"POST",data:[:])
+            guard let prefs=try JSONSerialization.jsonObject(with:raw) as? [String:Any],
+                  prefs["exists"] as? Bool == true else{return}
+            climbTwilightSky=prefs["twilight_sky"] as? Bool ?? false
+            climbAutoHideControls=prefs["auto_hide_controls"] as? Bool ?? true
+            climbShowTips=prefs["show_tips"] as? Bool ?? true
+            let desiredWorld=prefs["selected_world"] as? Int ?? 1
+            climbWorld=(climbWorlds.contains(desiredWorld) ||
+                        (desiredWorld==11 && climbSecretAvailable)) ? desiredWorld : 1
+            let desiredHero=prefs["equipped_hero"] as? String ?? "starter"
+            climbEquippedHero=CloudClimbHeroes.unlocked(desiredHero,owned:climbCharacters)
+                ? desiredHero : "starter"
+            UserDefaults.standard.set(climbEquippedHero,forKey:climbSaveKey+".hero")
+            resetMovement()
+        }catch {climbSyncStatus="Cloud progress connected · Preferences unavailable"}
+    }
+    private func saveClimbPreferences() {
+        guard cloud.isSignedIn,climbCloudReady else{return}
+        let payload:[String:Any]=[
+            "p_equipped_hero":climbEquippedHero,"p_selected_world":climbWorld,
+            "p_twilight_sky":climbTwilightSky,
+            "p_auto_hide_controls":climbAutoHideControls,"p_show_tips":climbShowTips
+        ]
+        Task {
+            do { _=try await cloud.request("/rest/v1/rpc/itamar_climb_save_preferences",
+                                           method:"POST",data:payload) }
+            catch {climbSyncStatus="Cloud progress connected · Preferences not saved"}
+        }
     }
     private func steerButton(_ label:String,left:Bool)->some View {
         Text(label).font(.title2)
@@ -704,7 +779,7 @@ struct ItamarPartyGamesView: View {
     }
     @MainActor private func loadCloudClimb() async {
         guard cloud.isSignedIn else {
-            climbSyncStatus="Local save · Sign in with verified SMS to sync"
+            climbSyncStatus="Local save · Sign in with ItamarOS to sync"
             return
         }
         climbCloudReady=false
@@ -725,9 +800,10 @@ struct ItamarPartyGamesView: View {
                 climbGameOver=(state["game_over"] as? Bool ?? false) || climbHearts==0
                 resetMovement()
             }
-            climbSyncStatus="Cloud save connected · Same verified number, same account"
+            climbSyncStatus="Cloud save connected · ItamarOS account"
             climbCloudReady=true
             await loadClimbRewards()
+            await loadClimbPreferences()
             if state["exists"] as? Bool != true {saveClimb()}
             else {UserDefaults.standard.set([
                 "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
