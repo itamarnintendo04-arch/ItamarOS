@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>ItamarOS · Public Profiles</title>
+<style>
+:root{color:#14365b;background:#eaf2fd;font:16px system-ui,sans-serif}*{box-sizing:border-box}main{max-width:700px;margin:25px auto;padding:20px}
+section{background:#fff;border:1px solid #d1def0;border-radius:20px;padding:22px;margin:16px 0}
+h1,h2{margin:0 0 12px}p{line-height:1.55}a{color:#2466b9}
+input,button{font:inherit;padding:10px 13px;border-radius:10px;border:1px solid #b4c5dc}
+input{min-width:0;flex:1}button{background:#2360c8;color:#fff;cursor:pointer}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:12px}#avatar{width:88px;height:88px;object-fit:cover;border-radius:50%;background:#d1e2f8}
+#qr{display:inline-block;min-height:200px;max-width:100%}#qr img,#qr canvas{max-width:100%}
+.verified{display:inline-grid;place-items:center;color:white;width:25px;height:25px;font-weight:900;font-size:18px;
+clip-path:polygon(50% 0%,61% 9%,75% 3%,83% 17%,97% 25%,91% 39%,100% 50%,91% 61%,97% 75%,83% 83%,75% 97%,61% 91%,50% 100%,39% 91%,25% 97%,17% 83%,3% 75%,9% 61%,0% 50%,9% 39%,3% 25%,17% 17%,25% 3%,39% 9%)}
+.verified.green{background:#16a34a}.verified.blue{background:#1681e7}
+#status{min-height:22px}#userID{overflow-wrap:anywhere;font-family:ui-monospace,monospace}[hidden]{display:none!important}
+</style></head><body><main>
+<h1>ItamarOS Profiles</h1><p><a href="/connect.html">My account</a></p>
+<section><form id="lookup"><label for="id">Find anyone by their unique profile ID</label>
+<div class="row"><input id="id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required><button type="submit">Find profile</button></div></form></section>
+<section id="profile" hidden>
+<div class="row"><img id="avatar" alt="Profile picture"><div><h2><span id="name"></span> <span id="badge" hidden></span></h2><p id="username"></p></div></div>
+<p id="about"></p><p><strong>Unique ItamarOS ID</strong> <span id="userID"></span></p>
+<button id="copyID" type="button">Copy ID</button> <button id="copyLink" type="button">Copy profile link</button>
+<h3>Scan to open this profile</h3><div id="qr" aria-label="QR code linking to this public profile"></div>
+<p><small>Only public profile details are visible here. Email addresses and phone numbers are never shown.</small></p></section>
+<p id="status" role="status" aria-live="polite"></p>
+</main><script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="/apps/public-profile.js" defer></script></body></html>

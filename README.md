@@ -17,7 +17,7 @@
 
 **Windows desktop application:** the All apps menu now lists ItamarOS built-ins and, in the packaged Electron edition on Windows, locally installed Start Menu shortcut entries. Programs open only after a user click and are never fabricated or uploaded. Some Microsoft Store apps may not have classic Start Menu shortcuts and may be absent from the native listing. Browser emulators cannot enumerate desktop programs.
 
-**Desktop/tablet login:** the Connect web client has an email login and a phone OTP flow through Supabase Auth using Twilio/Twilio Verify as its server-side SMS provider. The native iPad/iPhone and Android tablet app sources also include SMS OTP support. SMS is **not active** until a new Supabase project and an authorized Twilio sender are configured. See [Twilio and sync setup](messaging/TWILIO_SETUP.md).
+**ItamarOS web accounts:** Registration now requires **Username \***, **Email \*** and **Password \***. A phone number and profile image are **optional**. Supabase Auth sends an email confirmation link; it does not send SMS or claim that an optional phone number is verified. Sign-in uses email and password; Cloud Climb's separate native games offer manual email/password or approved short-lived QR linking from an already signed-in ItamarOS app. Android native ItamarOS sign-up now uses email/password; the main iOS ItamarOS signup UI still needs parity testing. SMTP and redirect settings must be configured for real email delivery. See [account setup](messaging/TWILIO_SETUP.md).
 
 **Sync control:** account conversation/contact loading can be turned off in each device's settings. This is a local privacy control, not server-side deletion; already sent or retained server messages remain accessible elsewhere.
 
