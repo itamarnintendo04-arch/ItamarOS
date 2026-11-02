@@ -8,7 +8,10 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.identity.GetPhoneNumberHintIntentRequest
+import com.google.android.gms.auth.api.identity.Identity
 import java.io.ByteArrayOutputStream
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -20,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
@@ -507,6 +512,56 @@ fun AndroidConnectScreen(
     var ownCode by remember{mutableStateOf("")}
     var searchable by remember{mutableStateOf(false)}
 
+    // Google Play services proposes SIM-based phone numbers in a system chooser.
+    // Never silently read, save or send a phone number; the user must select it.
+    var hintForProfile by remember { mutableStateOf(false) }
+    var hintWasManual by remember { mutableStateOf(false) }
+    val phoneHintLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val selected = runCatching {
+                Identity.getSignInClient(ctx).getPhoneNumberFromIntent(result.data)
+                    .replace(Regex("[\\s()-]"), "")
+            }.getOrNull()
+            if (selected != null && Regex("^\\+[1-9][0-9]{7,14}$").matches(selected)) {
+                if (hintForProfile) ownPhone = selected else signInPhone = selected
+                notice = "Number suggested by your device. Confirm it before sending an SMS."
+            } else if (hintWasManual) {
+                notice = "No international number was available. Enter it with +country code."
+            }
+        }
+    }
+    fun offerPhoneHint(forProfile: Boolean, manual: Boolean) {
+        hintForProfile = forProfile
+        hintWasManual = manual
+        val request = GetPhoneNumberHintIntentRequest.builder().build()
+        try {
+            Identity.getSignInClient(ctx).getPhoneNumberHintIntent(request)
+                .addOnSuccessListener { intent ->
+                    try {
+                        phoneHintLauncher.launch(IntentSenderRequest.Builder(intent).build())
+                    } catch (_: Exception) {
+                        if (manual) notice = "Device number suggestion unavailable. Enter your number."
+                    }
+                }
+                .addOnFailureListener {
+                    if (manual) notice = "No phone number suggestion. Enter your number manually."
+                }
+        } catch (_: Exception) {
+            if (manual) notice = "Device number suggestion unavailable. Enter your number."
+        }
+    }
+    LaunchedEffect(api.configured, signed) {
+        // One automatic suggestion at first sign-in; user can decline, or type instead.
+        val prefs = ctx.getSharedPreferences("itamaros_native", Context.MODE_PRIVATE)
+        if (api.configured && !signed && signInPhone.isBlank() &&
+            !prefs.getBoolean("phone_hint_first_signin_shown", false)) {
+            prefs.edit().putBoolean("phone_hint_first_signin_shown", true).apply()
+            offerPhoneHint(forProfile = false, manual = false)
+        }
+    }
+
     fun perform(action:suspend()->Unit){
         scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
     }
@@ -558,7 +613,12 @@ fun AndroidConnectScreen(
     if(!signed){
         Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
         Text("Phone verification by SMS is required. A photo and password are optional.")
-        OutlinedTextField(signInPhone,{signInPhone=it},label={Text("Phone (+country code)")})
+        OutlinedTextField(signInPhone,{signInPhone=it},
+            label={Text("Phone (+country code)")},
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
+        TextButton(onClick={offerPhoneHint(forProfile=false,manual=true)}) {
+            Text("Use phone number suggested by my device")
+        }
         Button(onClick={chooseSignupAvatar.launch("image/*")}){
             Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
         }
@@ -754,7 +814,12 @@ fun AndroidConnectScreen(
                 }){Text("Share contact QR")}
             }
             Text("Optional verified phone. Only searchable if you opt in.")
-            OutlinedTextField(ownPhone,{ownPhone=it},label={Text("My phone (+international)")})
+            OutlinedTextField(ownPhone,{ownPhone=it},
+                label={Text("My phone (+international)")},
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
+            TextButton(onClick={offerPhoneHint(forProfile=true,manual=true)}) {
+                Text("Suggest number from this device")
+            }
             Button(onClick={perform{api.setPhone(ownPhone)}},enabled=ownPhone.startsWith("+")){Text("Send verification SMS")}
             OutlinedTextField(ownCode,{ownCode=it},label={Text("SMS verification code")})
             Button(onClick={perform{api.verifyPhone(ownPhone,ownCode)}},
