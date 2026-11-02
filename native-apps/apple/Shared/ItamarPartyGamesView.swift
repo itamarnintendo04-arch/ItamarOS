@@ -1078,9 +1078,7 @@ struct ItamarPartyGamesView: View {
     }
     private func loseClimbHeart(fromEnemy:Bool=false){
         climbHearts=max(0,climbHearts-1)
-        climbMessage=(fromEnemy ? "A sky sprite caught you. " : "You fell. ")+
-            "\(climbHearts) hearts remaining."+
-            (climbCheckpointSeed==climbStageSeed ? " Checkpoint restored." : "")
+        climbMessage = (fromEnemy ? "A sky sprite caught you. " : "You fell. ") + "\(climbHearts) hearts remaining." + (climbCheckpointSeed==climbStageSeed ? " Checkpoint restored." : "")
         if climbHearts==0 {climbGameOver=true}
         resetMovement(useCheckpoint:true);saveClimb()
     }
