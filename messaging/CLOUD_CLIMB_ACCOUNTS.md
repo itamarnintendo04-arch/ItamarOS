@@ -53,3 +53,7 @@ The deployed schema changes are recorded in [`cloud-climb-account-preferences.sq
 3. Confirm `/hero` and `/world` refuse locked content, and `/save` cannot create arbitrary coins.
 4. Check offline demo stays isolated and QR pairing expires securely.
 5. Build and test native apps before distributing an APK/IPA. A code change or Actions link does not prove an installable artifact exists.
+
+## Game chat updates (2026-11-02)
+
+New game-chat panels show recent player/game messages, and execute chat commands such as `/world N`, `/theme twilight`, `/theme reset`, `/hero reset`, `/controls reset`, `/tips reset`, `/where`, `/stats`, `/pause`, `/resume`, `/undo`, `/cancel`, `/revert`, `/save` and `/sync` (online only). Undo reverts the **last chat command's settings/world/hero/pause change only**; it does not reverse earned currency, unlocked rewards, stage movement, or cloud sync. A player's unlocked worlds and heroes are still validated before travel/equip. In both standalone Cloud Climb iOS and Android, account login now prominently uses **email/password or approved QR** rather than SMS. Existing SMS helper functions may remain internally for legacy devices but are not used by the current game UI.
