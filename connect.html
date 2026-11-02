@@ -106,7 +106,9 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <form id="newChannel"><label for="channelTitle">New channel name</label><input id="channelTitle" maxlength="90" required><button class="primary" type="submit">Create channel</button></form>
 <button id="discover">Discover public channels</button><div id="discovered"></div></section></div>
 <div id="tab-updates" hidden><section><h2>Updates from unmuted rooms</h2><button id="reloadUpdates">Refresh</button><div id="updates"></div>
-<p class="muted">Browser push notifications and background delivery are not configured. This feed refreshes on demand.</p></section></div>
+<p class="muted">Browser push notifications and background delivery are not configured. This feed refreshes on demand.</p>
+<h3>Official ItamarOS messages</h3><button id="reloadOfficial" type="button">Refresh official inbox</button>
+<div id="officialNotices"></div><p class="muted">Only messages addressed to your account appear here. They are not emails.</p></section></div>
 <div id="tab-settings" hidden><section><h2>Sync & privacy</h2>
 <label class="row" for="deviceSync"><input type="checkbox" id="deviceSync" checked>
 <strong>Sync chats, channels and saved contacts on this device</strong></label>
@@ -119,6 +121,10 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <label for="username">Unique username</label><input id="username" minlength="3" maxlength="24" required pattern="[a-z0-9_.]{3,24}">
 <label for="bio">About (optional)</label><textarea id="bio" maxlength="160"></textarea>
 <button class="primary" type="submit">Save profile</button></form>
+<h3>My profile ID & QR</h3><p>Every ItamarOS account has a permanent unique ID.</p>
+<p id="myProfileID" style="overflow-wrap:anywhere;font-family:ui-monospace,monospace"></p>
+<div class="row"><button id="copyMyID" type="button">Copy my ID</button><a id="myProfileQR" href="/profile.html">Open my profile and QR</a></div>
+<p><a href="/profile.html">Find another profile by user ID</a></p>
 <p class="muted">Your verified phone is not shared by this emulator. Only contacts you explicitly choose are added.</p>
 </section></div>
 </div>
