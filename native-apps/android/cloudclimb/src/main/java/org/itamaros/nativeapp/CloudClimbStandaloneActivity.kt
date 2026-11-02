@@ -118,8 +118,6 @@ private fun CloudClimbStandaloneHome(){
     var manualLogin by remember { mutableStateOf(false) }
     var manualIdentifier by remember { mutableStateOf("") }
     var manualPassword by remember { mutableStateOf("") }
-    var manualCode by remember { mutableStateOf("") }
-    var manualCodeRequested by remember { mutableStateOf(false) }
     val scope= rememberCoroutineScope()
 
     LaunchedEffect(wantQR) {
@@ -277,7 +275,7 @@ private fun CloudClimbStandaloneHome(){
                     OutlinedButton(
                         onClick={
                             manualLogin=!manualLogin
-                            manualCodeRequested=false;manualCode=""
+
                         },
                         enabled=!connecting && !wantQR,
                         modifier=Modifier.fillMaxWidth()
@@ -291,7 +289,7 @@ private fun CloudClimbStandaloneHome(){
                             OutlinedTextField(
                                 value=manualIdentifier,
                                 onValueChange={manualIdentifier=it.take(254)},
-                                label={Text("Email or phone number")},
+                                label={Text("Email")},
                                 singleLine=true,
                                 modifier=Modifier.fillMaxWidth(),
                                 colors=OutlinedTextFieldDefaults.colors(
@@ -304,7 +302,7 @@ private fun CloudClimbStandaloneHome(){
                             OutlinedTextField(
                                 value=manualPassword,
                                 onValueChange={manualPassword=it.take(256)},
-                                label={Text("Password (optional)")},
+                                label={Text("Password")},
                                 singleLine=true,
                                 visualTransformation=PasswordVisualTransformation(),
                                 modifier=Modifier.fillMaxWidth(),
@@ -321,8 +319,7 @@ private fun CloudClimbStandaloneHome(){
                                         connecting=true
                                         try{
                                             api.loginManually(manualIdentifier,manualPassword)
-                                            manualPassword="";manualCode=""
-                                            manualCodeRequested=false;manualLogin=false
+                                            manualPassword="";manualLogin=false
                                             isAuthenticated=true
                                             status="Signed in with your ItamarOS account."
                                         }catch(e:Exception){
@@ -333,45 +330,7 @@ private fun CloudClimbStandaloneHome(){
                                 enabled=!connecting && manualIdentifier.isNotBlank()
                                     && manualPassword.isNotBlank()
                             ){Text("Sign in with password")}
-                            OutlinedButton(
-                                onClick={
-                                    scope.launch {
-                                        connecting=true
-                                        try{
-                                            api.requestExistingSms(manualIdentifier.trim())
-                                            manualCodeRequested=true
-                                            status="Check your registered phone for a login SMS."
-                                        }catch(e:Exception){
-                                            status=e.localizedMessage ?: "Could not send SMS"
-                                        }finally{connecting=false}
-                                    }
-                                },
-                                enabled=!connecting && manualIdentifier.isNotBlank()
-                            ){Text("Send SMS login code instead",color=Color.White)}
-                            if(manualCodeRequested){
-                                OutlinedTextField(
-                                    value=manualCode,onValueChange={manualCode=it.take(8)},
-                                    label={Text("SMS verification code")},singleLine=true,
-                                    modifier=Modifier.fillMaxWidth()
-                                )
-                                Button(onClick={
-                                    scope.launch{
-                                        connecting=true
-                                        try{
-                                            api.verifySms(manualIdentifier.trim(),manualCode.trim())
-                                            manualPassword="";manualCode=""
-                                            manualCodeRequested=false;manualLogin=false
-                                            isAuthenticated=true
-                                            status="Your ItamarOS account is connected."
-                                        }catch(e:Exception){
-                                            status=e.localizedMessage ?: "Invalid SMS code"
-                                        }finally{connecting=false}
-                                    }
-                                },enabled=!connecting && manualCode.isNotBlank()){
-                                    Text("Verify SMS and sign in")
-                                }
-                            }
-                            Text("Without a password, use SMS or approve a QR code in an already signed-in ItamarOS app. SMS may have a cost.",
+                            Text("Or use QR login and approve it in your signed-in ItamarOS app. No SMS is required.",
                                 color=Color.White.copy(alpha=0.77f),fontSize=12.sp)
                         }
                     }
