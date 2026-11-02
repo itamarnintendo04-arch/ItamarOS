@@ -1,3 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cloud Climb icon">
-<defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#0878ec"/><stop offset="1" stop-color="#84e8ff"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#013875" flood-opacity=".45"/></filter></defs>
-<rect width="512" height="512" rx="98" fill="url(#g)"/><g fill="#fff" opacity=".85"><ellipse cx="110" cy="418" rx="125" ry="71"/><ellipse cx="325" cy="422" rx="171" ry="71"/><circle cx="70" cy="363" r="59"/><circle cx="389" cy="363" r="81"/></g><g filter="url(#s)"><path d="M256 62 L376 194 H136Z" fill="#165db1" stroke="white" stroke-width="12" stroke-linejoin="round"/><path d="M256 62 L299 114 L280 127 259 104 240 133 225 114Z" fill="white"/><path d="M256 61 V19" stroke="white" stroke-width="10"/><path d="M256 19 Q281 7 301 25 Q278 44 256 35Z" fill="#f54a63" stroke="white" stroke-width="5"/><text x="256" y="270" font-family="Arial,sans-serif" font-size="121" font-weight="900" letter-spacing="-7" text-anchor="middle" paint-order="stroke" stroke="#094c9e" stroke-width="23" fill="#fff">Cloud</text><text x="256" y="376" font-family="Arial,sans-serif" font-size="133" font-weight="900" letter-spacing="-7" text-anchor="middle" paint-order="stroke" stroke="#094c9e" stroke-width="23" fill="#def8ff">Climb</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cloud Climb colorful game icon">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0268e8"/><stop offset=".53" stop-color="#22a7ff"/><stop offset="1" stop-color="#b4efff"/></linearGradient>
+<linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d5ff47"/><stop offset=".35" stop-color="#48df13"/><stop offset="1" stop-color="#008d4d"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff89a"/><stop offset=".5" stop-color="#ffc72c"/><stop offset="1" stop-color="#ef6900"/></linearGradient>
+<filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#07356e" flood-opacity=".6"/></filter>
+</defs>
+<rect width="512" height="512" rx="100" fill="url(#sky)"/>
+<g fill="#fff" opacity=".8"><ellipse cx="92" cy="144" rx="85" ry="32"/><circle cx="76" cy="116" r="38"/><circle cx="128" cy="124" r="27"/><ellipse cx="419" cy="155" rx="91" ry="34"/><circle cx="390" cy="132" r="38"/><circle cx="450" cy="130" r="44"/></g>
+<path d="M0 358 L105 240 174 326 266 219 365 345 440 269 512 351V512H0Z" fill="#156ac8" opacity=".6"/>
+<path d="M0 409L93 319 184 402 284 298 390 403 473 330 512 364V512H0Z" fill="#0754b0" opacity=".65"/>
+<g filter="url(#shadow)">
+<path d="M277 331L443 331 423 407 365 435 299 400Z" fill="#955026" stroke="#63371d" stroke-width="8"/>
+<path d="M268 325Q330 311 452 324L447 347Q428 355 419 343L404 361 384 349 369 360 354 344 340 358 321 345 306 355 292 344 269 349Z" fill="url(#grass)" stroke="#168c2a" stroke-width="7"/>
+<path d="M384 318V222" stroke="#f5faff" stroke-width="13" stroke-linecap="round"/>
+<path d="M387 224Q430 207 460 230L442 251 461 273Q426 263 387 279Z" fill="#f53b4b" stroke="#9c1828" stroke-width="7"/>
+<path d="M38 406L210 406 194 458 127 480 60 457Z" fill="#9a502b" stroke="#64341f" stroke-width="8"/>
+<path d="M27 400Q126 385 222 399L213 422 195 414 182 431 162 418 144 431 125 414 108 433 87 418 71 430 51 414 31 423Z" fill="url(#grass)" stroke="#188d26" stroke-width="7"/>
+</g>
+<g filter="url(#shadow)" stroke="#2b2658" stroke-width="7" stroke-linejoin="round">
+<path d="M145 310L110 348 133 364 169 331Z" fill="#292d9d"/>
+<path d="M179 320L205 354 225 336 194 298Z" fill="#292d9d"/>
+<path d="M137 281L174 271 198 320 156 343 121 315Z" fill="#0867e6"/>
+<path d="M137 288L109 313 121 332 151 307Z" fill="#f9c092"/>
+<path d="M181 286L211 301 204 323 177 307Z" fill="#f9c092"/>
+<path d="M133 239Q160 213 191 240L192 274Q173 299 145 279Z" fill="#ffd0a0"/>
+<path d="M130 247Q118 214 142 212L151 199 167 208 181 203 199 219 194 246 175 236 158 246 148 235Z" fill="#793620"/>
+<path d="M156 261h5m18-3h5" stroke="#172e55" stroke-width="7" stroke-linecap="round"/>
+</g>
+<g filter="url(#shadow)"><circle cx="244" cy="243" r="25" fill="url(#gold)" stroke="#fff4a3" stroke-width="5"/><path d="M244 229l5 9 10 2-8 8 2 10-9-5-9 5 2-10-8-8 10-2Z" fill="#fff8a2"/></g>
+<g filter="url(#shadow)" font-family="Arial,Helvetica,sans-serif" font-weight="900" text-anchor="middle" paint-order="stroke" stroke-linejoin="round">
+<text x="256" y="105" font-size="84" fill="#fff" stroke="#0650ab" stroke-width="15">Cloud</text>
+<text x="256" y="177" font-size="90" fill="url(#gold)" stroke="#a54b06" stroke-width="15">Climb</text>
+</g>
+<g fill="#fff"><path d="M56 213l5 13 13 5-13 5-5 13-5-13-13-5 13-5Z"/><path d="M467 321l4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/></g>
+</svg>
