@@ -4,7 +4,7 @@
 
 ## One account for both apps
 
-- Use **Sign in with ItamarOS** in the separate Cloud Climb app, or use an existing signed-in ItamarOS game screen. The standalone app opens ItamarOS for explicit approval or offers a short-lived QR approval. Do not share passwords, SMS OTPs, or Supabase tokens with the game.
+- The standalone Cloud Climb iOS/Android screens now offer three choices: **approve via the ItamarOS app**, **scan a short-lived QR with an already signed-in ItamarOS app**, or **sign in manually** using a registered email/phone + password or a registered phone + SMS OTP. These methods all authenticate the same Supabase user ID (no duplicate game accounts). Do not share passwords, SMS OTPs, or Supabase tokens with other players.
 - Levels, earned coins, hearts, boss status, and game-over state use `itamar_cloud_climb_progress` and its `itamar_cloud_climb_state` / `itamar_cloud_climb_save` RPCs.
 - World unlocks, collected cubes and earned characters use the existing Cloud Climb reward tables and RPCs.
 - **NEW:** Chosen world, equipped character, day/twilight theme, auto-hide controls, and tips use `itamar_climb_preferences` and its `itamar_climb_get_preferences` / `itamar_climb_save_preferences` RPCs.
