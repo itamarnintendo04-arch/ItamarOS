@@ -225,6 +225,10 @@ class MainActivity : ComponentActivity() {
             incomingCloudClimbRequest=request?.takeIf{
                 it.matches(Regex("[A-Za-z0-9_-]{24,40}"))
             }
+        } else if (uri.host == "account") {
+            // Browser validated the one-use invitation before suggesting the app.
+            // This opens the app, but only normal account sign-in authenticates.
+            status = "Open ItamarOS Connect to sign in with the password you just created."
         } else if (uri.host == "hub-auth") {
             // Do not treat URL parameters as a verified identity.
             // Hub ticket redemption is disabled until server integration is configured.
