@@ -23,6 +23,7 @@ $('form').addEventListener('submit',async e=>{
  const {error}=await client.auth.updateUser({password:first});
  if(error){status(error.message);return;}
  $('form').hidden=true;$('password').value='';$('confirm').value='';
+ $('openNative').hidden=false;
  status('Password saved. You can now sign in to ItamarOS.');
 });
 void init();
