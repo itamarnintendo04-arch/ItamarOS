@@ -47,7 +47,12 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS codes">
 <p class="muted">Your username and uploaded photo are public. You never have to use your real face. Your phone number stays private.</p>
 </div>
-<button class="primary" type="submit">Next — send SMS</button>
+<div id="signinFields" hidden>
+<label for="signinPassword">Password (optional)</label>
+<input id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter your password, or leave blank to get an SMS code">
+<p class="muted">Sign in with your password to avoid an SMS charge, or leave it blank to request a one-time code.</p>
+</div>
+<button id="authSubmit" class="primary" type="submit">Next — send SMS</button>
 </form>
 <form id="smsVerifyForm" hidden>
 <h3>Enter your SMS code</h3>
