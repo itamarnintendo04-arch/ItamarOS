@@ -39,6 +39,7 @@ private data class CloudClimbChatUndo(
  */
 @Composable
 fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onExit: () -> Unit) {
+    CloudClimbLandscape()
     val room = match?.optString("code").orEmpty()
     val roomSeed = match?.optInt("seed") ?: 0
     val context = LocalContext.current
@@ -67,6 +68,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var right by remember { mutableStateOf(false) }
     var jump by remember { mutableStateOf(false) }
     var lastBossHit by remember { mutableLongStateOf(0L) }
+    var checkpointSeed by remember { mutableIntStateOf(Int.MIN_VALUE) }
+    var lastEnemyHit by remember { mutableLongStateOf(0L) }
     var controllerConnected by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var autoHideControls by remember(accountKey) {
@@ -377,9 +380,13 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             syncStatus="Local save · Account upload will retry"
         }
     }
-    fun resetPosition() {
-        px = 48f; py = 430f; vy = 0f; landed = true
-        jump = false; left = false; right = false
+    fun resetPosition(useCheckpoint:Boolean=false) {
+        val checkpoint=if(useCheckpoint && checkpointSeed==seed)
+            platforms.getOrNull(CloudClimbStageExtras.CHECKPOINT_INDEX) else null
+        px=checkpoint?.let{it.first+it.third/2f} ?: 48f
+        py=checkpoint?.let{it.second-3f} ?: 430f
+        vy=0f;landed=true
+        jump=false;left=false;right=false
     }
     fun advanceStage() {
         val completed = level
@@ -394,7 +401,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     fun loseHeart() {
         hearts = (hearts - 1).coerceAtLeast(0)
-        resetPosition()
+        resetPosition(useCheckpoint=true)
         if (hearts == 0) {
             gameOver = true
             message = "No hearts left. Try again from level " + level + "."
@@ -453,16 +460,29 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             py += vy
             if (vy >= 0f) {
                 landed = false
-                for (platform in platforms) {
+                for ((index,platform) in platforms.withIndex()) {
                     if (px + 11f > platform.first && px - 11f < platform.first + platform.third &&
                         previousBottom <= platform.second && py + 3f >= platform.second) {
                         py = platform.second - 3f
                         vy = 0f; landed = true
+                        if(CloudClimbStageExtras.isCheckpoint(index))checkpointSeed=seed
+                        if(CloudClimbStageExtras.spring(index,px,platform)) {
+                            vy=-11.2f;landed=false
+                        }
                         break
                     }
                 }
             }
             if (py > 495f) { loseHeart(); continue }
+            val current=SystemClock.elapsedRealtime()
+            if(current-lastEnemyHit>1400L &&
+               CloudClimbStageExtras.danger(px,py,platforms,current/1000f)){
+                lastEnemyHit=current
+                loseHeart()
+                message="A sky sprite caught you! "+hearts+" hearts remaining. "+
+                    (if(checkpointSeed==seed)"Checkpoint restored." else "")
+                continue
+            }
             if (landed && py < 110f && !bossStage) { advanceStage(); continue }
             val time = SystemClock.elapsedRealtime()
             if (room != "local-cloudclimb" && time - lastSent > 650L) {
@@ -550,7 +570,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         if (bossStage) Text("BOSS ENCOUNTER · " + bossHealth + "/3",
             color = goldAccent, style = MaterialTheme.typography.titleMedium)
         if (showControlHints) Text(
-            "Reach the top platform. Earn 10 coins per stage · Boss every 30 levels.",
+            "Landscape · dodge sky sprites, jump on spring pads and reach the glowing checkpoint. Boss every 30 stages.",
             color = Color.White.copy(alpha = 0.9f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { settingsOpen = true },
@@ -592,7 +612,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Button(onClick = { paused = false }) { Text("Resume") }
             Button(onClick = onExit) { Text("Exit to menu") }
         } else {
-            Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f)) {
+            Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
                 val sx = size.width / 400f; val sy = size.height / 500f
                 drawRect(brush = Brush.verticalGradient(listOf(darkBackground, lightBackground)))
                 repeat(12) { i ->
@@ -616,6 +636,9 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                     drawRoundRect(Color(0xFF1558D6),topLeft=Offset(dx,dy),
                         size=Size(24f*sx,37f*sy),cornerRadius=CornerRadius(8f))
                     drawCircle(Color(0xFF7DD9FF),3f*sx,Offset(dx+17f*sx,dy+20f*sy))
+                }
+                with(CloudClimbStageExtras) {
+                    render(platforms,sx,sy,timeSeconds(),checkpointSeed==seed)
                 }
                 if (bossStage) {
                     drawCircle(Color(0xFFAF4EF2), 21f * sx, Offset(bossX * sx, 65f * sy))
