@@ -75,6 +75,8 @@ struct ItamarPartyGamesView: View {
     @State private var climbDoorBusy=false
     @State private var climbSlashInput=""
     @State private var climbSlashReply="Type /help for commands"
+    @State private var climbChatMessages:[String]=["Game: Welcome to Cloud Climb! Type /help."]
+    @State private var climbChatUndo:(world:Int,hero:String,twilight:Bool,auto:Bool,tips:Bool,paused:Bool)?
     private var climbSaveKey:String {
         "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest")
     }
@@ -429,16 +431,21 @@ struct ItamarPartyGamesView: View {
             }
             .buttonStyle(.borderedProminent)
             VStack(alignment:.leading,spacing:8) {
-                Text("Cloud Climb Commands").font(.subheadline.bold()).foregroundStyle(.white)
+                Text("💬 Game Chat").font(.subheadline.bold()).foregroundStyle(.white)
+                ForEach(climbChatMessages.indices,id:\.self){index in
+                    Text(climbChatMessages[index])
+                        .font(.caption).foregroundStyle(.white)
+                        .frame(maxWidth:.infinity,alignment:.leading)
+                }
                 HStack {
-                    TextField("Enter /command",text:$climbSlashInput)
+                    TextField("Message game: /help, /undo…",text:$climbSlashInput)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .textFieldStyle(.roundedBorder)
+                        .onSubmit{runClimbCommand()}
                     Button("Send") {runClimbCommand()}
-                        .disabled(!climbSlashInput.hasPrefix("/"))
+                        .disabled(climbSlashInput.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
                 }
-                Text(climbSlashReply).font(.caption).foregroundStyle(.white)
             }
             Text(climbSyncStatus)
                 .font(.caption).foregroundStyle(.yellow)
@@ -604,48 +611,85 @@ struct ItamarPartyGamesView: View {
             saveClimb()
         }
     }
-    // Player-visible commands only alter normal gameplay and cosmetic settings.
-    // Progress rewards are still awarded by the existing gameplay / server RPCs.
+    // Game-chat commands adjust only normal settings/available unlocks.
+    // /undo reverses the latest command preference/world change; it never reverses earned rewards.
     private func runClimbCommand() {
-        let command=climbSlashInput.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
-        defer {climbSlashInput=""}
+        let typed=climbSlashInput.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !typed.isEmpty else{return}
+        let command=(typed.hasPrefix("/") ? typed : "/"+typed).lowercased()
+        climbSlashInput=""
+        climbChatMessages.append("You: "+typed)
+        let before=(world:climbWorld,hero:climbEquippedHero,twilight:climbTwilightSky,
+                    auto:climbAutoHideControls,tips:climbShowTips,paused:climbPaused)
         switch command {
         case "/help", "/commands":
-            climbSlashReply="/stats · /account · /room · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /controls auto|show · /tips on|off · /pause · /resume · /reset-position · /save · /sync"
-        case "/stats":
+            climbSlashReply="/stats · /where · /account · /room · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /controls auto|show|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save · /sync"
+        case "/stats", "/status":
             climbSlashReply="Level \(climbLevel) · World \(climbWorld) · Coins \(climbCoins) · Hearts \(climbHearts)/3 · Blue \(climbBlueCubes.count)/50 · Colored \(climbColoredBosses.count)/10 · Heroes \(climbCharacters.count)"
+        case "/where", "/world current":
+            climbSlashReply="World \(climbWorld), stage \(climbLevel). Use /world N to travel to an unlocked world."
         case "/account":
-            climbSlashReply=cloud.isSignedIn ? "Connected to your ItamarOS account. "+climbSyncStatus : "Offline demo · Progress stays on this device."
-        case "/pause":
-            climbPaused=true;climbSlashReply="Game paused."
-        case "/resume":
-            climbPaused=false;climbSlashReply="Game resumed."
-        case "/reset-position":
-            resetMovement();climbSlashReply="Moved back to the stage start. Progress was kept."
+            climbSlashReply=cloud.isSignedIn ? "Linked to your ItamarOS account. "+climbSyncStatus : "Offline demo · Progress stays on this device."
         case "/room":
             climbSlashReply="Room: \(match?.code ?? "offline")"
-        case "/theme day":
+        case "/pause":
+            climbPaused=true;climbSlashReply="Game paused. Type /resume to continue."
+        case "/resume", "/unpause":
+            climbPaused=false;climbSlashReply="Game resumed."
+        case "/reset-position", "/position reset":
+            resetMovement();climbSlashReply="Returned to stage start; progress kept. Movement reset cannot be undone."
+        case "/theme day", "/theme reset":
             climbTwilightSky=false;saveClimbPreferences();climbSlashReply="Day theme enabled."
         case "/theme twilight":
             climbTwilightSky=true;saveClimbPreferences();climbSlashReply="Twilight theme enabled."
-        case "/controls auto":
-            climbAutoHideControls=true;saveClimbPreferences();climbSlashReply="Touch controls hide when a controller is connected."
+        case "/controls auto", "/controls reset":
+            climbAutoHideControls=true;saveClimbPreferences();climbSlashReply="Touch controls will hide when a controller connects."
         case "/controls show":
-            climbAutoHideControls=false;saveClimbPreferences();climbSlashReply="Touch controls always visible."
-        case "/tips on":
-            climbShowTips=true;saveClimbPreferences();climbSlashReply="Gameplay tips enabled."
+            climbAutoHideControls=false;saveClimbPreferences();climbSlashReply="Touch controls will remain visible."
+        case "/tips on", "/tips reset":
+            climbShowTips=true;saveClimbPreferences();climbSlashReply="Tips enabled."
         case "/tips off":
-            climbShowTips=false;saveClimbPreferences();climbSlashReply="Gameplay tips disabled."
+            climbShowTips=false;saveClimbPreferences();climbSlashReply="Tips disabled."
         case "/hero list":
-            climbSlashReply="Unlocked hero IDs: starter"+(climbCharacters.isEmpty ? "" : ", "+climbCharacters.sorted().joined(separator:", "))
+            climbSlashReply="Unlocked: starter"+(climbCharacters.isEmpty ? "" : ", "+climbCharacters.sorted().joined(separator:", "))
+        case "/hero reset":
+            climbEquippedHero="starter"
+            UserDefaults.standard.set("starter",forKey:climbSaveKey+".hero")
+            saveClimbPreferences();climbSlashReply="Default hero equipped."
+        case "/world back":
+            if let previous=climbChatUndo, previous.world != climbWorld,
+               climbWorlds.contains(previous.world) || (previous.world==11 && climbSecretAvailable) {
+                climbWorld=previous.world;resetMovement();saveClimb();saveClimbPreferences()
+                climbChatUndo=nil
+                climbSlashReply="Returned to World \(climbWorld)."
+            } else {climbSlashReply="No previous world change to reverse. Use /undo immediately after changing worlds."}
+        case "/undo", "/cancel", "/revert":
+            if let previous=climbChatUndo {
+                if previous.world != climbWorld {
+                    if climbWorlds.contains(previous.world) || (previous.world==11 && climbSecretAvailable) {
+                        climbWorld=previous.world;resetMovement();saveClimb()
+                    }
+                }
+                if CloudClimbHeroes.unlocked(previous.hero,owned:climbCharacters) {
+                    climbEquippedHero=previous.hero
+                    UserDefaults.standard.set(previous.hero,forKey:climbSaveKey+".hero")
+                }
+                climbTwilightSky=previous.twilight
+                climbAutoHideControls=previous.auto
+                climbShowTips=previous.tips
+                climbPaused=previous.paused
+                climbChatUndo=nil
+                saveClimbPreferences()
+                climbSlashReply="Last game-chat setting change undone."
+            } else {climbSlashReply="Nothing to undo. /undo only reverses the last chat setting change."}
         case "/save":
             saveClimb();saveClimbPreferences()
-            climbSlashReply=climbCloudReady ? "Account save requested." : "Saved on this device. Cloud sync is not connected."
+            climbSlashReply=climbCloudReady ? "Account save requested." : "Saved on this device."
         case "/sync":
             if cloud.isSignedIn {
                 Task {await loadCloudClimb()}
-                climbSlashReply="Reloading your ItamarOS account save."
-            } else {climbSlashReply="Sign in with ItamarOS to sync. Offline progress is kept separate."}
+                climbSlashReply="Reloading your ItamarOS cloud save."
+            } else {climbSlashReply="Sign in to sync. Offline progress stays separate."}
         default:
             if command.hasPrefix("/world "),let number=Int(command.dropFirst(7)),
                climbWorlds.contains(number) || (number==11 && climbSecretAvailable) {
@@ -658,9 +702,19 @@ struct ItamarPartyGamesView: View {
                     UserDefaults.standard.set(requested,forKey:climbSaveKey+".hero")
                     saveClimbPreferences()
                     climbSlashReply="Equipped \(CloudClimbHeroes.get(requested).name)."
-                } else {climbSlashReply="Hero is locked. Use /hero list to see your characters."}
+                } else {climbSlashReply="Hero locked. Use /hero list."}
             } else {climbSlashReply="Unknown command or locked world. Type /help."}
         }
+        if command != "/undo" && command != "/cancel" && command != "/revert" &&
+           command != "/world back" {
+            if before.world != climbWorld || before.hero != climbEquippedHero ||
+               before.twilight != climbTwilightSky || before.auto != climbAutoHideControls ||
+               before.tips != climbShowTips || before.paused != climbPaused {
+                climbChatUndo=before
+            }
+        }
+        climbChatMessages.append("Game: "+climbSlashReply)
+        if climbChatMessages.count>12 {climbChatMessages.removeFirst(climbChatMessages.count-12)}
     }
     @MainActor private func loadClimbPreferences() async {
         guard cloud.isSignedIn,climbCloudReady else{return}
