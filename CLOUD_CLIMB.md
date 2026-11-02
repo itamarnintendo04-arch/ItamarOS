@@ -9,6 +9,14 @@ Cloud Climb is an original platform-adventure prototype available inside ItamarO
 - Android uses a dedicated Cloud Climb vector launcher drawable rather than the ItamarOS app logo.
 - The standalone iOS build renders a 1024x1024 PNG app icon from the vector graphic before compiling; the IPA still requires valid signing.
 
+## Playable characters and original graphics
+
+- The English-only character wardrobe now supports **23 original characters**: free Cloud Scout, 12 regular characters in Character Orb for 500 earned game coins each, and 10 mystery characters earned by collecting the five blue-door cubes in each world.
+- The regular character names are Sky Fox, Nimbus Cat, Breeze Bunny, Rain Penguin, Star Pup, Cloud Bear, Comet Owl, Mist Koala, Aurora Dragon, Kite Frog, Moon Bat and Sun Lion.
+- Equipping a character changes the playable mascot's colors, scarf and accessories on the iPhone and Android stage. Available characters have selectable cards; locked heroes cannot be equipped.
+- The equipped choice is kept locally: per account in ItamarOS, and separately in each offline demo. Online ownership is fetched from the existing server; no paid currency or premium loot boxes are added.
+- This is an original Cloud Climb game, not a copy of another studio's copyrighted characters or artwork.
+
 ## Builds
 
 - Android standalone application ID: `org.itamaros.cloudclimb`, built by [Cloud Climb Android](.github/workflows/cloud-climb-standalone.yml).
