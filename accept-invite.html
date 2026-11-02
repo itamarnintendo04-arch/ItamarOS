@@ -9,7 +9,8 @@
 <label>Confirm password<input type="password" id="confirm" required minlength="8" autocomplete="new-password"></label>
 <button type="submit">Set my password</button></form>
 <p id="status" role="status" aria-live="polite">Checking invitation…</p>
-<p><a href="/connect.html">Open ItamarOS sign-in</a></p>
+<div id="openNative" hidden><p>Your account is ready. Open the ItamarOS app and sign in with your new password.</p><p><a href="itamaros://account" id="openApp">Open ItamarOS App</a> · <a href="/downloads.html">Install the app</a></p></div>
+<p><a href="/connect.html">Use ItamarOS in the browser instead</a></p>
 </main>
 <script src="/messaging/public-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
