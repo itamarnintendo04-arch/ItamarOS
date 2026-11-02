@@ -461,6 +461,7 @@ fun AndroidConnectScreen(
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
     var registrationUsername by remember{mutableStateOf("")}
+    var myVerifiedBadge by remember(api.userID){mutableStateOf<String?>(null)}
     var password by remember{mutableStateOf("")}
     var signInPhone by remember{mutableStateOf("")}
     var otpInput by remember{mutableStateOf("")}
@@ -648,6 +649,16 @@ fun AndroidConnectScreen(
                 api.uploadAttachment(ctx,uri,selectedRoom)
                 messages=api.messages(selectedRoom)
             }
+        }
+    }
+    LaunchedEffect(api.userID,signed){
+        myVerifiedBadge=null
+        val id=api.userID
+        if(signed && !id.isNullOrBlank()){
+            try{
+                val payload=api.request("/rest/v1/itamar_profile_badges?select=badge&user_id=eq."+id,"GET")
+                myVerifiedBadge=JSONArray(payload).optJSONObject(0)?.optString("badge")?.takeIf{it in listOf("green","blue")}
+            }catch(_:Exception){}
         }
     }
     if(!api.configured){
@@ -845,6 +856,21 @@ fun AndroidConnectScreen(
     when(tab){
         "Profile"->{
             Text("Public profile")
+            val id=api.userID
+            if(!id.isNullOrBlank()){
+                Text("My ItamarOS ID: "+id)
+                if(myVerifiedBadge=="green")Text("✿ ✓ ItamarOS Official",color=Color(0xFF17AA60))
+                if(myVerifiedBadge=="blue")Text("✿ ✓ Verified",color=Color(0xFF2988E8))
+                Text("My public profile QR")
+                val myProfileURL="https://itamaros-web-emulator.onrender.com/profile.html?id="+id
+                PublicLinkQR(myProfileURL)
+                Button(onClick={
+                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{
+                        type="text/plain"
+                        putExtra(Intent.EXTRA_TEXT,myProfileURL)
+                    },"Share my public profile"))
+                }){Text("Share profile link")}
+            }
             OutlinedTextField(displayName,{displayName=it},label={Text("Name")})
             OutlinedTextField(handle,{handle=it},label={Text("Unique @username")})
             Button(onClick={perform{
