@@ -1,3 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Cloud Climb icon">
-<defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#0878ec"/><stop offset="1" stop-color="#84e8ff"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#013875" flood-opacity=".45"/></filter></defs>
-<rect width="512" height="512" rx="98" fill="url(#g)"/><g fill="#fff" opacity=".85"><ellipse cx="110" cy="418" rx="125" ry="71"/><ellipse cx="325" cy="422" rx="171" ry="71"/><circle cx="70" cy="363" r="59"/><circle cx="389" cy="363" r="81"/></g><g filter="url(#s)"><path d="M256 62 L376 194 H136Z" fill="#165db1" stroke="white" stroke-width="12" stroke-linejoin="round"/><path d="M256 62 L299 114 L280 127 259 104 240 133 225 114Z" fill="white"/><path d="M256 61 V19" stroke="white" stroke-width="10"/><path d="M256 19 Q281 7 301 25 Q278 44 256 35Z" fill="#f54a63" stroke="white" stroke-width="5"/><text x="256" y="270" font-family="Arial,sans-serif" font-size="121" font-weight="900" letter-spacing="-7" text-anchor="middle" paint-order="stroke" stroke="#094c9e" stroke-width="23" fill="#fff">Cloud</text><text x="256" y="376" font-family="Arial,sans-serif" font-size="133" font-weight="900" letter-spacing="-7" text-anchor="middle" paint-order="stroke" stroke="#094c9e" stroke-width="23" fill="#def8ff">Climb</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Cloud Climb app icon">
+  <defs>
+    <linearGradient id="sky" x1=".1" y1="0" x2=".9" y2="1">
+      <stop stop-color="#034AB9"/><stop offset=".46" stop-color="#128FF0"/>
+      <stop offset="1" stop-color="#5BDDFB"/>
+    </linearGradient>
+    <linearGradient id="peak" x1=".2" y1="0" x2=".85" y2="1">
+      <stop stop-color="#F1FAFF"/><stop offset=".48" stop-color="#CDEBFF"/>
+      <stop offset="1" stop-color="#7ABAF6"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1=".1" y1=".2" x2=".75" y2="1">
+      <stop stop-color="#78C8FF"/><stop offset="1" stop-color="#3263D2"/>
+    </linearGradient>
+    <linearGradient id="flag" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFCF68"/><stop offset="1" stop-color="#FF6A64"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="170%" height="190%">
+      <feDropShadow dx="0" dy="29" stdDeviation="24" flood-color="#072D77" flood-opacity=".43"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <circle cx="801" cy="197" r="98" fill="#D7FBFF" opacity=".42"/>
+  <g fill="#ECFFFF" opacity=".85">
+    <circle cx="171" cy="310" r="50"/><ellipse cx="231" cy="340" rx="122" ry="47"/>
+    <circle cx="291" cy="308" r="58"/>
+    <circle cx="723" cy="465" r="37"/><ellipse cx="778" cy="482" rx="99" ry="36"/>
+    <circle cx="826" cy="455" r="49"/>
+  </g>
+  <g fill="#B6EFFF" opacity=".5">
+    <path d="M98 565 l12 -35 12 35 35 12 -35 13 -12 35 -12 -35 -35 -13z"/>
+    <path d="M879 339 l12 -32 12 32 32 12 -32 12 -12 32 -12 -32 -32 -12z"/>
+  </g>
+  <g filter="url(#shadow)" stroke-linejoin="round">
+    <path d="M144 806 469 358 q44 -62 85 0 L900 806z" fill="url(#ridge)" stroke="#EFFCFF" stroke-width="26"/>
+    <path d="M264 805 491 451 q21 -32 41 0 L770 805z" fill="url(#peak)"/>
+    <path d="M381 619 488 453 q22 -33 44 -1 L625 594 558 562 518 592 464 547z" fill="#FFFFFF"/>
+    <path d="M144 806 327 559 398 676 459 623 585 803z" fill="#327BDC" opacity=".91"/>
+    <path d="M451 805 628 570 760 743 821 691 901 805z" fill="#73B9FF" opacity=".95"/>
+  </g>
+  <g stroke="#173F92" stroke-linecap="round">
+    <path d="M514 376 V192" stroke-width="22"/>
+    <path d="M528 194 Q605 160 667 208 L625 272 Q585 235 528 250z" fill="url(#flag)" stroke-width="13"/>
+  </g>
+  <path d="M0 878 Q190 819 356 887 Q517 817 668 892 Q859 836 1024 879 V1024 H0Z" fill="#E9FBFF" opacity=".93"/>
+  <ellipse cx="490" cy="967" rx="408" ry="82" fill="#FFF" opacity=".63"/>
+</svg>
