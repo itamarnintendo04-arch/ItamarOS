@@ -23,7 +23,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates git live-build debootstrap squashfs-tools xorriso \
+            ca-certificates git python3 live-build debootstrap squashfs-tools xorriso \
             grub-pc-bin grub-efi-amd64-bin syslinux-common isolinux
       - uses: actions/checkout@v4
       - name: Validate build script syntax
