@@ -231,7 +231,7 @@ struct ItamarCloudLoginView: View {
             }
             if awaitingEmail && !cloud.isSignedIn {
                 Section("Verify your email") {
-                    Text("Enter the code sent to \\(email). Check spam if needed.")
+                    Text("Enter the code sent to \(email). Check spam if needed.")
                         .font(.footnote)
                     TextField("Email verification code", text: $code)
                         .keyboardType(.numberPad).textContentType(.oneTimeCode)
