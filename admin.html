@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ItamarOS · Account Administration</title>
+<style>
+:root{font:16px system-ui,sans-serif;color:#14294e;background:#eef5ff}
+main{max-width:860px;margin:24px auto;padding:20px}section{background:white;border:1px solid #d7e4fa;border-radius:16px;padding:20px;margin:14px 0}
+h1{margin:0 0 12px}button,input{font:inherit;padding:10px 13px;border-radius:8px;border:1px solid #becde0}
+button{background:#185dd1;color:white;cursor:pointer}button:disabled{opacity:.5}
+input{max-width:100%;width:360px}label{display:block;margin:10px 0}
+li{margin:8px 0}#status{min-height:24px}[hidden]{display:none!important}
+a{color:#155fc1}#link{display:block;overflow-wrap:anywhere;padding:12px;background:#edf4fe;border-radius:8px}
+small{color:#59687d}
+</style></head><body><main>
+<h1>ItamarOS · Administration</h1>
+<p>Administrator access is granted by the server to a verified account. An email address or common PIN alone never grants administrator rights.</p>
+<p><a href="/connect.html">Back to ItamarOS account sign-in</a></p>
+<section id="login"><h2>Sign in required</h2><p>Sign in on the account page first, then return here. Only an authorized administrator can open this console.</p></section>
+<section id="panel" hidden><h2>Users</h2><button id="refresh">Refresh account list</button><ul id="users"></ul>
+<h2>Create manual invitation</h2>
+<form id="invite"><label for="email">Email to invite</label><input id="email" type="email" maxlength="254" required placeholder="user@example.com">
+<button type="submit">Generate one-time invitation</button></form>
+<p><small>This generates a link without sending an email. Send it privately to the intended recipient. Do not post invitation links publicly.</small></p>
+<div id="invitation" hidden><p id="link"></p><button id="copy" type="button">Copy invitation link</button></div>
+</section>
+<p id="status" role="status" aria-live="polite"></p>
+</main>
+<script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="/apps/admin.js" defer></script>
+</body></html>
