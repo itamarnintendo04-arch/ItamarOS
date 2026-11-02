@@ -68,6 +68,11 @@ function mount(){
  cloudEntry.hidden=true;
  cloudEntry.style.cssText='margin:12px 0;padding:18px;border:1px solid #88bcec;border-radius:16px;background:linear-gradient(135deg,#1c376f,#227b99);color:white';
  cloudEntry.append(make('h3','☁️ Cloud Climb · Secret Game'));
+ const cloudCover=make('img');cloudCover.src='/assets/branding/cloud-climb-cover.svg';
+ cloudCover.alt='Cloud Climb floating islands, coins, stars and a jumping hero';
+ cloudCover.loading='lazy';
+ cloudCover.style.cssText='width:100%;max-width:760px;display:block;margin:12px 0;border-radius:14px;box-shadow:0 8px 26px #081b3d55';
+ cloudEntry.append(cloudCover);
  cloudEntry.append(make('p','Cloud Climb has a separate Android APK and iPhone unsigned IPA development build. Multiplayer room codes use the same ItamarOS server.','ios-caption'));
  const download=make('a','Find the matching Cloud Climb download');
  download.href='/downloads.html#cloud-climb';download.target='_blank';download.rel='noopener noreferrer';

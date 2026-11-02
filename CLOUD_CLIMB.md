@@ -2,6 +2,13 @@
 
 Cloud Climb is an original platform-adventure prototype available inside ItamarOS and as a separate mobile app. It does **not** contain Crossy Road Castle code, artwork or sounds.
 
+## Artwork and standalone app icons
+
+- [Cloud Climb illustrated cover](assets/branding/cloud-climb-cover.svg) appears on the secret-game entry and downloads page.
+- [Cloud Climb vector icon](assets/branding/cloud-climb-icon.svg) is the master icon asset.
+- Android uses a dedicated Cloud Climb vector launcher drawable rather than the ItamarOS app logo.
+- The standalone iOS build renders a 1024x1024 PNG app icon from the vector graphic before compiling; the IPA still requires valid signing.
+
 ## Builds
 
 - Android standalone application ID: `org.itamaros.cloudclimb`, built by [Cloud Climb Android](.github/workflows/cloud-climb-standalone.yml).
