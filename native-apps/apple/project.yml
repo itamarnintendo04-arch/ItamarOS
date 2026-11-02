@@ -18,6 +18,7 @@ targets:
           - ItamarOSApp.swift
       - path: CloudClimb/CloudClimbStandaloneApp.swift
       - path: CloudClimb/Assets.xcassets
+      - path: CloudClimb/Fonts
       - path: iOS/Assets.xcassets
     info:
       path: CloudClimb/Info.plist
@@ -29,6 +30,8 @@ targets:
             CFBundleURLSchemes:
               - cloudclimb
         NSFaceIDUsageDescription: "Confirm it is you before approving a Cloud Climb account login."
+        UIAppFonts:
+          - Fredoka.ttf
         ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
     settings:
