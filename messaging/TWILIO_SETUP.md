@@ -25,7 +25,7 @@ The clients use **Supabase Auth**:
 - Verification: `auth.verifyOtp({phone,token,type:'sms'})` on the web, or `POST /auth/v1/verify` on native clients.
 - The server signs in the user **only after** verifying their OTP. Code requests by themselves are **not a login**.
 - No custom Twilio SMS-sending service or custom OTP database is needed. Supabase creates and validates the one-time code while Twilio Programmable Messaging delivers the SMS.
-- The ItamarConnect **web** flow now includes a separate **Create account** form: phone number and unique @username are required; users must pick an uploaded JPG/PNG/WebP profile image (max 3 MB) or the privacy-preserving default avatar; password is optional (minimum 8 characters).
+- The ItamarConnect **web** Create account form requires three fields marked **\***: a unique @username (3–24 permitted characters), an email address, and an international phone number. Users also choose an uploaded JPG/PNG/WebP profile image (max 3 MB) or a default avatar. Password remains optional (minimum 8 characters). Phone registration first verifies an SMS OTP; then `auth.updateUser({email})` attaches the required email to that **same** Auth user and sends a confirmation email. The email is not usable as a verified sign-in identity until the user confirms it. Supabase email template delivery and redirect allowlists must be configured.
 - Existing users can sign in by phone OTP or by phone + password if they chose one. Password entry skips a new SMS request. The native iOS/Android clients still require their own UX updates to match this web signup screen. These changes remain source-only until a backend is configured and tested.
 - Uploaded profile images are public; do not require a real face or government-identifying photo.
 
@@ -51,3 +51,11 @@ Phone numbers are used only for verification or an individually authorized looku
 ## 5. Validate and release
 
 Run GitHub Actions [ItamarOS smoke tests](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/validate.yml), [Android build](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/native-android.yml), and [unsigned iOS IPA build](https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned-ipa.yml). Test with different accounts, devices, blocked users, phone verification, local sync-off, and network errors before release.
+
+## Required registration fields and manual sign-in (web)
+
+New ItamarOS web registrations require **username \***, **email \*** and **phone number \***. The username is public; email and phone are private Auth identities. An uploaded picture or default avatar is selected; passwords are optional. Account email confirmation must be completed via the confirmation mail. Existing accounts are not automatically removed, and the native registration screens still need to be aligned with these requirements before a production release.
+
+Manual login supports the existing user's **email or phone plus password**, **phone SMS OTP**, or **email Magic Link/OTP** (depending on Supabase Email template settings). For email links, the web client now allows auth tokens in redirect URLs; allowlist the exact deployed web URL under Supabase Authentication → URL Configuration and verify that your public browser host redirects correctly. `shouldCreateUser:false` prevents login requests silently making new accounts.
+
+Cloud Climb's separate native apps also support QR approval from an already signed-in ItamarOS installation, or manual sign-in using the same existing account. QR login is **not** a substitute for creating or verifying an ItamarOS account. No live cross-device test is implied by source updates.
