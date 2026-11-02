@@ -214,6 +214,7 @@ private struct CloudClimbOfflineDemo:View {
     @AppStorage("cloudclimb.offline.blue") private var blueStorage=""
     @AppStorage("cloudclimb.offline.colored") private var coloredStorage=""
     @AppStorage("cloudclimb.offline.characters") private var characterStorage=""
+    @AppStorage("cloudclimb.offline.equippedHero") private var equippedHero="starter"
     @AppStorage("cloudclimb.offline.worlds") private var worldStorage=""
     @State private var x:CGFloat=48
     @State private var y:CGFloat=430
@@ -349,10 +350,13 @@ private struct CloudClimbOfflineDemo:View {
                                 let rect=CGRect(x:(bossX-21)*sx,y:45*sy,width:42*sx,height:42*sy)
                                 ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
                             }
-                            ctx.fill(Path(roundedRect:CGRect(x:(x-12)*sx,y:(y-21)*sy,
-                                width:24*sx,height:24*sy),cornerRadius:7),with:.color(.orange))
-                            ctx.draw(Text("Guest").font(.system(size:12,weight:.bold)),
-                                at:CGPoint(x:x*sx,y:(y-31)*sy))
+                            CloudClimbHeroes.draw(ctx,
+                                hero:CloudClimbHeroes.unlocked(equippedHero,owned:characters)
+                                    ? equippedHero : "starter",
+                                x:x,y:y,sx:sx,sy:sy)
+                            ctx.draw(Text(CloudClimbHeroes.get(equippedHero).name)
+                                .font(.system(size:11,weight:.bold)),
+                                at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
                         .aspectRatio(4/5,contentMode:.fit)
                         .clipShape(RoundedRectangle(cornerRadius:16))
@@ -379,6 +383,7 @@ private struct CloudClimbOfflineDemo:View {
                         }
                     }
                     Text(notice).font(.caption).foregroundStyle(.white)
+                    CloudClimbHeroPicker(owned:characters,selected:$equippedHero)
                     Button("🔮 Character Orb · \(characters.count) Characters") {
                         orbOpen=true
                     }
@@ -511,7 +516,7 @@ private struct CloudClimbOfflineDemo:View {
         coins-=500
         var unlocked=characters;unlocked.insert(next)
         characterStorage=unlocked.sorted().joined(separator:",")
-        notice="🎉 New character: \(next)!"
+        notice="🎉 New character: \(CloudClimbHeroes.get(next).name)!"
     }
 }
 #endif
