@@ -207,6 +207,12 @@ function setAuthMode(mode){
 $('signupMode').onclick=()=>setAuthMode('signup');
 $('signinMode').onclick=()=>setAuthMode('signin');
 $('useDefaultAvatar').addEventListener('change',()=>{
+ if($('useDefaultAvatar').checked){
+  pendingAvatar=null;
+  $('signupAvatar').value='';
+  $('avatarPreview').hidden=true;
+  if(avatarPreviewURL){URL.revokeObjectURL(avatarPreviewURL);avatarPreviewURL=null;}
+ }
  $('signupAvatar').required=authMode==='signup'&&!$('useDefaultAvatar').checked;
 });
 setAuthMode('signup');
@@ -373,7 +379,7 @@ $('discover').onclick=safe(async()=>{
 });
 $('reloadUpdates').onclick=()=>safe(loadUpdates)();
 for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>selectTab(button.dataset.tab);
-client.auth.onAuthStateChange((_event,session)=>{if(!session){stopWatching();user=null;$('app').hidden=true;$('auth').hidden=false}});
+client.auth.onAuthStateChange((_event,session)=>{if(!session){stopWatching();user=null;profileReady=false;$('app').hidden=true;$('auth').hidden=false}});
 // RLS-protected Realtime is primary; polling heals reconnects and new room invitations.
 window.setInterval(()=>{
  if(!user||!deviceSync||document.visibilityState!=='visible')return;
