@@ -175,6 +175,7 @@ async function drawSession(){
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  if(!data.user.email_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('Confirm your email before signing in.',true);return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
+ $('adminLink').hidden=!(data.user.email_confirmed_at && data.user.app_metadata?.itamaros_admin===true);
  const {data:profile,error:profileError}=await client.from('itamar_profiles').select('id').eq('id',user.id).maybeSingle();
  if(profileError)throw profileError;
  profileReady=Boolean(profile);
