@@ -4,6 +4,12 @@
 
 [**Open ItamarOS Demo**](https://itamaros-web-emulator.onrender.com/) · [**Downloads**](https://itamaros-web-emulator.onrender.com/downloads.html) · [**Installation guide**](INSTALLATION.md) · [**GitHub Releases**](https://github.com/itamarnintendo04-arch/ItamarOS/releases)
 
+## Cloud Climb — game commands and ItamarOS account sync
+
+The dedicated Cloud Climb iOS/Android game already uses the ItamarOS Supabase identity to load online progress. This change adds **account-scoped synced game preferences** (selected unlocked world/hero, theme, controls, tips) backed by owner-only RLS and server checks for locked worlds/heroes. Both native games now offer more slash commands such as `/hero list`, `/theme twilight`, `/tips off`, `/reset-position`, `/save`, and `/sync`. The standalone iOS offline demo also gets a local command box. **Play Offline Demo remains completely local** and does not silently merge saves.
+
+See [Cloud Climb account sync and commands](messaging/CLOUD_CLIMB_ACCOUNTS.md). The SQL preference migration is applied to the ItamarOS Supabase project; **native builds and cross-device testing remain pending**. No SMS is required for *each* Cloud Climb login when an existing signed-in ItamarOS app can approve it; SMS itself is not permanently free.
+
 ## ItamarMirror casting, richer settings and ChatGPT plugin (development)
 
 - [ItamarMirror](mirror.html) now has a working **Google Cast Web Sender integration** for user-provided public HTTPS videos/audio, using Google's Default Media Receiver, and an **AirPlay media output picker** on supported Apple browsers. This is **media playback casting**, not a full AirPlay 2 receiver or Google Cast full-screen mirroring receiver. The browser screen capture preview is still local-only. 4K/60 FPS is a best-effort target, not a verified result.
