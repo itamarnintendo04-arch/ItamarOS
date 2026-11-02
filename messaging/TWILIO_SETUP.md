@@ -15,16 +15,19 @@ For production: check security/performance advisors, privacy rules, abuse report
 
 Supabase Dashboard → **Authentication → Providers → Phone**:
 
-1. Enable phone login and choose **Twilio** or **Twilio Verify** as the SMS provider.
-2. Enter the requested Twilio Account SID, Twilio Auth Token and messaging/verification service identifiers **only in the private Dashboard fields**. These values must never be in `public-config.js`, JavaScript, Kotlin, Swift, README examples, public GitHub commits or client builds.
-3. Enable rate limits and CAPTCHA where supported. Twilio/Supabase SMS may incur charges. Only deliver codes to numbers your users control and take account of applicable SMS regulations.
-4. Test with an approved testing number and a non-production project before going live.
+1. Enable phone login and select **Twilio** (Programmable Messaging), **not Twilio Verify**, as the SMS provider.
+2. Configure an authorized Twilio sender and **Messaging Service SID**, then enter the Twilio Account SID, Auth Token and Messaging Service SID **only in the private Supabase Dashboard fields**. Do not paste secrets into `public-config.js`, JavaScript, Kotlin, Swift, README examples, public GitHub commits or client builds.
+3. Enable rate limits and CAPTCHA where supported, restrict allowed destination countries and add spending alerts. **Twilio Programmable Messaging still charges for SMS messages** (and possibly sender numbers and carrier fees); avoiding Verify does not make SMS free.
+4. Test with approved test numbers and a staging project before going live. Trial Twilio accounts have destination restrictions.
 
 The clients use **Supabase Auth**:
 - Request: `auth.signInWithOtp({phone:'+972…'})` on the web, or `POST /auth/v1/otp` on native clients.
 - Verification: `auth.verifyOtp({phone,token,type:'sms'})` on the web, or `POST /auth/v1/verify` on native clients.
 - The server signs in the user **only after** verifying their OTP. Code requests by themselves are **not a login**.
-- No custom Twilio SMS-sending service is needed. The credentials are stored by Supabase as the SMS provider.
+- No custom Twilio SMS-sending service or custom OTP database is needed. Supabase creates and validates the one-time code while Twilio Programmable Messaging delivers the SMS.
+- The ItamarConnect **web** flow now includes a separate **Create account** form: phone number and unique @username are required; users must pick an uploaded JPG/PNG/WebP profile image (max 3 MB) or the privacy-preserving default avatar; password is optional (minimum 8 characters).
+- Existing users can sign in by phone OTP or by phone + password if they chose one. Password entry skips a new SMS request. The native iOS/Android clients still require their own UX updates to match this web signup screen. These changes remain source-only until a backend is configured and tested.
+- Uploaded profile images are public; do not require a real face or government-identifying photo.
 
 Official references: [Supabase Phone Login](https://supabase.com/docs/guides/auth/phone-login), [JavaScript OTP](https://supabase.com/docs/reference/javascript/auth-signinwithotp).
 
