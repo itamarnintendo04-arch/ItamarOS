@@ -238,11 +238,11 @@ struct CloudClimbStandaloneHome:View {
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
             .toolbar(.hidden,for:.navigationBar)
-            .sheet(isPresented:$showOnline) {
+            .fullScreenCover(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
                     .environmentObject(cloud)
             }
-            .sheet(isPresented:$offlineDemo) {
+            .fullScreenCover(isPresented:$offlineDemo) {
                 CloudClimbOfflineDemo()
             }
         }
@@ -375,6 +375,8 @@ private struct CloudClimbOfflineDemo:View {
     @State private var notice="Complete stages to earn game coins and discover blue doors."
     @State private var orbOpen=false
     @State private var lastBossHit=Date.distantPast
+    @State private var lastEnemyHit=Date.distantPast
+    @State private var checkpointStage:Int=Int.min
     @State private var controllerConnected=false
     @State private var lastMenuButton=false
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
@@ -385,6 +387,7 @@ private struct CloudClimbOfflineDemo:View {
     private var worlds:Set<Int> {Set([1]).union(worldStorage.split(separator:",").compactMap{Int($0)})}
     private var keys:Int {max(0,(level-1)/100-(worlds.count-1))}
     private var boss:Bool {level%30==0}
+    private var stageKey:Int {level &* 2039 &+ world &* 1009}
     private var secret:Bool {colored.count==10}
     private var stages:[CGRect] {
         var value=UInt64(UInt32(truncatingIfNeeded:level &* 2039 &+ world &* 1009))
@@ -497,6 +500,9 @@ private struct CloudClimbOfflineDemo:View {
                                 let rect=CGRect(x:(bossX-21)*sx,y:45*sy,width:42*sx,height:42*sy)
                                 ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
                             }
+                            CloudClimbStageExtras.draw(ctx,platforms:stages,sx:sx,sy:sy,
+                                time:Date.timeIntervalSinceReferenceDate,
+                                checkpointActive:checkpointStage==stageKey)
                             CloudClimbHeroes.draw(ctx,
                                 hero:CloudClimbHeroes.unlocked(equippedHero,owned:characters)
                                     ? equippedHero : "starter",
@@ -505,8 +511,12 @@ private struct CloudClimbOfflineDemo:View {
                                 .font(.system(size:11,weight:.bold)),
                                 at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
-                        .aspectRatio(4/5,contentMode:.fit)
+                        .aspectRatio(16/9,contentMode:.fit)
+                        .frame(maxWidth:820)
+                        .frame(maxHeight:310)
                         .clipShape(RoundedRectangle(cornerRadius:16))
+                        .onAppear { CloudClimbLandscape.setActive(true) }
+                        .onDisappear { CloudClimbLandscape.setActive(false) }
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
                             Button("🚪 Enter Blue Door \(door)") {enterDoor(door)}
@@ -531,7 +541,7 @@ private struct CloudClimbOfflineDemo:View {
                     }
                     Text(notice).font(.caption).foregroundStyle(.white)
                     if showTips {
-                        Text("Tip: Land on clouds, collect blue cubes, and finish a stage to earn coins.")
+                        Text("Tip: Explore sky sprites, spring pads and glowing checkpoints. Each stage has a different layout.")
                             .font(.caption2).foregroundStyle(.white.opacity(0.82))
                     }
                     VStack(alignment:.leading,spacing:8){
@@ -693,23 +703,46 @@ private struct CloudClimbOfflineDemo:View {
         y+=velocity
         if velocity>=0 {
             grounded=false
-            for platform in stages {
+            for (index,platform) in stages.enumerated() {
                 if x+11>platform.minX && x-11<platform.maxX &&
                     previousBottom<=platform.minY && y+3>=platform.minY {
-                    y=platform.minY-3;velocity=0;grounded=true;break
+                    y=platform.minY-3;velocity=0;grounded=true
+                    if index==CloudClimbStageExtras.checkpointIndex {checkpointStage=stageKey}
+                    if CloudClimbStageExtras.isSpring(index:index,x:x,platform:platform) {
+                        velocity = -11.2;grounded=false
+                    }
+                    break
                 }
             }
         }
         if y>495 {
-            hearts=max(0,hearts-1)
-            if hearts==0 {finished=true;notice="No hearts remaining."}
-            resetPosition()
+            loseHeart(fromEnemy:false)
+            return
+        }
+        let now=Date()
+        if now.timeIntervalSince(lastEnemyHit)>1.4 &&
+           CloudClimbStageExtras.isDanger(x:x,y:y,stages:stages,
+                   time:now.timeIntervalSinceReferenceDate) {
+            lastEnemyHit=now
+            loseHeart(fromEnemy:true)
             return
         }
         if grounded && y<110 && !boss {completeLevel()}
     }
-    private func resetPosition() {
-        x=48;y=430;velocity=0;grounded=true;left=false;right=false;jump=false
+    private func loseHeart(fromEnemy:Bool) {
+        hearts=max(0,hearts-1)
+        notice=(fromEnemy ? "A sky sprite caught you. " : "You fell. ")+
+            "\(hearts) hearts remaining."+
+            (checkpointStage==stageKey ? " Checkpoint restored." : "")
+        if hearts==0 {finished=true}
+        resetPosition(useCheckpoint:true)
+    }
+    private func resetPosition(useCheckpoint:Bool=false) {
+        let checkpoint=(useCheckpoint && checkpointStage==stageKey)
+            ? stages[CloudClimbStageExtras.checkpointIndex] : nil
+        x=checkpoint?.midX ?? 48
+        y=checkpoint.map{$0.minY-3} ?? 430
+        velocity=0;grounded=true;left=false;right=false;jump=false
     }
     private func hitBoss() {
         guard boss,!paused,!finished,shopDue==0,
