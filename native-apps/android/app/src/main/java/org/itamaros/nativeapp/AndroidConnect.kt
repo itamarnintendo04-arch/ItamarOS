@@ -107,7 +107,7 @@ class AndroidConnectApi {
         require(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){"Enter a valid email"}
         require(password.length>=8){"Password must have at least 8 characters"}
         require(Regex("^[a-z0-9_.]{3,24}$").matches(handle)){"Username must have 3–24 valid characters"}
-        require(phone.isEmpty()||Regex("^\+[1-9][0-9]{7,14}$").matches(phone)){
+        require(phone.isEmpty()||Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)){
             "Optional phone must start with +country code"
         }
         val metadata=JSONObject().put("preferred_username",handle)
@@ -693,7 +693,7 @@ fun AndroidConnectScreen(
                 notice="Registration requested. Confirm your email, then sign in. No SMS needed."
             }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
                 && password.length>=8 && Regex("^[a-z0-9_.]{3,24}$").matches(registrationUsername)
-                && (signInPhone.isBlank()||Regex("^\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()))){
+                && (signInPhone.isBlank()||Regex("^\\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()))){
                 Text("Create account — send verification email")
             }
         }else{
