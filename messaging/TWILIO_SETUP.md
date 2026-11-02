@@ -1,3 +1,11 @@
+# ItamarOS registration — updated requirements (2026-11-02)
+
+**Current intended flow:** Username, email and password are REQUIRED. Phone and profile picture are OPTIONAL. Signing up via Supabase Auth `signUp({email,password,options:{data:{preferred_username,...},emailRedirectTo}})` triggers an email confirmation when email confirmation is enabled. It is not an SMS flow. Email link landing URL must be on Supabase's auth redirect allowlist and the email provider/SMTP must actually work. Returning users sign in with email and password. Cloud Climb supports QR approval using a device already signed in. Optional phone contact is kept in user metadata as **unverified** and must not be used for login, account recovery, identity checks, or public profile display. Photos are optional (default avatar) and can be uploaded after confirming email.
+
+**Phone number autofill:** Android's Play Services Phone Number Hint suggests possible numbers only after a deliberate user action. An iOS app cannot reliably read the SIM phone number, and a web browser cannot auto-read it either. Users can always enter the optional contact number manually.
+
+**Migration notes:** Old Twilio SMS/OTP notes, password-optional signup, and required phone verification are deprecated. Existing phone-only accounts may need a separate verified email-link upgrade before they can use email/password. We have not automatically migrated or deleted any existing accounts. Configure Supabase Auth email confirmation and SMTP in the Dashboard and test with a real inbox. Do not store secrets in browsers or mobile binaries.
+
 # ItamarConnect — Supabase + Twilio SMS setup
 
 **Development integration; not yet active until you configure your own new Supabase project.** Do not restore or reuse the old deleted Supabase project.
