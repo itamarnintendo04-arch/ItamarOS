@@ -46,8 +46,8 @@ Deno.serve(async(req:Request)=>{
   const users=data?.users||[];
   const ids=users.map(u=>u.id);
   const [profiles,badges]=await Promise.all([
-   ids.length?manager.from("itamar_profiles").select("id,username,display_name,avatar_path").in("id",ids):{data:[]},
-   ids.length?manager.from("itamar_profile_badges").select("user_id,badge").in("user_id",ids):{data:[]}
+   manager.from("itamar_profiles").select("id,username,display_name,avatar_path").in("id",ids),
+   manager.from("itamar_profile_badges").select("user_id,badge").in("user_id",ids)
   ]);
   if(profiles.error||badges.error)return json({error:"Could not load profile data"},500,origin);
   const profileMap=new Map((profiles.data||[]).map(p=>[p.id,p]));
