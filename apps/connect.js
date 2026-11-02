@@ -14,7 +14,7 @@ const client=sd.createClient(config.url,config.publishableKey,{
 let user=null,rooms=[],current=null;
 let pendingPassword='',pendingAvatar=null,avatarPreviewURL=null;
 let deviceSync=localStorage.getItem('itamaros-connect-device-sync')!=='off';
-let pendingPhone='';
+let pendingPhone='',pendingUsername='',pendingMode='signup',authMode='signup',profileReady=false;
 let messageChannel=null;
 function stopWatching(){
  if(messageChannel){void client.removeChannel(messageChannel);messageChannel=null}
@@ -49,13 +49,15 @@ const draw=(where,title,subtitle,act)=>{
  where.append(row);
 };
 function selectTab(name){
- if(!deviceSync&&name!=='settings'){name='settings';setStatus('Sync is off on this device. Turn it on to show cloud conversations.');}
+ if(user&&!profileReady&&name!=='profile'){name='profile';setStatus('Complete your profile before using Connect.');}
+ if(!deviceSync&&name!=='settings'&&!(name==='profile'&&!profileReady)){name='settings';setStatus('Sync is off on this device. Turn it on to show cloud conversations.');}
  for(const el of document.querySelectorAll('[id^="tab-"]'))el.hidden=el.id!=='tab-'+name;
  for(const el of document.querySelectorAll('[data-tab]'))el.dataset.selected=el.dataset.tab===name?'true':'false';
  if(name==='updates')safe(loadUpdates)();
 }
 function requireProfile(){
  if(!user)throw Error('Sign in to use Connect.');
+ if(!profileReady)throw Error('Complete your profile before using Connect.');
 }
 async function refreshRooms(){
  requireProfile();requireSync();
@@ -173,9 +175,39 @@ async function drawSession(){
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
  if(!data.user.phone_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('SMS phone verification is required.',true);return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
+ const {data:profile,error:profileError}=await client.from('itamar_profiles').select('id').eq('id',user.id).maybeSingle();
+ if(profileError)throw profileError;
+ profileReady=Boolean(profile);
+ if(!profileReady){
+  clearCloudView();
+  $('username').value=pendingUsername||'';
+  $('displayName').value=pendingUsername||'';
+  selectTab('profile');
+  setStatus('Phone verified. Save your unique username to finish your profile.');
+  return;
+ }
  if(deviceSync){await refreshRooms();await loadProfile();await showBlocks();}
  else {clearCloudView();selectTab('settings');}
 }
+function setAuthMode(mode){
+ authMode=mode==='signin'?'signin':'signup';
+ const signup=authMode==='signup';
+ $('signupFields').hidden=!signup;
+ $('signupUsername').required=signup;
+ $('signupAvatar').required=signup&&!$('useDefaultAvatar').checked;
+ $('authTitle').textContent=signup?'Create your ItamarOS account':'Sign in to ItamarOS';
+ $('authHelp').textContent=signup?
+ 'Choose a unique username, verify your phone and choose a photo or default avatar. Passwords are optional.':
+ 'Enter your registered phone number. We will send an SMS code to sign in.';
+ $('signupMode').classList.toggle('primary',signup);
+ $('signinMode').classList.toggle('primary',!signup);
+}
+$('signupMode').onclick=()=>setAuthMode('signup');
+$('signinMode').onclick=()=>setAuthMode('signin');
+$('useDefaultAvatar').addEventListener('change',()=>{
+ $('signupAvatar').required=authMode==='signup'&&!$('useDefaultAvatar').checked;
+});
+setAuthMode('signup');
 $('signupAvatar').addEventListener('change',()=>{
  const selected=$('signupAvatar').files?.[0]||null;
  if(avatarPreviewURL){URL.revokeObjectURL(avatarPreviewURL);avatarPreviewURL=null}
@@ -185,6 +217,8 @@ $('signupAvatar').addEventListener('change',()=>{
   $('signupAvatar').value='';message('Choose a JPG, PNG or WebP photo under 3 MB.');return;
  }
  pendingAvatar=selected;
+ $('useDefaultAvatar').checked=false;
+ $('signupAvatar').required=authMode==='signup';
  avatarPreviewURL=URL.createObjectURL(selected);
  $('avatarPreview').src=avatarPreviewURL;$('avatarPreview').hidden=false;
 });
@@ -198,11 +232,15 @@ $('smsForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
  const phone=$('phone').value.trim();
  if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error('Use your own mobile number with a country code, such as +972...');
- const password=$('signupPassword').value;
+ const signup=authMode==='signup';
+ const username=signup?$('signupUsername').value.trim().toLowerCase():'';
+ if(signup&&!/^[a-z0-9_.]{3,24}$/.test(username))throw Error('Username must contain 3–24 lowercase letters, numbers, _ or .');
+ if(signup&&!pendingAvatar&&!$('useDefaultAvatar').checked)throw Error('Upload a photo or choose the default avatar.');
+ const password=signup?$('signupPassword').value:'';
  if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
- const {error}=await client.auth.signInWithOtp({phone});
+ const {error}=await client.auth.signInWithOtp({phone,options:{shouldCreateUser:signup}});
  if(error)throw error;
- pendingPhone=phone;pendingPassword=password;
+ pendingPhone=phone;pendingPassword=password;pendingUsername=username;pendingMode=authMode;
  $('phoneDestination').textContent=phone;
  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
  setStatus('SMS requested. Enter the code to continue.');
@@ -231,21 +269,29 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
  const {data,error}=await client.auth.verifyOtp({phone:pendingPhone,token:code,type:'sms'});
  if(error)throw error;
  if(!data?.session||!data.user?.phone_confirmed_at)throw Error('Phone verification not completed.');
- const selectedPassword=pendingPassword;
- pendingPassword='';$('signupPassword').value='';
- if(selectedPassword){
-  const {error:passwordError}=await client.auth.updateUser({password:selectedPassword});
-  if(passwordError)message('Phone verified, but optional password was not saved: '+passwordError.message);
+ user=data.user;
+ const {data:existing,error:lookupError}=await client.from('itamar_profiles')
+  .select('id').eq('id',user.id).maybeSingle();
+ if(lookupError)throw lookupError;
+ if(!existing&&pendingMode==='signup'&&pendingUsername){
+  const {error:profileError}=await client.from('itamar_profiles').insert({
+   id:user.id,username:pendingUsername,display_name:pendingUsername
+  });
+  if(profileError){
+   await drawSession();
+   throw Error('Could not save that username. Choose another in Profile. '+profileError.message);
+  }
+  if(pendingPassword){
+   const {error:passwordError}=await client.auth.updateUser({password:pendingPassword});
+   if(passwordError)message('Phone verified but optional password could not be saved: '+passwordError.message);
+  }
  }
+ pendingPassword='';$('signupPassword').value='';
  $('smsCode').value='';pendingPhone='';
  $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;
  await drawSession();
- // A new account needs a username before the optional avatar can be attached.
- const {data:profile,error:profileError}=await client.from('itamar_profiles')
-  .select('id').eq('id',user.id).maybeSingle();
- if(profileError)throw profileError;
- if(profile){await applyPendingAvatar();setStatus('Phone verified. Welcome to ItamarConnect.')}
- else {selectTab('profile');setStatus('Phone verified. Choose a display name and unique username to finish.')}
+ if(profileReady){await applyPendingAvatar();setStatus('Phone verified. Welcome to ItamarOS.')}
+ else setStatus('Phone verified. Create your username in Profile to finish.');
 }));
 $('deviceSync').addEventListener('change',safe(async e=>{
  deviceSync=Boolean(e.target.checked);
@@ -288,14 +334,18 @@ $('newGroup').addEventListener('submit',safe(async(e)=>{
  if(error)throw error;await refreshRooms();setStatus('Group created.');
 }));
 $('profileForm').addEventListener('submit',safe(async(e)=>{
- e.preventDefault();requireProfile();requireSync();
+ e.preventDefault();
+ if(!user)throw Error('Sign in before editing your profile.');
  const username=$('username').value.toLowerCase().trim();
  if(!/^[a-z0-9_.]{3,24}$/.test(username))throw Error('Username must have 3–24 letters, digits, underscore or dot.');
  const {error}=await client.from('itamar_profiles').upsert({
   id:user.id,display_name:$('displayName').value.trim(),username,about:$('bio').value.trim()
  },{onConflict:'id'});
  if(error)throw error;
- await applyPendingAvatar();setStatus('Profile saved.');
+ profileReady=true;
+ await applyPendingAvatar();
+ if(deviceSync)await refreshRooms();
+ setStatus('Profile saved.');
 }));
 $('discover').onclick=safe(async()=>{
  const {data,error}=await client.from('itamar_rooms')
