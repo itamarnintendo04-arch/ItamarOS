@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>ItamarOS · Accept invitation</title>
+<style>body{font:16px system-ui,sans-serif;background:#ecf3fe;color:#143052;margin:0;padding:30px}main{max-width:500px;margin:auto;background:white;border-radius:18px;padding:26px}label{display:block;margin:16px 0}input{display:block;width:100%;box-sizing:border-box;padding:12px;margin:5px 0;border:1px solid #aabbcc;border-radius:9px}button{background:#225fcf;color:white;border:0;padding:12px 20px;border-radius:9px;cursor:pointer}button:disabled{opacity:.5}</style>
+</head><body><main>
+<h1>Welcome to ItamarOS</h1>
+<p>This private invitation allows the intended recipient to create their password. Only redeem links sent to your own email address.</p>
+<form id="form" hidden><label>Password (at least 8 characters)<input type="password" id="password" required minlength="8" autocomplete="new-password"></label>
+<label>Confirm password<input type="password" id="confirm" required minlength="8" autocomplete="new-password"></label>
+<button type="submit">Set my password</button></form>
+<p id="status" role="status" aria-live="polite">Checking invitation…</p>
+<p><a href="/connect.html">Open ItamarOS sign-in</a></p>
+</main>
+<script src="/messaging/public-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="/apps/accept-invite.js" defer></script>
+</body></html>
