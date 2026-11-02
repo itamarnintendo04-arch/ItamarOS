@@ -57,11 +57,12 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <label for="signinPassword">Password *</label>
 <input id="signinPassword" type="password" autocomplete="current-password" required placeholder="Your ItamarOS password">
 <p class="muted">Sign in with the email and password from your ItamarOS account. Cloud Climb also supports QR approval from a previously signed-in ItamarOS app.</p>
-<button id="forgotPassword" type="button">Forgot password?</button>
+<button id="forgotPassword" type="button">Forgot password?</button><button id="recoverPhone" type="button">Recover with verified phone</button>
 </div>
 <button id="authSubmit" class="primary" type="submit">Create account</button>
 </form>
-<p class="muted">Verification and password-reset messages are delivered by the connected ItamarOS email service. No SMS is required.</p>
+<p class="muted">Email confirmation and password resets use the ItamarOS mail service. Phone recovery is optional and requires a previously verified phone plus an SMS provider.</p>
+<p><a href="itamaros://account">Open the ItamarOS app</a> · <a href="/downloads.html">Get the app</a></p>
 </section>
 <section id="passwordRecovery" hidden>
 <h2>Reset your ItamarOS password</h2>
@@ -79,6 +80,24 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <button id="cancelForgot" type="button">Cancel</button>
 <p class="muted">If an account exists, you'll receive an email with a password reset link.</p>
 </form>
+<section id="phoneRecoveryBox" hidden>
+<h3>Recover account with a verified phone number</h3>
+<p class="muted">Available only after you have attached and verified this number on the same ItamarOS account. An optional signup phone is not automatically verified. SMS delivery must be configured.</p>
+<form id="phoneRecoveryRequest">
+<label for="recoveryPhone">Previously verified phone</label>
+<input id="recoveryPhone" type="tel" placeholder="+972501234567" autocomplete="tel" pattern="\+[1-9][0-9]{7,14}" required>
+<button type="submit">Send one-time SMS code</button>
+</form>
+<form id="phoneRecoveryVerify" hidden>
+<label for="recoveryPhoneCode">One-time code</label><input id="recoveryPhoneCode" inputmode="numeric" autocomplete="one-time-code" minlength="4" maxlength="8" required>
+<button type="submit">Verify and recover my account</button>
+</form>
+<form id="phoneRecoveryNewPassword" hidden>
+<p id="phoneRecoveredEmail"></p>
+<label for="phoneRecoveredPassword">Choose a new password</label>
+<input id="phoneRecoveredPassword" type="password" autocomplete="new-password" minlength="8" required>
+<button type="submit">Set new password</button></form>
+</section>
 <div id="app" hidden>
 <nav>
 <button data-tab="chats" data-selected="true">Chats</button>
@@ -121,6 +140,26 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <label for="username">Unique username</label><input id="username" minlength="3" maxlength="24" required pattern="[a-z0-9_.]{3,24}">
 <label for="bio">About (optional)</label><textarea id="bio" maxlength="160"></textarea>
 <button class="primary" type="submit">Save profile</button></form>
+<h3>Private account security</h3>
+<p>These details are visible only after you sign in to your account.</p>
+<label for="privateEmail">My account email</label><input id="privateEmail" type="email" readonly autocomplete="off">
+<label for="privatePassword">Password</label><input id="privatePassword" value="••••••••" readonly autocomplete="off">
+<p class="muted">Your actual password cannot be displayed or recovered. To change it, verify your current password or use email/verified-phone recovery.</p>
+<form id="changePasswordForm">
+<label for="oldPassword">Current password (verify identity)</label><input id="oldPassword" type="password" autocomplete="current-password" required>
+<label for="updatedPassword">New password (8+ characters)</label><input id="updatedPassword" type="password" autocomplete="new-password" minlength="8" required>
+<label for="repeatPassword">Confirm new password</label><input id="repeatPassword" type="password" autocomplete="new-password" minlength="8" required>
+<button type="submit">Verify and change password</button>
+</form>
+<h3>Optional verified recovery phone</h3>
+<p id="recoveryPhoneStatus">No verified recovery number connected.</p>
+<form id="attachRecoveryPhone"><label for="attachPhone">Phone for optional account recovery</label>
+<input id="attachPhone" type="tel" placeholder="+972501234567" pattern="\+[1-9][0-9]{7,14}" required>
+<button type="submit">Send verification code</button></form>
+<form id="confirmRecoveryPhone" hidden><label for="attachPhoneCode">SMS verification code</label>
+<input id="attachPhoneCode" inputmode="numeric" autocomplete="one-time-code" minlength="4" maxlength="8" required>
+<button type="submit">Confirm phone ownership</button></form>
+<p class="muted">Phone recovery requires verified number ownership and an SMS provider. Do not rely on an unverified optional signup number.</p>
 <h3>My profile ID & QR</h3><p>Every ItamarOS account has a permanent unique ID.</p>
 <p id="myProfileID" style="overflow-wrap:anywhere;font-family:ui-monospace,monospace"></p>
 <div class="row"><button id="copyMyID" type="button">Copy my ID</button><a id="myProfileQR" href="/profile.html">Open my profile and QR</a></div>
