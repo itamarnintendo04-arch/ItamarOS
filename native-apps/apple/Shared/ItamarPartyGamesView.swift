@@ -488,7 +488,8 @@ struct ItamarPartyGamesView: View {
                         Button(climbSlotNames[num-1]){
                             switchClimbSlot(num)
                         }
-                        .buttonStyle(num==climbSlot ? .borderedProminent : .bordered)
+                        .buttonStyle(.bordered)
+                        .tint(num==climbSlot ? .yellow : .white)
                         .disabled(climbCloudSaving)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
