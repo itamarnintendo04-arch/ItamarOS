@@ -72,6 +72,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var syncRevision by remember(accountKey) { mutableLongStateOf(0L) }
     var syncRefresh by remember(accountKey) { mutableIntStateOf(0) }
     var syncStatus by remember(accountKey) { mutableStateOf("Local save") }
+    var preferencesLoaded by remember(accountKey) { mutableStateOf(false) }
+    var manualSaveRequest by remember(accountKey) { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     var playerName by remember(accountKey) { mutableStateOf("Player") }
     var activeWorld by remember(accountKey) {
@@ -134,6 +136,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     LaunchedEffect(accountKey, rewardsRefresh, syncReady) {
         if (!syncReady || api.userID.isNullOrBlank()) return@LaunchedEffect
+        preferencesLoaded=false
         try {
             val rewards=JSONObject(api.request("/rest/v1/rpc/itamar_climb_rewards_state",
                 "POST",JSONObject()))
@@ -160,7 +163,43 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             if(activeWorld !in unlockedWorlds && !(activeWorld==11 && coloredBosses.size==10))
                 activeWorld=1
             rewardsStatus="Blue doors "+collectedCubes.size+"/50 · Colored "+coloredBosses.size+"/10"
-        }catch(_:Exception) { rewardsStatus="World rewards temporarily unavailable" }
+            // Only load account preferences after unlocks have been verified.
+            val accountPrefs=JSONObject(api.request("/rest/v1/rpc/itamar_climb_get_preferences",
+                "POST",JSONObject()))
+            if(accountPrefs.optBoolean("exists",false)) {
+                nightSky=accountPrefs.optBoolean("twilight_sky",false)
+                autoHideControls=accountPrefs.optBoolean("auto_hide_controls",true)
+                showControlHints=accountPrefs.optBoolean("show_tips",true)
+                val chosenWorld=accountPrefs.optInt("selected_world",1)
+                activeWorld=if(chosenWorld in unlockedWorlds ||
+                    (chosenWorld==11 && coloredBosses.size==10))chosenWorld else 1
+                val chosenHero=accountPrefs.optString("equipped_hero","starter")
+                equippedHero=if(chosenHero=="starter" || chosenHero in ownedCharacters)chosenHero else "starter"
+            }
+            preferencesLoaded=true
+        }catch(_:Exception) { rewardsStatus="Cloud world settings temporarily unavailable" }
+    }
+    // Signed-in user preferences use the same auth identity on every device.
+    // The standalone offline demo never writes to the account's cloud.
+    LaunchedEffect(accountKey,activeWorld,equippedHero,nightSky,autoHideControls,showControlHints) {
+        prefs.edit().putInt("active_world",activeWorld)
+            .putString("equipped_hero",equippedHero)
+            .putBoolean("night_sky",nightSky)
+            .putBoolean("auto_hide_controls",autoHideControls)
+            .putBoolean("show_control_hints",showControlHints).apply()
+    }
+    LaunchedEffect(accountKey,activeWorld,equippedHero,nightSky,autoHideControls,showControlHints,
+        syncReady,preferencesLoaded) {
+        if (!syncReady || !preferencesLoaded || api.userID.isNullOrBlank())return@LaunchedEffect
+        delay(500)
+        try {
+            api.request("/rest/v1/rpc/itamar_climb_save_preferences","POST",JSONObject()
+                .put("p_selected_world",activeWorld)
+                .put("p_equipped_hero",equippedHero)
+                .put("p_twilight_sky",nightSky)
+                .put("p_auto_hide_controls",autoHideControls)
+                .put("p_show_tips",showControlHints))
+        }catch(_:Exception){rewardsStatus="Game preferences could not be synced"}
     }
     LaunchedEffect(level,syncRevision,syncReady) {
         if(nextColoredBoss !in 1..10 ||
@@ -264,7 +303,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     LaunchedEffect(accountKey, syncRefresh) {
         syncReady = false
         if (api.userID.isNullOrBlank()) {
-            syncStatus = "Local save · Sign in with verified SMS to sync"
+            syncStatus = "Local save · Sign in with ItamarOS to sync"
             return@LaunchedEffect
         }
         try {
@@ -278,13 +317,13 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 gameOver = remote.optBoolean("game_over", false)
             }
             syncRevision = remote.optLong("revision", 0L)
-            syncStatus = "Cloud save connected · Same verified phone, same account"
+            syncStatus = "Cloud save connected · ItamarOS account"
             syncReady = true
         } catch (_: Exception) {
             syncStatus = "Local save · Cloud sync unavailable"
         }
     }
-    LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver, syncReady) {
+    LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver, syncReady, manualSaveRequest) {
         if (!syncReady) return@LaunchedEffect
         delay(350)
         try {
@@ -610,18 +649,42 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Button(onClick={
                 val cmd=slashInput.trim().lowercase()
                 slashReply=when {
-                    cmd=="/help"->"/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
+                    cmd=="/help" || cmd=="/commands" ->
+                        "/stats · /account · /room · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /controls auto|show · /tips on|off · /pause · /resume · /reset-position · /save · /sync"
                     cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue ${collectedCubes.size}/50 · Colored ${coloredBosses.size}/10 · Characters ${ownedCharacters.size} · Keys $worldKeys"
+                    cmd=="/account"->if(api.userID.isNullOrBlank())"Offline demo · Save stays on this device"
+                        else "Linked to your ItamarOS account · $syncStatus"
                     cmd=="/pause"->{paused=true;"Game paused."}
                     cmd=="/resume"->{paused=false;"Game resumed."}
+                    cmd=="/reset-position"->{resetPosition();"Returned to the start of this stage; progress kept."}
                     cmd=="/room"->if(room=="local-cloudclimb")"Offline demo · no room code" else "Room code: $room"
-                    cmd=="/theme day"->{nightSky=false;prefs.edit().putBoolean("night_sky",false).apply();"Day theme enabled"}
-                    cmd=="/theme twilight"->{nightSky=true;prefs.edit().putBoolean("night_sky",true).apply();"Twilight theme enabled"}
+                    cmd=="/theme day"->{nightSky=false;"Day theme enabled"}
+                    cmd=="/theme twilight"->{nightSky=true;"Twilight theme enabled"}
+                    cmd=="/controls auto"->{autoHideControls=true;"Touch controls now hide with a controller"}
+                    cmd=="/controls show"->{autoHideControls=false;"Touch controls always shown"}
+                    cmd=="/tips on"->{showControlHints=true;"Gameplay tips enabled"}
+                    cmd=="/tips off"->{showControlHints=false;"Gameplay tips disabled"}
+                    cmd=="/hero list"->"Unlocked: starter"+if(ownedCharacters.isEmpty)"" else ", "+ownedCharacters.sorted().joinToString(", ")
+                    cmd=="/save"->{
+                        manualSaveRequest+=1
+                        if(syncReady)"Account progress save requested" else "Saved on this device (offline)"
+                    }
+                    cmd=="/sync"->{
+                        if(api.userID.isNullOrBlank())"Sign in with ItamarOS first; offline saves stay separate"
+                        else {syncRefresh+=1;"Reloading your account save"}
+                    }
                     cmd.startsWith("/world ")-> {
                         val chosen=cmd.removePrefix("/world ").toIntOrNull()
-                        if(chosen!=null && (chosen in unlockedWorlds || chosen==11 && secretWorldReady)){
+                        if(chosen!=null && (chosen in unlockedWorlds || (chosen==11 && secretWorldReady))){
                             activeWorld=chosen;resetPosition();"Entered world $chosen"
                         }else "World locked or invalid. Unlock it with a key."
+                    }
+                    cmd.startsWith("/hero ")->{
+                        val chosen=cmd.removePrefix("/hero ")
+                        if(chosen=="starter" || chosen in ownedCharacters){
+                            equippedHero=chosen
+                            "Equipped ${CloudHeroes.get(chosen).name}"
+                        }else "Hero locked. Use /hero list."
                     }
                     else->"Unknown command. Type /help."
                 }
@@ -652,7 +715,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                             nightSky = it; prefs.edit().putBoolean("night_sky", it).apply()
                         })
                     }
-                    Text("Account: verified phone SMS sign-in through ItamarOS Connect.")
+                    Text("Account: linked to your signed-in ItamarOS profile. Offline demo remains local.")
                     Text("Progress: " + syncStatus)
                 }
             },
