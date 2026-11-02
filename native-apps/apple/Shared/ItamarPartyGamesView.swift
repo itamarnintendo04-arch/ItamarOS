@@ -52,6 +52,8 @@ struct ItamarPartyGamesView: View {
     @State private var climbGameOver=false
     @State private var climbMessage=""
     @State private var lastBossStrike=Date.distantPast
+    @State private var climbCheckpointSeed:Int=Int.min
+    @State private var climbLastEnemyHit=Date.distantPast
     @State private var climbControllerConnected=false
     @State private var climbPreviousPauseButton=false
     @State private var climbSettingsPresented=false
@@ -319,7 +321,7 @@ struct ItamarPartyGamesView: View {
                 .frame(maxWidth:.infinity,alignment:.leading)
             if climbShowTips {
                 Text(match?.status=="waiting" ? "Waiting for another player." :
-                     "Climb together! Explore the sky in this original platformer.")
+                     "Landscape stages: patrol sprites, bounce pads, checkpoints and boss rooms.")
                     .font(.footnote).foregroundStyle(.white.opacity(0.88))
             }
             HStack {
@@ -423,6 +425,9 @@ struct ItamarPartyGamesView: View {
                     ctx.draw(Text("★").font(.system(size:24,weight:.bold)),
                              at:CGPoint(x:climbBossX*sx,y:65*sy))
                 }
+                CloudClimbStageExtras.draw(ctx,platforms:stages,sx:sx,sy:sy,
+                    time:Date.timeIntervalSinceReferenceDate,
+                    checkpointActive:climbCheckpointSeed==climbStageSeed)
                 for player in 1...4 {
                     guard let match else{break}
                     let p=match.positions["\(player)"]
@@ -443,9 +448,12 @@ struct ItamarPartyGamesView: View {
                              at:CGPoint(x:x*sx,y:(y-29)*sy))
                 }
             }
-            .aspectRatio(4.0/5.0,contentMode:.fit)
-            .frame(maxWidth:350)
+            .aspectRatio(16.0/9.0,contentMode:.fit)
+            .frame(maxWidth:820)
+            .frame(maxHeight:310)
             .clipShape(RoundedRectangle(cornerRadius:16))
+            .onAppear { CloudClimbLandscape.setActive(true) }
+            .onDisappear { CloudClimbLandscape.setActive(false) }
             .onReceive(timer) { _ in tickClimb() }
             if let door=climbNearDoor,!climbPaused,!climbGameOver,climbShopDue==0 {
                 Button("🚪 Enter Blue Door \(door)") {
@@ -904,17 +912,32 @@ struct ItamarPartyGamesView: View {
         posY+=velocityY
         if velocityY>=0 {
             landed=false
-            for platform in platforms(climbStageSeed) {
+            for (index,platform) in platforms(climbStageSeed).enumerated() {
                 if posX+11>platform.minX && posX-11<platform.maxX &&
                   oldBottom<=platform.minY && posY+3>=platform.minY {
                     posY=platform.minY-3
                     velocityY=0
                     landed=true
+                    if index==CloudClimbStageExtras.checkpointIndex {
+                        climbCheckpointSeed=climbStageSeed
+                    }
+                    if CloudClimbStageExtras.isSpring(index:index,x:posX,platform:platform) {
+                        velocityY = -11.2
+                        landed=false
+                    }
                     break
                 }
             }
         }
         if posY>495 {loseClimbHeart();return}
+        let now=Date()
+        if now.timeIntervalSince(climbLastEnemyHit)>1.4 &&
+           CloudClimbStageExtras.isDanger(x:posX,y:posY,
+               stages:platforms(climbStageSeed),time:now.timeIntervalSinceReferenceDate) {
+            climbLastEnemyHit=now
+            loseClimbHeart(fromEnemy:true)
+            return
+        }
         if landed && posY<110 && !climbIsBoss {finishClimbLevel();return}
         if Date().timeIntervalSince(lastPositionUpload)>0.6,let code=match?.code{
             lastPositionUpload=Date()
@@ -1053,11 +1076,13 @@ struct ItamarPartyGamesView: View {
             (completed % 100 == 0 ? " New world key available!" : "")
         resetMovement();saveClimb()
     }
-    private func loseClimbHeart(){
+    private func loseClimbHeart(fromEnemy:Bool=false){
         climbHearts=max(0,climbHearts-1)
-        climbMessage="You fell. \(climbHearts) hearts remaining."
+        climbMessage=(fromEnemy ? "A sky sprite caught you. " : "You fell. ")+
+            "\(climbHearts) hearts remaining."+
+            (climbCheckpointSeed==climbStageSeed ? " Checkpoint restored." : "")
         if climbHearts==0 {climbGameOver=true}
-        resetMovement();saveClimb()
+        resetMovement(useCheckpoint:true);saveClimb()
     }
     private func strikeClimbBoss(){
         guard climbIsBoss,!climbPaused,!climbGameOver,climbShopDue==0,
@@ -1071,8 +1096,12 @@ struct ItamarPartyGamesView: View {
             saveClimb()
         }
     }
-    private func resetMovement(){
-        posX=48;posY=430;velocityY=0;landed=true
+    private func resetMovement(useCheckpoint:Bool=false){
+        let checkpoint=(useCheckpoint && climbCheckpointSeed==climbStageSeed)
+            ? platforms(climbStageSeed)[CloudClimbStageExtras.checkpointIndex] : nil
+        posX=checkpoint?.midX ?? 48
+        posY=checkpoint.map{$0.minY-3} ?? 430
+        velocityY=0;landed=true
         pressLeft=false;pressRight=false;pressJump=false
     }
     private func api(_ tool:String,_ payload:[String:Any]) async throws -> ItamarPartyState {
