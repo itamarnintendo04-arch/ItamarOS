@@ -193,6 +193,8 @@ function setAuthMode(mode){
  authMode=mode==='signin'?'signin':'signup';
  const signup=authMode==='signup';
  $('signupFields').hidden=!signup;
+ $('signinFields').hidden=signup;
+ $('authSubmit').textContent=signup?'Next — send SMS':'Sign in';
  $('signupUsername').required=signup;
  $('signupAvatar').required=signup&&!$('useDefaultAvatar').checked;
  $('authTitle').textContent=signup?'Create your ItamarOS account':'Sign in to ItamarOS';
@@ -238,6 +240,15 @@ $('smsForm').addEventListener('submit',safe(async e=>{
  if(signup&&!pendingAvatar&&!$('useDefaultAvatar').checked)throw Error('Upload a photo or choose the default avatar.');
  const password=signup?$('signupPassword').value:'';
  if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
+ if(!signup&&$('signinPassword').value){
+  const {error}=await client.auth.signInWithPassword({phone,password:$('signinPassword').value});
+  if(error)throw error;
+  $('signinPassword').value='';
+  pendingPhone='';pendingUsername='';pendingAvatar=null;
+  await drawSession();
+  setStatus('Signed in with your password.');
+  return;
+ }
  const {error}=await client.auth.signInWithOtp({phone,options:{shouldCreateUser:signup}});
  if(error)throw error;
  pendingPhone=phone;pendingPassword=password;pendingUsername=username;pendingMode=authMode;
@@ -273,6 +284,7 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
  const {data:existing,error:lookupError}=await client.from('itamar_profiles')
   .select('id').eq('id',user.id).maybeSingle();
  if(lookupError)throw lookupError;
+ let newProfileCreated=false;
  if(!existing&&pendingMode==='signup'&&pendingUsername){
   const {error:profileError}=await client.from('itamar_profiles').insert({
    id:user.id,username:pendingUsername,display_name:pendingUsername
@@ -281,6 +293,7 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
    await drawSession();
    throw Error('Could not save that username. Choose another in Profile. '+profileError.message);
   }
+  newProfileCreated=true;
   if(pendingPassword){
    const {error:passwordError}=await client.auth.updateUser({password:pendingPassword});
    if(passwordError)message('Phone verified but optional password could not be saved: '+passwordError.message);
@@ -290,8 +303,11 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
  $('smsCode').value='';pendingPhone='';
  $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;
  await drawSession();
- if(profileReady){await applyPendingAvatar();setStatus('Phone verified. Welcome to ItamarOS.')}
- else setStatus('Phone verified. Create your username in Profile to finish.');
+ if(profileReady){
+  if(newProfileCreated)await applyPendingAvatar();
+  else pendingAvatar=null;
+  setStatus('Phone verified. Welcome to ItamarOS.');
+ }else setStatus('Phone verified. Create your username in Profile to finish.');
 }));
 $('deviceSync').addEventListener('change',safe(async e=>{
  deviceSync=Boolean(e.target.checked);
