@@ -390,6 +390,8 @@ private struct CloudClimbOfflineDemo:View {
     @AppStorage("cloudclimb.offline.tips") private var showTips=true
     @State private var commandInput=""
     @State private var commandReply="Type /help for Cloud Climb commands."
+    @State private var offlineChat:[String]=["Game: Welcome! Type /help for commands."]
+    @State private var offlineUndo:(world:Int,hero:String,twilight:Bool,tips:Bool,paused:Bool)?
     @State private var x:CGFloat=48
     @State private var y:CGFloat=430
     @State private var velocity:CGFloat=0
@@ -562,17 +564,20 @@ private struct CloudClimbOfflineDemo:View {
                             .font(.caption2).foregroundStyle(.white.opacity(0.82))
                     }
                     VStack(alignment:.leading,spacing:8){
-                        Text("Cloud Climb Commands")
+                        Text("💬 Game Chat")
                             .font(.subheadline.bold()).foregroundStyle(.white)
+                        ForEach(offlineChat.indices,id:\.self){index in
+                            Text(offlineChat[index]).font(.caption).foregroundStyle(.white)
+                        }
                         HStack {
-                            TextField("Enter /command",text:$commandInput)
+                            TextField("Message game: /help, /undo…",text:$commandInput)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                                 .textFieldStyle(.roundedBorder)
+                                .onSubmit{runOfflineCommand()}
                             Button("Send"){runOfflineCommand()}
-                                .disabled(!commandInput.hasPrefix("/"))
+                                .disabled(commandInput.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
                         }
-                        Text(commandReply).font(.caption).foregroundStyle(.white)
                     }
                     CloudClimbHeroPicker(owned:characters,selected:$equippedHero)
                     Button("🔮 Character Orb · \(characters.count) Characters") {
@@ -613,39 +618,63 @@ private struct CloudClimbOfflineDemo:View {
             }
         }
     }
-    // Offline commands change only local gameplay and cosmetic choices.
+    // Offline game chat never alters currency, earned rewards, or locked levels.
     private func runOfflineCommand(){
-        let cmd=commandInput.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
-        defer{commandInput=""}
+        let typed=commandInput.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !typed.isEmpty else{return}
+        let cmd=(typed.hasPrefix("/") ? typed : "/"+typed).lowercased()
+        commandInput=""
+        offlineChat.append("You: "+typed)
+        let before=(world:world,hero:equippedHero,twilight:twilight,tips:showTips,paused:paused)
         switch cmd {
-        case "/help","/commands":
-            commandReply="/stats · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /tips on|off · /pause · /resume · /reset-position · /save"
-        case "/stats":
+        case "/help", "/commands":
+            commandReply="/stats · /where · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save"
+        case "/stats", "/status":
             commandReply="Level \(level) · World \(world) · Coins \(coins) · Hearts \(hearts)/3 · Blue \(blue.count)/50 · Colored \(colored.count)/10 · Heroes \(characters.count)"
+        case "/where", "/world current":
+            commandReply="World \(world), stage \(level)."
         case "/pause":
-            paused=true;commandReply="Game paused."
-        case "/resume":
+            paused=true;commandReply="Game paused. Type /resume to continue."
+        case "/resume", "/unpause":
             paused=false;commandReply="Game resumed."
-        case "/reset-position":
-            resetPosition();commandReply="Returned to the stage start without losing progress."
-        case "/theme day":
+        case "/reset-position", "/position reset":
+            resetPosition();commandReply="Returned to stage start; progress kept. Position reset cannot be undone."
+        case "/theme day", "/theme reset":
             twilight=false;commandReply="Day theme enabled."
         case "/theme twilight":
             twilight=true;commandReply="Twilight theme enabled."
-        case "/tips on":
-            showTips=true;commandReply="Game tips enabled."
+        case "/tips on", "/tips reset":
+            showTips=true;commandReply="Tips enabled."
         case "/tips off":
-            showTips=false;commandReply="Game tips disabled."
+            showTips=false;commandReply="Tips disabled."
         case "/hero list":
             commandReply="Unlocked: starter"+(characters.isEmpty ? "" : ", "+characters.sorted().joined(separator:", "))
+        case "/hero reset":
+            equippedHero="starter";commandReply="Default hero equipped."
+        case "/world back":
+            if let back=offlineUndo,back.world != world,
+               worlds.contains(back.world) || (back.world==11 && secret) {
+                world=back.world;resetPosition();offlineUndo=nil
+                commandReply="Returned to World \(world)."
+            }else{commandReply="No recent world change. Use /undo immediately after switching."}
+        case "/undo", "/cancel", "/revert":
+            if let back=offlineUndo {
+                if back.world != world,worlds.contains(back.world) || (back.world==11 && secret) {
+                    world=back.world;resetPosition()
+                }
+                if CloudClimbHeroes.unlocked(back.hero,owned:characters) {equippedHero=back.hero}
+                twilight=back.twilight;showTips=back.tips;paused=back.paused
+                offlineUndo=nil
+                commandReply="Previous game-chat setting change undone."
+            }else{commandReply="Nothing to undo. /undo only restores the most recent chat change."}
         case "/save":
             commandReply="Offline progress is automatically saved on this device."
-        case "/sync","/account":
-            commandReply="Offline Demo never syncs to an account. Sign in with ItamarOS to play online."
+        case "/sync", "/account":
+            commandReply="Offline demo does not sync. Sign in with ItamarOS to play online."
         default:
             if cmd.hasPrefix("/world "),let n=Int(cmd.dropFirst(7)),
                 worlds.contains(n) || (n==11 && secret) {
-                world=n;resetPosition();commandReply="Entered world \(n)."
+                world=n;resetPosition();commandReply="Entered World \(n)."
             }else if cmd.hasPrefix("/hero "){
                 let requested=String(cmd.dropFirst(6))
                 if CloudClimbHeroes.unlocked(requested,owned:characters){
@@ -654,6 +683,13 @@ private struct CloudClimbOfflineDemo:View {
                 }else{commandReply="Hero locked. Use /hero list."}
             }else{commandReply="Unknown command or locked world. Type /help."}
         }
+        if cmd != "/undo" && cmd != "/cancel" && cmd != "/revert" && cmd != "/world back",
+           before.world != world || before.hero != equippedHero ||
+           before.twilight != twilight || before.tips != showTips || before.paused != paused {
+            offlineUndo=before
+        }
+        offlineChat.append("Game: "+commandReply)
+        if offlineChat.count>12{offlineChat.removeFirst(offlineChat.count-12)}
     }
     private func control(_ name:String,left:Bool)->some View {
         Text(name).font(.title2.bold()).padding(15)
