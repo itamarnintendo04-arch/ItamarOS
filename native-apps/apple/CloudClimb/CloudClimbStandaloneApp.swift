@@ -731,9 +731,7 @@ private struct CloudClimbOfflineDemo:View {
     }
     private func loseHeart(fromEnemy:Bool) {
         hearts=max(0,hearts-1)
-        notice=(fromEnemy ? "A sky sprite caught you. " : "You fell. ")+
-            "\(hearts) hearts remaining."+
-            (checkpointStage==stageKey ? " Checkpoint restored." : "")
+        notice = (fromEnemy ? "A sky sprite caught you. " : "You fell. ") + "\(hearts) hearts remaining." + (checkpointStage==stageKey ? " Checkpoint restored." : "")
         if hearts==0 {finished=true}
         resetPosition(useCheckpoint:true)
     }
