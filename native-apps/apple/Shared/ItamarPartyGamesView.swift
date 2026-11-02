@@ -68,6 +68,7 @@ struct ItamarPartyGamesView: View {
     @State private var climbBlueCubes:Set<String>=[]
     @State private var climbColoredBosses:Set<Int>=[]
     @State private var climbCharacters:Set<String>=[]
+    @State private var climbEquippedHero="starter"
     @State private var climbCharacterOrbOpen=false
     @State private var climbCharacterBusy=false
     @State private var climbCharacterNotice="Surprise character · 500 earned coins"
@@ -376,8 +377,15 @@ struct ItamarPartyGamesView: View {
                     let x=player==slot ? posX : CGFloat(p!.x)*400/1024
                     let y=player==slot ? posY : CGFloat(p!.y)*500/2048
                     let tint:Color=[.orange,.pink,.mint,.yellow][player-1]
-                    let avatar=CGRect(x:(x-12)*sx,y:(y-21)*sy,width:24*sx,height:24*sy)
-                    ctx.fill(Path(roundedRect:avatar,cornerRadius:6),with:.color(tint))
+                    if player==slot {
+                        CloudClimbHeroes.draw(ctx,
+                            hero:CloudClimbHeroes.unlocked(climbEquippedHero,owned:climbCharacters)
+                                ? climbEquippedHero : "starter",
+                            x:x,y:y,sx:sx,sy:sy)
+                    } else {
+                        let avatar=CGRect(x:(x-12)*sx,y:(y-21)*sy,width:24*sx,height:24*sy)
+                        ctx.fill(Path(roundedRect:avatar,cornerRadius:6),with:.color(tint))
+                    }
                     ctx.draw(Text("P\(player)").font(.system(size:12,weight:.bold)),
                              at:CGPoint(x:x*sx,y:(y-29)*sy))
                 }
@@ -407,6 +415,14 @@ struct ItamarPartyGamesView: View {
             if !climbMessage.isEmpty {
                 Text(climbMessage).font(.footnote).foregroundStyle(.white)
             }
+            CloudClimbHeroPicker(owned:climbCharacters,
+                selected:Binding(
+                    get:{climbEquippedHero},
+                    set:{ value in
+                        guard CloudClimbHeroes.unlocked(value,owned:climbCharacters) else{return}
+                        climbEquippedHero=value
+                        UserDefaults.standard.set(value,forKey:climbSaveKey+".hero")
+                    }))
             Button("🔮 Character Orb · \(climbCharacters.count) characters") {
                 climbCharacterOrbOpen=true
             }
@@ -556,7 +572,7 @@ struct ItamarPartyGamesView: View {
                     climbRevision=(result["revision"] as? NSNumber)?.int64Value ?? climbRevision
                     let awarded=result["character"] as? String ?? "unknown"
                     climbCharacters.insert(awarded)
-                    climbCharacterNotice="🎉 You unlocked \(awarded)!"
+                    climbCharacterNotice="🎉 You unlocked \(CloudClimbHeroes.get(awarded).name)!"
                 }else {climbCharacterNotice="You already own all regular characters."}
                 climbCloudReady=true
                 await loadClimbRewards()
@@ -574,7 +590,7 @@ struct ItamarPartyGamesView: View {
             }
             climbCoins-=500
             climbCharacters.insert(new)
-            climbCharacterNotice="🎉 Offline character: \(new)"
+            climbCharacterNotice="🎉 Offline character: \(CloudClimbHeroes.get(new).name)"
             saveClimb()
         }
     }
@@ -675,6 +691,7 @@ struct ItamarPartyGamesView: View {
         climbCloudReady=false
         climbRevision=0
         let saved=UserDefaults.standard.dictionary(forKey:climbSaveKey) ?? [:]
+        climbEquippedHero=UserDefaults.standard.string(forKey:climbSaveKey+".hero") ?? "starter"
         climbLevel=max(1,saved["level"] as? Int ?? 1)
         climbCoins=max(0,saved["coins"] as? Int ?? 0)
         climbHearts=min(3,max(0,saved["hearts"] as? Int ?? 3))
