@@ -31,7 +31,7 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 </section>
 <section id="auth" hidden>
 <h2 id="authTitle">Create your ItamarOS account</h2>
-<p id="authHelp" class="muted">Username, email and phone number are required (*). You can use a default avatar; a password is optional.</p>
+<p id="authHelp" class="muted">Username, email, phone number and password are required (*). Registration confirms your email, not your phone.</p>
 <div class="row"><button id="signupMode" type="button" class="primary">Create account</button><button id="signinMode" type="button">Sign in</button></div>
 <form id="smsForm">
 <div id="signupPhoneField">
@@ -47,29 +47,38 @@ fieldset{border:0;margin:0;padding:0}label{display:block;font-weight:600;margin:
 <input type="file" id="signupAvatar" accept="image/jpeg,image/png,image/webp">
 <img id="avatarPreview" alt="Selected profile picture" hidden style="width:72px;height:72px;object-fit:cover;border-radius:50%;margin-top:7px">
 <label class="row" for="useDefaultAvatar"><input type="checkbox" id="useDefaultAvatar" checked>Use a default avatar instead of uploading a photo</label>
-<label for="signupPassword">Password (optional, at least 8 characters)</label>
-<input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to use SMS codes">
-<p class="muted">We'll verify your phone by SMS and send a confirmation email. The username and uploaded photo are public; your email and phone are private. A real face isn't required.</p>
+<label for="signupPassword">Password * (at least 8 characters)</label>
+<input id="signupPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="Create a secure password">
+<p class="muted">We confirm your email address; no SMS is sent at registration. The phone is saved as <strong>unverified</strong> contact information. Username and uploaded photo can be public; never use someone else's phone number.</p>
 </div>
 <div id="signinFields" hidden>
 <label for="signinIdentifier">Email or phone number *</label>
 <input id="signinIdentifier" type="text" autocomplete="username" placeholder="you@example.com or +972501234567">
-<label for="signinPassword">Password (optional)</label>
-<input id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter a password, or leave blank for a login code">
-<p class="muted">With no password, an email login link or SMS code is sent. Email login has no SMS charge.</p>
+<label for="signinPassword">Password *</label>
+<input id="signinPassword" type="password" autocomplete="current-password" required placeholder="Your ItamarOS password">
+<p class="muted">Email + password works after email confirmation. Phone + password works only for phone identities already registered in Supabase Auth; an unverified contact number cannot be used to sign in.</p>
+<button id="forgotPassword" type="button">Forgot password?</button>
 </div>
-<button id="authSubmit" class="primary" type="submit">Next — send SMS</button>
+<button id="authSubmit" class="primary" type="submit">Create account</button>
 </form>
-<form id="smsVerifyForm" hidden>
-<h3 id="verifyTitle">Enter your SMS code</h3>
-<p class="muted">A code was requested for <strong id="phoneDestination"></strong>. Never share your code.</p>
-<label for="smsCode">Verification code (SMS or email OTP)</label>
-<input id="smsCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required>
-<div class="row"><button type="submit" class="primary">Verify and continue</button>
-<button type="button" id="changePhone">Change number</button></div>
-</form>
-<p class="muted">SMS uses Twilio Programmable Messaging, which may cost money. Email login uses your configured Supabase email service. QR account linking is supported in Cloud Climb using approval in an already signed-in ItamarOS app.</p>
+<p class="muted">The confirmation email is sent by Supabase Auth using the project's configured SMTP provider. You must confirm your email before signing in. For phone ownership verification, a separate opt-in verification step is needed.</p>
 </section>
+<section id="passwordRecovery" hidden>
+<h2>Reset your ItamarOS password</h2>
+<form id="resetPasswordForm">
+<label for="newPassword">New password *</label>
+<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required>
+<button class="primary" type="submit">Set new password</button>
+</form>
+</section>
+<form id="forgotPasswordForm" hidden>
+<h3>Forgot password?</h3>
+<label for="recoveryEmail">Email *</label>
+<input id="recoveryEmail" type="email" autocomplete="email" required>
+<button class="primary" type="submit">Send reset email</button>
+<button id="cancelForgot" type="button">Cancel</button>
+<p class="muted">If an account exists, you'll receive an email with a password reset link.</p>
+</form>
 <div id="app" hidden>
 <nav>
 <button data-tab="chats" data-selected="true">Chats</button>
