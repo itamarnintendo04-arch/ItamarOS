@@ -118,6 +118,28 @@ class AndroidConnectApi {
             .put("data",metadata),false)
         // The user is not considered signed-in until their email has been confirmed.
     }
+    suspend fun privateAccountEmail():String{
+        val response=JSONObject(request("/auth/v1/user","GET"))
+        return response.optString("email").ifBlank{throw IllegalStateException("Email is unavailable")}
+    }
+    suspend fun changePasswordVerifyingCurrent(oldPassword:String,newPassword:String){
+        require(oldPassword.isNotEmpty()&&newPassword.length>=8&&oldPassword!=newPassword){
+            "Enter the current password and a different new password of at least 8 characters"
+        }
+        val email=privateAccountEmail()
+        val verified=JSONObject(request("/auth/v1/token?grant_type=password","POST",
+            JSONObject().put("email",email).put("password",oldPassword),false))
+        val verifiedID=verified.optJSONObject("user")?.optString("id").orEmpty()
+        require(verifiedID.isNotEmpty()&&verifiedID==userID){"Current password verification failed"}
+        request("/auth/v1/user","PUT",JSONObject().put("password",newPassword))
+    }
+    suspend fun requestPasswordReset(email:String){
+        require(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
+            "Enter a valid email to request a reset link"
+        }
+        request("/auth/v1/recover?redirect_to=https%3A%2F%2Fitamaros-web-emulator.onrender.com%2Fconnect.html",
+            "POST",JSONObject().put("email",email),false)
+    }
     suspend fun requestedUsername():String{
         val result=JSONObject(request("/auth/v1/user","GET"))
         return result.optJSONObject("user_metadata")?.optString("preferred_username").orEmpty()
@@ -462,6 +484,11 @@ fun AndroidConnectScreen(
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
     var registrationUsername by remember{mutableStateOf("")}
+    var privateAccountEmail by remember(api.userID){mutableStateOf("")}
+    var oldPrivatePassword by remember{mutableStateOf("")}
+    var newPrivatePassword by remember{mutableStateOf("")}
+    var confirmPrivatePassword by remember{mutableStateOf("")}
+    var securityStatus by remember{mutableStateOf("")}
     var officialNotices by remember(api.userID){mutableStateOf(JSONArray())}
     var myVerifiedBadge by remember(api.userID){mutableStateOf<String?>(null)}
     var password by remember{mutableStateOf("")}
@@ -654,6 +681,9 @@ fun AndroidConnectScreen(
         }
     }
     LaunchedEffect(api.userID,signed){
+        privateAccountEmail=if(signed)runCatching{api.privateAccountEmail()}.getOrNull().orEmpty() else ""
+    }
+    LaunchedEffect(api.userID,signed){
         myVerifiedBadge=null
         val id=api.userID
         if(signed && !id.isNullOrBlank()){
@@ -729,7 +759,16 @@ fun AndroidConnectScreen(
                 && password.isNotEmpty()){
                 Text("Sign in")
             }
-            Text("Forgot your password? Use the password reset link on the ItamarOS website.")
+            TextButton(onClick={perform{
+                api.requestPasswordReset(email.trim())
+                notice="If this account exists, a reset link has been requested by email."
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()){
+                Text("Forgot password? Send email reset link")
+            }
+            TextButton(onClick={
+                ctx.startActivity(Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://itamaros-web-emulator.onrender.com/connect.html")))
+            }){Text("Recover account with verified phone (requires SMS)")}
         }
         if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.primary)
         return
@@ -858,6 +897,30 @@ fun AndroidConnectScreen(
     when(tab){
         "Profile"->{
             Text("Public profile")
+            Text("Private account credentials")
+            OutlinedTextField(privateAccountEmail,{},label={Text("My email")},
+                readOnly=true,singleLine=true)
+            OutlinedTextField("••••••••",{},label={Text("Password (never displayed)")},
+                readOnly=true,singleLine=true)
+            Text("For security, the current password cannot be revealed. Verify your current password below to choose a new one.")
+            OutlinedTextField(oldPrivatePassword,{oldPrivatePassword=it},
+                label={Text("Current password")},
+                visualTransformation=PasswordVisualTransformation())
+            OutlinedTextField(newPrivatePassword,{newPrivatePassword=it},
+                label={Text("New password (8+ characters)")},
+                visualTransformation=PasswordVisualTransformation())
+            OutlinedTextField(confirmPrivatePassword,{confirmPrivatePassword=it},
+                label={Text("Confirm new password")},
+                visualTransformation=PasswordVisualTransformation())
+            Button(onClick={perform{
+                require(newPrivatePassword==confirmPrivatePassword){"New passwords do not match"}
+                api.changePasswordVerifyingCurrent(oldPrivatePassword,newPrivatePassword)
+                oldPrivatePassword="";newPrivatePassword="";confirmPrivatePassword=""
+                securityStatus="Password changed successfully."
+            }},enabled=oldPrivatePassword.isNotEmpty()&&newPrivatePassword.length>=8&&
+                confirmPrivatePassword.isNotEmpty()){Text("Verify and change password")}
+            if(securityStatus.isNotEmpty())Text(securityStatus)
+            Text("Forgot your password? Use email or previously verified-phone recovery on the ItamarOS account website.")
             val id=api.userID
             if(!id.isNullOrBlank()){
                 Text("My ItamarOS ID: "+id)
