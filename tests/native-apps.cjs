@@ -125,6 +125,29 @@ assert.match(androidMedia,/MediaPlayer/,'Android preview must support audio');
 assert.match(androidManifest,/android\.permission\.REQUEST_INSTALL_PACKAGES/,'APK installer declares the Android install-request permission');
 const androidActivity=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/MainActivity.kt');
 const androidScreen=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/NativeScreen.kt');
+const climbStagesAndroid=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/CloudClimbStageExtras.kt');
+const climbGameAndroid=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/CloudClimbAndroid.kt');
+const standaloneAndroid=read(androidRoot+'/cloudclimb/src/main/AndroidManifest.xml');
+const climbSwift=read(appleRoot+'/Shared/CloudClimbStageExtras.swift');
+const climbOrientationSwift=read(appleRoot+'/Shared/CloudClimbLandscape.swift');
+const climbStandaloneSwift=read(appleRoot+'/CloudClimb/CloudClimbStandaloneApp.swift');
+const climbMultiplayerSwift=read(appleRoot+'/Shared/ItamarPartyGamesView.swift');
+assert.match(climbGameAndroid,/CloudClimbLandscape\(\)/,'Android Cloud Climb uses landscape orientation');
+assert.match(climbGameAndroid,/aspectRatio\(16f \/ 9f\)/,'Android stage view is 16:9');
+assert.match(climbStagesAndroid,/fun danger\(/,'Android stage has patrol enemies');
+assert.match(climbStagesAndroid,/fun spring\(/,'Android stage has spring pads');
+assert.match(climbStagesAndroid,/CHECKPOINT_INDEX/,'Android stage has checkpoint');
+assert.match(standaloneAndroid,/configChanges="orientation\|screenSize\|keyboardHidden"/,
+ 'Android standalone retains gameplay when device rotates');
+assert.match(climbMultiplayerSwift,/aspectRatio\(16.0\/9.0/,'Online iPhone stage is landscape');
+assert.match(climbStandaloneSwift,/aspectRatio\(16\/9/,'Offline iPhone stage is landscape');
+assert.match(climbStagesAndroid,/does not grant coins|Does not grant coins/i,
+ 'Stage gimmicks do not create cloud coins');
+assert.match(climbSwift,/static func isDanger/,'iPhone has enemy collisions');
+assert.match(climbSwift,/static func isSpring/,'iPhone has spring pads');
+assert.match(climbOrientationSwift,/requestGeometryUpdate/,'iPhone requests landscape scene');
+assert.match(read(appleRoot+'/project.yml'),/UIInterfaceOrientationLandscapeRight/,
+ 'iOS bundle permits landscape');
 const autoUpdate=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/ItamarApkUpdate.kt');
 const updateWorker=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/ItamarUpdateWorker.kt');
 const androidMain=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/MainActivity.kt');

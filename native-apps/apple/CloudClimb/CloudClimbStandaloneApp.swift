@@ -515,8 +515,6 @@ private struct CloudClimbOfflineDemo:View {
                         .frame(maxWidth:820)
                         .frame(maxHeight:310)
                         .clipShape(RoundedRectangle(cornerRadius:16))
-                        .onAppear { CloudClimbLandscape.setActive(true) }
-                        .onDisappear { CloudClimbLandscape.setActive(false) }
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
                             Button("🚪 Enter Blue Door \(door)") {enterDoor(door)}
@@ -577,6 +575,8 @@ private struct CloudClimbOfflineDemo:View {
                 [Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
+            .onAppear { CloudClimbLandscape.setActive(true) }
+            .onDisappear { CloudClimbLandscape.setActive(false) }
             .sheet(isPresented:$orbOpen) {
                 NavigationStack {
                     VStack(spacing:16) {

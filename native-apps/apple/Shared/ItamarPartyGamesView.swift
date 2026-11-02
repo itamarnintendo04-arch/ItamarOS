@@ -452,8 +452,6 @@ struct ItamarPartyGamesView: View {
             .frame(maxWidth:820)
             .frame(maxHeight:310)
             .clipShape(RoundedRectangle(cornerRadius:16))
-            .onAppear { CloudClimbLandscape.setActive(true) }
-            .onDisappear { CloudClimbLandscape.setActive(false) }
             .onReceive(timer) { _ in tickClimb() }
             if let door=climbNearDoor,!climbPaused,!climbGameOver,climbShopDue==0 {
                 Button("🚪 Enter Blue Door \(door)") {
@@ -559,6 +557,8 @@ struct ItamarPartyGamesView: View {
                 startPoint:.topLeading,endPoint:.bottomTrailing),
             in:RoundedRectangle(cornerRadius:24)
         )
+        .onAppear { CloudClimbLandscape.setActive(true) }
+        .onDisappear { CloudClimbLandscape.setActive(false) }
         .sheet(isPresented:$climbSettingsPresented) {climbSettings}
         .confirmationDialog("Choose what to cancel",isPresented:$climbCancelPicker,titleVisibility:.visible){
             Button("Undo Last Chat Command") {
