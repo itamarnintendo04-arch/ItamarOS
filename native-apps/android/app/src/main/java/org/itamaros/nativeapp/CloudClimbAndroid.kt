@@ -95,6 +95,9 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var ownedCharacters by remember(accountKey) {
         mutableStateOf(prefs.getStringSet("local_characters",emptySet())!!.toSet())
     }
+    var equippedHero by remember(accountKey) {
+        mutableStateOf(prefs.getString("equipped_hero","starter") ?: "starter")
+    }
     var characterOrbOpen by remember { mutableStateOf(false) }
     var characterBusy by remember { mutableStateOf(false) }
     var characterNotice by remember { mutableStateOf("Unlock a surprise character for 500 earned coins.") }
@@ -199,7 +202,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         syncRevision=result.getLong("revision")
                         val character=result.getString("character")
                         ownedCharacters=ownedCharacters+character
-                        characterNotice="🎉 New character: "+character.replace('_',' ').uppercase()
+                        characterNotice="🎉 New character: "+CloudHeroes.get(character).name
                         rewardsRefresh+=1
                     } else characterNotice="You already own every regular character!"
                     syncReady=true
@@ -212,7 +215,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         coins-=500
                         ownedCharacters=ownedCharacters+character
                         prefs.edit().putStringSet("local_characters",ownedCharacters).apply()
-                        characterNotice="🎉 Offline character: "+character.uppercase()
+                        characterNotice="🎉 Offline character: "+CloudHeroes.get(character).name
                     }
                 }
             }catch(e:Exception){
@@ -529,9 +532,15 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                     val x = if (id == slot) px else remote?.optDouble("x")?.toFloat()?.times(400f / 1024f)
                     val y = if (id == slot) py else remote?.optDouble("y")?.toFloat()?.times(500f / 2048f)
                     if (x != null && y != null) {
-                        drawRoundRect(color = colors[id - 1],
-                            topLeft = Offset((x - 12) * sx, (y - 22) * sy),
-                            size = Size(24f * sx, 24f * sy), cornerRadius = CornerRadius(5f))
+                        if(id==slot) {
+                            drawCloudHero(
+                                if(CloudHeroes.unlocked(equippedHero,ownedCharacters))equippedHero else "starter",
+                                x,y,sx,sy)
+                        } else {
+                            drawRoundRect(color = colors[id - 1],
+                                topLeft = Offset((x - 12) * sx, (y - 22) * sy),
+                                size = Size(24f * sx, 24f * sy), cornerRadius = CornerRadius(5f))
+                        }
                     }
                 }
             }
@@ -568,6 +577,14 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             else "",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
         Text(syncStatus, color = goldAccent, style = MaterialTheme.typography.bodySmall)
+        CloudHeroWardrobe(
+            owned=ownedCharacters,
+            selected=if(CloudHeroes.unlocked(equippedHero,ownedCharacters))equippedHero else "starter",
+            onSelect={ hero ->
+                equippedHero=hero
+                prefs.edit().putString("equipped_hero",hero).apply()
+            }
+        )
         Button(onClick={characterOrbOpen=true},modifier=Modifier.fillMaxWidth(),
             colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF6651C9))) {
             Text("🔮 Character Orb · Collection "+ownedCharacters.size)
