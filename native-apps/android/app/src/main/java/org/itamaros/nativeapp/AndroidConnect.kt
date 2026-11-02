@@ -462,6 +462,7 @@ fun AndroidConnectScreen(
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
     var registrationUsername by remember{mutableStateOf("")}
+    var officialNotices by remember(api.userID){mutableStateOf(JSONArray())}
     var myVerifiedBadge by remember(api.userID){mutableStateOf<String?>(null)}
     var password by remember{mutableStateOf("")}
     var signInPhone by remember{mutableStateOf("")}
@@ -991,7 +992,30 @@ fun AndroidConnectScreen(
                     if(kind!="channel")
                         OutlinedTextField(other,{other=it},label={Text(if(kind=="group")"Usernames, comma separated" else "@username")})
                     Button(onClick={perform{api.create(kind,title,other);rooms=api.rooms()}}){Text("Create")}
-                }else Text("Updates from unmuted chats and channels. Push notifications require APNs/FCM.")
+                }else {
+                    Text("Official ItamarOS messages and updates")
+                    LaunchedEffect(api.userID){
+                        if(!api.userID.isNullOrBlank())try{
+                            officialNotices=JSONArray(api.request(
+                                "/rest/v1/itamar_admin_notices?select=id,body,created_at"+
+                                "&recipient_id=eq."+api.userID+
+                                "&order=created_at.desc&limit=40","GET"))
+                        }catch(_:Exception){}
+                    }
+                    Button(onClick={perform{
+                        officialNotices=JSONArray(api.request(
+                            "/rest/v1/itamar_admin_notices?select=id,body,created_at"+
+                            "&recipient_id=eq."+api.userID+
+                            "&order=created_at.desc&limit=40","GET"))
+                    }}){Text("Refresh official inbox")}
+                    if(officialNotices.length()==0)Text("No official messages yet")
+                    for(i in 0 until officialNotices.length()){
+                        val note=officialNotices.optJSONObject(i)?:continue
+                        Text("✓ ItamarOS Official",color=Color(0xFF16A34A))
+                        Text(note.optString("body"))
+                        Text(note.optString("created_at"),style=MaterialTheme.typography.bodySmall)
+                    }
+                }
             }else{
                 Button(onClick={
                     if(recordingVoice){voiceRecorder.discard();recordingVoice=false}
