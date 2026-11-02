@@ -76,9 +76,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var showManualLogin=false
     @State private var manualIdentifier=""
     @State private var manualPassword=""
-    @State private var manualCode=""
-    @State private var manualCodeRequested=false
-    private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
+     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
         NavigationStack {
@@ -139,22 +137,20 @@ struct CloudClimbStandaloneHome:View {
                         .disabled(working || pair != nil)
                         Button(showManualLogin ? "Hide manual login" : "Sign in manually") {
                             showManualLogin.toggle()
-                            manualCodeRequested=false
-                            manualCode=""
-                        }
+                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(working || pair != nil)
                         if showManualLogin {
                             VStack(alignment:.leading,spacing:10) {
-                                Text("Email or phone number")
+                                Text("Email")
                                     .font(.headline).foregroundStyle(.white)
-                                TextField("email@example.com or +972501234567",text:$manualIdentifier)
+                                TextField("email@example.com",text:$manualIdentifier)
                                     .keyboardType(.emailAddress)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
                                     .textContentType(.username)
                                     .textFieldStyle(.roundedBorder)
-                                SecureField("Password (optional)",text:$manualPassword)
+                                SecureField("Password",text:$manualPassword)
                                     .textContentType(.password)
                                     .textFieldStyle(.roundedBorder)
                                 Button("Sign in with password") {
@@ -162,23 +158,7 @@ struct CloudClimbStandaloneHome:View {
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .disabled(working || manualIdentifier.isEmpty || manualPassword.isEmpty)
-                                Button("Send SMS login code instead") {
-                                    Task {await requestManualSMS()}
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(working || manualIdentifier.isEmpty)
-                                if manualCodeRequested {
-                                    TextField("SMS verification code",text:$manualCode)
-                                        .keyboardType(.numberPad)
-                                        .textContentType(.oneTimeCode)
-                                        .textFieldStyle(.roundedBorder)
-                                    Button("Verify SMS and sign in") {
-                                        Task {await verifyManualSMS()}
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .disabled(working || manualCode.isEmpty)
-                                }
-                                Text("No password? SMS login requires a registered phone and may cost money. QR login avoids a new SMS when ItamarOS is already signed in.")
+                                Text("Or select QR login and approve it from an already signed-in ItamarOS app. No SMS is required.")
                                     .font(.caption).foregroundStyle(.white.opacity(0.8))
                             }
                             .padding()
@@ -261,37 +241,12 @@ struct CloudClimbStandaloneHome:View {
         defer{working=false}
         do {
             try await cloud.signInManually(identifier:manualIdentifier,password:manualPassword)
-            manualPassword="";manualCode="";manualCodeRequested=false;showManualLogin=false
+            manualPassword="";showManualLogin=false
             info="Signed in with your existing ItamarOS account."
         }catch {
             info="Manual login failed: "+error.localizedDescription
         }
     }
-    @MainActor private func requestManualSMS() async {
-        guard !working else{return}
-        working=true
-        defer{working=false}
-        do {
-            try await cloud.requestExistingSMS(phone:manualIdentifier)
-            manualCodeRequested=true
-            info="Enter the SMS code sent to your registered phone. Never share this code."
-        }catch {
-            info="Could not request a code: "+error.localizedDescription
-        }
-    }
-    @MainActor private func verifyManualSMS() async {
-        guard !working,manualCodeRequested else{return}
-        working=true
-        defer{working=false}
-        do {
-            try await cloud.verifySMS(phone:manualIdentifier,code:manualCode)
-            manualPassword="";manualCode="";manualCodeRequested=false;showManualLogin=false
-            info="Your ItamarOS account is connected. Cloud progress can now sync."
-        }catch {
-            info="Code verification failed: "+error.localizedDescription
-        }
-    }
-
     private func makeQRCode(_ value:String)->UIImage? {
         let generator=CIFilter.qrCodeGenerator()
         generator.message=Data(value.utf8)
