@@ -510,6 +510,17 @@ struct ItamarPartyGamesView: View {
                     Button("Cancel…"){showClimbCancelOptions()}
                 }
 .font(.subheadline.bold()).foregroundStyle(.white)
+                Picker("Send to game",selection:Binding(
+                    get:{climbSlot},
+                    set:{switchClimbSlot($0)}
+                )) {
+                    ForEach(1...3,id:\.self){index in
+                        Text(climbSlotNames[index-1]).tag(index)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("Select a game before sending a chat command. Each game has separate progress.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.85))
                 ForEach(climbChatMessages.indices,id:\.self){index in
                     Text(climbChatMessages[index])
                         .font(.caption).foregroundStyle(.white)
@@ -549,7 +560,18 @@ struct ItamarPartyGamesView: View {
                 climbTwilightSky=false;saveClimbPreferences()
             }
             Button("Reset Hero") {
-                climbEquippedHero="starter";saveClimbPreferences()
+                climbEquippedHero="starter"
+                UserDefaults.standard.set("starter",forKey:climbSaveKey+".hero")
+                saveClimbPreferences()
+            }
+            Button("Reset Tips") {
+                climbShowTips=true;saveClimbPreferences()
+            }
+            Button("Reset Touch Controls") {
+                climbAutoHideControls=true;saveClimbPreferences()
+            }
+            Button("Resume Game") {
+                climbPaused=false
             }
             Button("Cancel All Changes") {cancelClimbVisualChanges()}
             Button("Keep Changes",role:.cancel){}
