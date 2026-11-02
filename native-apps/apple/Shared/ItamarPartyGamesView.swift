@@ -77,8 +77,59 @@ struct ItamarPartyGamesView: View {
     @State private var climbSlashReply="Type /help for commands"
     @State private var climbChatMessages:[String]=["Game: Welcome to Cloud Climb! Type /help."]
     @State private var climbChatUndo:(world:Int,hero:String,twilight:Bool,auto:Bool,tips:Bool,paused:Bool)?
+    @State private var climbCancelPicker=false
+    @State private var climbSlot=1
+    @State private var climbSlotNames:[String]=["My Game 1","My Game 2","My Game 3"]
+    @State private var climbRenameInput=""
     private var climbSaveKey:String {
-        "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest")
+        "itamaros_cloud_climb_v1_" + (cloud.userID?.uuidString ?? "guest") + "_save_\(climbSlot)"
+    }
+    private var climbSlotNameKey:String {"itamaros_cloud_climb_names_\(cloud.userID?.uuidString ?? "guest")"}
+    private func storeClimbNames(){
+        UserDefaults.standard.set(climbSlotNames,forKey:climbSlotNameKey)
+    }
+    private func switchClimbSlot(_ chosen:Int){
+        guard (1...3).contains(chosen),chosen != climbSlot,!climbCloudSaving else{return}
+        saveClimb()
+        climbSlot=chosen
+        climbChatUndo=nil
+        climbChatMessages=["Game: You selected \(climbSlotNames[chosen-1]). Type /help."]
+        loadClimb()
+        Task {await loadCloudClimb()}
+    }
+    private func renameClimbSlot(){
+        let clean=String(climbRenameInput.trimmingCharacters(in:.whitespacesAndNewlines).prefix(32))
+        guard !clean.isEmpty else{return}
+        climbSlotNames[climbSlot-1]=clean
+        storeClimbNames()
+        saveClimb()
+    }
+    private var climbGameSnapshot:[String:Any] {
+        ["level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
+         "boss_health":climbBossHealth,"shop_due":climbShopDue,
+         "game_over":climbGameOver,"selected_world":climbWorld,
+         "equipped_hero":climbEquippedHero,
+         "twilight_sky":climbTwilightSky,
+         "auto_hide_controls":climbAutoHideControls,
+         "show_tips":climbShowTips,
+         "worlds":climbWorlds.sorted(),
+         "blue_cubes":climbBlueCubes.sorted(),
+         "colored_bosses":climbColoredBosses.sorted(),
+         "characters":climbCharacters.sorted()]
+    }
+    private func showClimbCancelOptions(){
+        climbCancelPicker=true
+    }
+    private func cancelClimbVisualChanges(){
+        climbTwilightSky=false
+        climbAutoHideControls=true
+        climbShowTips=true
+        climbEquippedHero="starter"
+        climbPaused=false
+        climbChatUndo=nil
+        saveClimbPreferences()
+        climbChatMessages.append("Game: Visual settings reset. Your saves and achievements are safe.")
+        if climbChatMessages.count>12{climbChatMessages.removeFirst(climbChatMessages.count-12)}
     }
     private var climbStageSeed:Int {(match?.seed ?? 0) &+ (climbLevel &* 2039) &+ (climbWorld &* 1009)}
     private var climbKeyCount:Int {max(0,(climbLevel-1)/100-(climbWorlds.count-1))}
@@ -431,7 +482,33 @@ struct ItamarPartyGamesView: View {
             }
             .buttonStyle(.borderedProminent)
             VStack(alignment:.leading,spacing:8) {
-                Text("💬 Game Chat").font(.subheadline.bold()).foregroundStyle(.white)
+                Text("☁️ My Games · Three independent saves").font(.headline).foregroundStyle(.white)
+                HStack {
+                    ForEach(1...3,id:\.self){num in
+                        Button(climbSlotNames[num-1]){
+                            switchClimbSlot(num)
+                        }
+                        .buttonStyle(num==climbSlot ? .borderedProminent : .bordered)
+                        .disabled(climbCloudSaving)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    }
+                }
+                TextField("Rename this game",text:$climbRenameInput)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit{renameClimbSlot()}
+                Button("Save game name"){renameClimbSlot()}
+                    .disabled(climbRenameInput.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                Text("Progress from one game is never copied into another.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.9))
+            }
+            VStack(alignment:.leading,spacing:8) {
+                HStack {
+                    Text("💬 Game Chat · \(climbSlotNames[climbSlot-1])")
+                    Spacer()
+                    Button("Cancel…"){showClimbCancelOptions()}
+                }
+.font(.subheadline.bold()).foregroundStyle(.white)
                 ForEach(climbChatMessages.indices,id:\.self){index in
                     Text(climbChatMessages[index])
                         .font(.caption).foregroundStyle(.white)
@@ -463,6 +540,21 @@ struct ItamarPartyGamesView: View {
             in:RoundedRectangle(cornerRadius:24)
         )
         .sheet(isPresented:$climbSettingsPresented) {climbSettings}
+        .confirmationDialog("Choose what to cancel",isPresented:$climbCancelPicker,titleVisibility:.visible){
+            Button("Undo Last Chat Command") {
+                climbSlashInput="/undo";runClimbCommand()
+            }
+            Button("Reset Theme") {
+                climbTwilightSky=false;saveClimbPreferences()
+            }
+            Button("Reset Hero") {
+                climbEquippedHero="starter";saveClimbPreferences()
+            }
+            Button("Cancel All Changes") {cancelClimbVisualChanges()}
+            Button("Keep Changes",role:.cancel){}
+        } message: {
+            Text("Cancel All resets visual settings, tips, controls and pause. Saved levels, currencies and rewards are never deleted.")
+        }
         .alert("🔮 Character Orb",isPresented:$climbCharacterOrbOpen) {
             Button("Unlock for 500 Coins") {
                 Task {await buyClimbCharacter()}
@@ -506,7 +598,7 @@ struct ItamarPartyGamesView: View {
     }
 
     @MainActor private func loadClimbRewards() async {
-        guard climbCloudReady else{return}
+        guard climbCloudReady,climbSlot==1 else{return}
         do {
             let data=try await cloud.request("/rest/v1/rpc/itamar_climb_rewards_state",
                                              method:"POST",data:[:])
@@ -532,7 +624,7 @@ struct ItamarPartyGamesView: View {
         climbDoorBusy=true
         defer {climbDoorBusy=false}
         let world=climbWorld
-        if climbCloudReady {
+        if climbCloudReady && climbSlot==1 {
             do {
                 let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_enter_blue_door",
                     method:"POST",data:["p_world":world,"p_cube":door])
@@ -551,7 +643,14 @@ struct ItamarPartyGamesView: View {
         }
     }
     @MainActor private func unlockClimbWorld(_ world:Int) async {
-        guard climbCloudReady,climbKeyCount>0,(2...10).contains(world) else{return}
+        guard climbKeyCount>0,(2...10).contains(world) else{return}
+        if climbSlot != 1 {
+            climbWorlds.insert(world)
+            climbMessage="World \(world) unlocked in this save!"
+            saveClimb()
+            return
+        }
+        guard climbCloudReady else{return}
         do {
             _=try await cloud.request("/rest/v1/rpc/itamar_climb_unlock_world",
                                       method:"POST",data:["p_world":world])
@@ -563,6 +662,11 @@ struct ItamarPartyGamesView: View {
         let boss=min(10,max(0,(climbLevel-2)/30))
         guard climbCloudReady,(1...10).contains(boss),
               !climbColoredBosses.contains(boss) else{return}
+        if climbSlot != 1 {
+            climbColoredBosses.insert(boss)
+            saveClimb()
+            return
+        }
         do {
             let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_claim_colored",
                                     method:"POST",data:["p_boss_index":boss])
@@ -577,7 +681,7 @@ struct ItamarPartyGamesView: View {
         guard climbCoins>=500,!climbCharacterBusy else{return}
         climbCharacterBusy=true
         defer {climbCharacterBusy=false}
-        if climbCloudReady {
+        if climbCloudReady && climbSlot==1 {
             climbPendingUpload=false
             climbCloudReady=false
             do {
@@ -623,7 +727,7 @@ struct ItamarPartyGamesView: View {
                     auto:climbAutoHideControls,tips:climbShowTips,paused:climbPaused)
         switch command {
         case "/help", "/commands":
-            climbSlashReply="/stats · /where · /account · /room · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /controls auto|show|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save · /sync"
+            climbSlashReply="/cancel (options) · /stats · /where · /account · /room · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /controls auto|show|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save · /sync"
         case "/stats", "/status":
             climbSlashReply="Level \(climbLevel) · World \(climbWorld) · Coins \(climbCoins) · Hearts \(climbHearts)/3 · Blue \(climbBlueCubes.count)/50 · Colored \(climbColoredBosses.count)/10 · Heroes \(climbCharacters.count)"
         case "/where", "/world current":
@@ -663,7 +767,10 @@ struct ItamarPartyGamesView: View {
                 climbChatUndo=nil
                 climbSlashReply="Returned to World \(climbWorld)."
             } else {climbSlashReply="No previous world change to reverse. Use /undo immediately after changing worlds."}
-        case "/undo", "/cancel", "/revert":
+        case "/cancel":
+            climbCancelPicker=true
+            climbSlashReply="Choose what to cancel in the buttons. Saves and rewards are protected."
+        case "/undo", "/revert":
             if let previous=climbChatUndo {
                 if previous.world != climbWorld {
                     if climbWorlds.contains(previous.world) || (previous.world==11 && climbSecretAvailable) {
@@ -737,17 +844,7 @@ struct ItamarPartyGamesView: View {
         }catch {climbSyncStatus="Cloud progress connected · Preferences unavailable"}
     }
     private func saveClimbPreferences() {
-        guard cloud.isSignedIn,climbCloudReady else{return}
-        let payload:[String:Any]=[
-            "p_equipped_hero":climbEquippedHero,"p_selected_world":climbWorld,
-            "p_twilight_sky":climbTwilightSky,
-            "p_auto_hide_controls":climbAutoHideControls,"p_show_tips":climbShowTips
-        ]
-        Task {
-            do { _=try await cloud.request("/rest/v1/rpc/itamar_climb_save_preferences",
-                                           method:"POST",data:payload) }
-            catch {climbSyncStatus="Cloud progress connected · Preferences not saved"}
-        }
+        saveClimb()
     }
     private func steerButton(_ label:String,left:Bool)->some View {
         Text(label).font(.title2)
@@ -805,11 +902,12 @@ struct ItamarPartyGamesView: View {
     }
     private func saveClimb(){
         guard climbLoaded else{return}
-        UserDefaults.standard.set([
-            "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
-            "bossHealth":climbBossHealth,"shopDue":climbShopDue,
-            "gameOver":climbGameOver, "world":climbWorld
-        ] as [String:Any],forKey:climbSaveKey)
+        var payload=climbGameSnapshot
+        payload["bossHealth"]=climbBossHealth
+        payload["shopDue"]=climbShopDue
+        payload["gameOver"]=climbGameOver
+        payload["world"]=climbWorld
+        UserDefaults.standard.set(payload,forKey:climbSaveKey)
         if climbCloudReady {
             climbPendingUpload=true
             Task {await uploadClimb()}
@@ -819,6 +917,7 @@ struct ItamarPartyGamesView: View {
         climbLoaded=false
         climbCloudReady=false
         climbRevision=0
+        climbSlotNames=UserDefaults.standard.stringArray(forKey:climbSlotNameKey) ?? ["My Game 1","My Game 2","My Game 3"]
         let saved=UserDefaults.standard.dictionary(forKey:climbSaveKey) ?? [:]
         climbEquippedHero=UserDefaults.standard.string(forKey:climbSaveKey+".hero") ?? "starter"
         climbLevel=max(1,saved["level"] as? Int ?? 1)
@@ -828,6 +927,14 @@ struct ItamarPartyGamesView: View {
         climbShopDue=max(0,saved["shopDue"] as? Int ?? 0)
         climbGameOver=(saved["gameOver"] as? Bool ?? false) || climbHearts==0
         climbWorld=min(11,max(1,saved["world"] as? Int ?? 1))
+        climbWorlds=Set((saved["worlds"] as? [Int]) ?? [1])
+        climbWorlds.insert(1)
+        climbBlueCubes=Set(saved["blue_cubes"] as? [String] ?? [])
+        climbColoredBosses=Set(saved["colored_bosses"] as? [Int] ?? [])
+        climbCharacters=Set(saved["characters"] as? [String] ?? [])
+        climbTwilightSky=saved["twilight_sky"] as? Bool ?? false
+        climbAutoHideControls=saved["auto_hide_controls"] as? Bool ?? true
+        climbShowTips=saved["show_tips"] as? Bool ?? true
         climbPaused=false;climbMessage="";climbLoaded=true
         resetMovement()
     }
@@ -836,65 +943,79 @@ struct ItamarPartyGamesView: View {
             climbSyncStatus="Local save · Sign in with ItamarOS to sync"
             return
         }
+        let requested=climbSlot
         climbCloudReady=false
         do {
-            let raw=try await cloud.request("/rest/v1/rpc/itamar_cloud_climb_state",
-                                            method:"POST",data:[:])
-            guard let state=try JSONSerialization.jsonObject(with:raw) as? [String:Any] else {
-                climbSyncStatus="Local save · Cloud response unavailable"
-                return
-            }
+            let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_slot_state",
+                                            method:"POST",data:["p_slot":requested])
+            guard requested==climbSlot,
+                  let state=try JSONSerialization.jsonObject(with:raw) as? [String:Any] else{return}
             climbRevision=(state["revision"] as? NSNumber)?.int64Value ?? 0
-            if state["exists"] as? Bool == true {
-                climbLevel=max(1,state["level"] as? Int ?? 1)
-                climbCoins=max(0,state["coins"] as? Int ?? 0)
-                climbHearts=min(3,max(0,state["hearts"] as? Int ?? 3))
-                climbBossHealth=min(3,max(1,state["boss_health"] as? Int ?? 3))
-                climbShopDue=max(0,state["shop_due"] as? Int ?? 0)
-                climbGameOver=(state["game_over"] as? Bool ?? false) || climbHearts==0
+            if let name=state["name"] as? String,!name.isEmpty{
+                climbSlotNames[requested-1]=name
+                storeClimbNames()
+            }
+            if let game=state["game"] as? [String:Any],state["exists"] as? Bool == true {
+                climbLevel=max(1,game["level"] as? Int ?? 1)
+                climbCoins=max(0,game["coins"] as? Int ?? 0)
+                climbHearts=min(3,max(0,game["hearts"] as? Int ?? 3))
+                climbBossHealth=min(3,max(1,game["boss_health"] as? Int ?? 3))
+                climbShopDue=max(0,game["shop_due"] as? Int ?? 0)
+                climbGameOver=(game["game_over"] as? Bool ?? false) || climbHearts==0
+                climbWorlds=Set(game["worlds"] as? [Int] ?? [1])
+                climbWorlds.insert(1)
+                climbBlueCubes=Set(game["blue_cubes"] as? [String] ?? [])
+                climbColoredBosses=Set(game["colored_bosses"] as? [Int] ?? [])
+                climbCharacters=Set(game["characters"] as? [String] ?? [])
+                let requestedWorld=game["selected_world"] as? Int ?? 1
+                climbWorld=climbWorlds.contains(requestedWorld) ||
+                    (requestedWorld==11 && climbSecretAvailable) ? requestedWorld : 1
+                let desiredHero=game["equipped_hero"] as? String ?? "starter"
+                climbEquippedHero=CloudClimbHeroes.unlocked(desiredHero,owned:climbCharacters) ?
+                    desiredHero : "starter"
+                climbTwilightSky=game["twilight_sky"] as? Bool ?? false
+                climbAutoHideControls=game["auto_hide_controls"] as? Bool ?? true
+                climbShowTips=game["show_tips"] as? Bool ?? true
+                UserDefaults.standard.set(climbEquippedHero,forKey:climbSaveKey+".hero")
                 resetMovement()
             }
-            climbSyncStatus="Cloud save connected · ItamarOS account"
+            climbSyncStatus="Game \(requested) connected to your ItamarOS account"
             climbCloudReady=true
-            await loadClimbRewards()
-            await loadClimbPreferences()
-            if state["exists"] as? Bool != true {saveClimb()}
-            else {UserDefaults.standard.set([
-                "level":climbLevel,"coins":climbCoins,"hearts":climbHearts,
-                "bossHealth":climbBossHealth,"shopDue":climbShopDue,
-                "gameOver":climbGameOver
-            ] as [String:Any],forKey:climbSaveKey)}
+            if state["exists"] as? Bool != true {
+                saveClimb()
+            } else {
+                UserDefaults.standard.set(climbGameSnapshot,forKey:climbSaveKey)
+            }
         }catch {
-            climbSyncStatus="Local save · Cloud sync unavailable"
+            if requested==climbSlot {climbSyncStatus="Local save · Cloud sync unavailable"}
         }
     }
     @MainActor private func uploadClimb() async {
         guard !climbCloudSaving && climbCloudReady else{return}
         climbCloudSaving=true
-        defer {climbCloudSaving=false}
+        defer{climbCloudSaving=false}
         while climbCloudReady && climbPendingUpload {
             climbPendingUpload=false
+            let current=climbSlot
+            let game=climbGameSnapshot
+            let name=climbSlotNames[current-1]
+            let rev=climbRevision
             do {
-                let raw=try await cloud.request("/rest/v1/rpc/itamar_cloud_climb_save",
-                    method:"POST",data:[
-                        "p_level":climbLevel,"p_coins":climbCoins,"p_hearts":climbHearts,
-                        "p_boss_health":climbBossHealth,"p_shop_due":climbShopDue,
-                        "p_game_over":climbGameOver,"p_revision":climbRevision])
-                guard let obj=try JSONSerialization.jsonObject(with:raw) as? [String:Any] else {
-                    climbSyncStatus="Local save · Unable to read sync response"
-                    break
-                }
-                if obj["saved"] as? Bool == true {
-                    climbRevision=(obj["revision"] as? NSNumber)?.int64Value ?? climbRevision
-                    climbSyncStatus="Cloud progress saved"
+                let raw=try await cloud.request("/rest/v1/rpc/itamar_climb_slot_save",
+                    method:"POST",data:["p_slot":current,"p_name":name,"p_game":game,
+                                        "p_revision":rev])
+                guard current==climbSlot else{return}
+                let response=try JSONSerialization.jsonObject(with:raw) as? [String:Any] ?? [:]
+                if response["saved"] as? Bool == true {
+                    climbRevision=(response["revision"] as? NSNumber)?.int64Value ?? climbRevision
+                    climbSyncStatus="Saved \(name) to your ItamarOS account"
                     await claimClimbColoredRewards()
-                }else{
-                    climbPendingUpload=false
+                }else {
                     climbCloudReady=false
-                    climbSyncStatus="Newer progress on another device · Reloading"
+                    climbSyncStatus="Newer progress exists on another device · Reloading"
                     await loadCloudClimb()
                 }
-            }catch{
+            }catch {
                 climbSyncStatus="Local save · Cloud upload will retry"
                 break
             }
