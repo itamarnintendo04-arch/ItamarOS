@@ -403,6 +403,7 @@ fun AndroidConnectScreen(
     groupInvite:String?=null,
     contactUsername:String?=null,
     desktopRequest:String?=null,
+    cloudClimbRequest:String?=null,
     authOnly:Boolean=false,
     onAccountReady:(String)->Unit={},
     onSignOut:()->Unit={}
@@ -417,6 +418,7 @@ fun AndroidConnectScreen(
     var otpInput by remember{mutableStateOf("")}
     var codeRequested by remember{mutableStateOf(false)}
     var pendingDesktopRequest by remember{mutableStateOf("")}
+    var pendingCloudClimb by remember { mutableStateOf(false) }
     var desktopApprovalStatus by remember{mutableStateOf("")}
     var credentialRequest by remember { mutableStateOf("") }
     val approvalCredentialPrompt = rememberLauncherForActivityResult(
@@ -430,7 +432,9 @@ fun AndroidConnectScreen(
                 try {
                     api.approveDesktopPairing(pending)
                     pendingDesktopRequest = ""
-                    desktopApprovalStatus = "Verified. Login approved on your other device."
+                    desktopApprovalStatus = if(pendingCloudClimb)
+                        "Cloud Climb account approved. Return to Cloud Climb to finish."
+                    else "Verified. Login approved on your other device."
                 } catch (e: Exception) {
                     desktopApprovalStatus = e.localizedMessage ?: "Unable to approve login"
                 }
@@ -485,9 +489,11 @@ fun AndroidConnectScreen(
             tab="Profile"
         }
     }
-    LaunchedEffect(desktopRequest) {
-        if(desktopRequest?.matches(Regex("[A-Za-z0-9_-]{24,40}"))==true){
-            pendingDesktopRequest=desktopRequest
+    LaunchedEffect(desktopRequest,cloudClimbRequest) {
+        val request=cloudClimbRequest ?: desktopRequest
+        if(request?.matches(Regex("[A-Za-z0-9_-]{24,40}"))==true){
+            pendingDesktopRequest=request
+            pendingCloudClimb=cloudClimbRequest!=null
             desktopApprovalStatus=""
         }
     }
@@ -647,9 +653,14 @@ fun AndroidConnectScreen(
     if(pendingDesktopRequest.isNotBlank()){
         Card {
             Column(modifier=Modifier.padding(14.dp)) {
-                Text("Approve computer login",style=MaterialTheme.typography.titleMedium)
-                Text("Compare this code with the one on your computer: "+pendingDesktopRequest.take(6).uppercase())
-                Text("Only approve your own computer. It receives temporary message access, not your password or SMS code.")
+                Text(if(pendingCloudClimb) "Approve Cloud Climb Login" else "Approve Computer Login",
+                    style=MaterialTheme.typography.titleMedium)
+                Text("Compare this code with the one in "+
+                    (if(pendingCloudClimb) "Cloud Climb: " else "your computer: ")+
+                    pendingDesktopRequest.take(6).uppercase())
+                Text(if(pendingCloudClimb)
+                    "Only approve if you opened Cloud Climb yourself. It can access your ItamarOS account with a temporary session."
+                    else "Only approve your own computer. It receives temporary message access, not your password or SMS code.")
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                     Button(onClick={
                         val manager=ctx.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -658,7 +669,8 @@ fun AndroidConnectScreen(
                         } else {
                             val credentialIntent=manager.createConfirmDeviceCredentialIntent(
                                 "Approve ItamarOS login",
-                                "Confirm it is you before approving the device shown in the QR request"
+                                if(pendingCloudClimb) "Verify it is you to connect Cloud Climb"
+                                else "Confirm it is you before approving this device"
                             )
                             if (credentialIntent!=null) {
                                 credentialRequest=pendingDesktopRequest
@@ -673,7 +685,20 @@ fun AndroidConnectScreen(
             }
         }
     }
-    if(desktopApprovalStatus.isNotBlank())Text(desktopApprovalStatus)
+    if(desktopApprovalStatus.isNotBlank()) {
+        Text(desktopApprovalStatus)
+        if(pendingCloudClimb && desktopApprovalStatus.startsWith("Cloud Climb account approved")) {
+            OutlinedButton(onClick={
+                try {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW,
+                        Uri.parse("cloudclimb://login-return"))
+                        .setPackage("org.itamaros.cloudclimb"))
+                }catch(_:Exception){
+                    desktopApprovalStatus="Open Cloud Climb manually to finish linking."
+                }
+            }){Text("Return to Cloud Climb")}
+        }
+    }
     Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
     if(api.token!=null){
         Button(onClick={

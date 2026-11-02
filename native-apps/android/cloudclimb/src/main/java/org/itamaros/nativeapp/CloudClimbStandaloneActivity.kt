@@ -1,6 +1,8 @@
 package org.itamaros.nativeapp
 
 import android.graphics.Bitmap
+import android.content.Intent
+import android.net.Uri
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.view.KeyEvent
@@ -13,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
@@ -89,9 +92,11 @@ private fun qrBitmap(contents:String):Bitmap {
 @Composable
 private fun CloudClimbStandaloneHome(){
     val api=remember { AndroidConnectApi() }
+    val context=LocalContext.current
     var isAuthenticated by remember { mutableStateOf(false) }
     var localPlay by remember { mutableStateOf(false) }
     var wantQR by remember { mutableStateOf(false) }
+    var useItamarOSApp by remember { mutableStateOf(false) }
     var requestId by remember { mutableStateOf("") }
     var claimSecret by remember { mutableStateOf("") }
     var qrUrl by remember { mutableStateOf("") }
@@ -109,7 +114,21 @@ private fun CloudClimbStandaloneHome(){
             claimSecret=reply.getString("claimSecret")
             qrUrl=reply.getString("approveUrl")
             expiry=reply.getLong("expiresAt")
-            status="Scan this QR using the ItamarOS app on a trusted signed-in phone."
+            status=if(useItamarOSApp)
+                "Confirm the login in ItamarOS, then return to Cloud Climb."
+            else "Scan this QR using ItamarOS on your trusted signed-in phone."
+            if(useItamarOSApp) {
+                // Only the request ID crosses the app boundary, never the claim secret
+                // or a Supabase access token. Require user verification in ItamarOS.
+                val deepLink=Uri.Builder().scheme("itamaros").authority("cloud-climb")
+                    .appendQueryParameter("request",requestId).build()
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW,deepLink)
+                        .setPackage("org.itamaros.nativeapp"))
+                }catch(_:Exception){
+                    status="Could not open ItamarOS. Install the current app or use QR linking."
+                }
+            }
         }catch(e:Exception){status=e.localizedMessage?:"QR unavailable";wantQR=false}
         finally{connecting=false}
     }
@@ -127,7 +146,7 @@ private fun CloudClimbStandaloneHome(){
                     api.token=res.getString("accessToken")
                     api.userID=res.getString("userId")
                     isAuthenticated=true
-                    requestId="";claimSecret="";qrUrl="";wantQR=false
+                    requestId="";claimSecret="";qrUrl="";wantQR=false;useItamarOSApp=false
                     status="Connected with your existing ItamarOS account. Room codes are shared."
                     break
                 }
@@ -159,11 +178,21 @@ private fun CloudClimbStandaloneHome(){
             Button(onClick={localPlay=true},modifier=Modifier.fillMaxWidth()){
                 Text("Play Offline Demo")
             }
-            Button(onClick={wantQR=!wantQR},
-                enabled=!connecting,modifier=Modifier.fillMaxWidth()){
-                Text(if(wantQR)"Cancel account linking" else "Link ItamarOS Account · QR")
+            Button(onClick={useItamarOSApp=true;wantQR=true},
+                enabled=!connecting && !wantQR,modifier=Modifier.fillMaxWidth()){
+                Text("Continue with ItamarOS · No QR")
             }
-            if(wantQR && qrUrl.isNotBlank()) {
+            OutlinedButton(onClick={useItamarOSApp=false;wantQR=true},
+                enabled=!connecting && !wantQR,modifier=Modifier.fillMaxWidth()){
+                Text("Use QR Code Instead")
+            }
+            if(wantQR) {
+                Text("Compare this code in ItamarOS: "+requestId.take(6).uppercase())
+                TextButton(onClick={
+                    wantQR=false;requestId="";claimSecret="";qrUrl=""
+                }){Text("Cancel Account Linking")}
+            }
+            if(wantQR && !useItamarOSApp && qrUrl.isNotBlank()) {
                 val qr=remember(qrUrl) { qrBitmap(qrUrl) }
                 Box(contentAlignment=Alignment.Center,
                     modifier=Modifier.fillMaxWidth()) {
@@ -179,8 +208,9 @@ private fun CloudClimbStandaloneHome(){
                 Text("Code: "+requestId.take(6).uppercase(),style=MaterialTheme.typography.titleMedium)
             }
             Text(status)
-            Text("QR linking uses a temporary signed-in session. A device with an existing ItamarOS login is required. No SMS is sent by this app.")
-            Text("Never approve a QR request you did not initiate.")
+            Text("Sign in to ItamarOS on this phone, verify the displayed code, and approve. Cloud Climb never receives your password.")
+            Text("No QR is required when both apps are installed on the same phone.")
+            Text("Only approve a sign-in request you started yourself.")
         }
     }
 }

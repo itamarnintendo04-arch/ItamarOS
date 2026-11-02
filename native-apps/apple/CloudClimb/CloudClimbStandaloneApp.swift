@@ -33,6 +33,8 @@ struct CloudClimbStandaloneApp: App {
 
 struct CloudClimbStandaloneHome:View {
     @EnvironmentObject private var cloud:ItamarCloudService
+    @Environment(\.openURL) private var openURL
+    @State private var qrVisible=false
     @State private var pair:CloudClimbPairStart?
     @State private var info="Link the account already signed in on your ItamarOS phone."
     @State private var working=false
@@ -61,16 +63,19 @@ struct CloudClimbStandaloneHome:View {
                             .buttonStyle(.borderedProminent)
                         Button("Sign Out") {cloud.signOut()}
                             .buttonStyle(.bordered)
-                        Text("This QR session is temporary. If it expires, reapprove on a trusted device.")
+                        Text("Your approved session is temporary. Reconnect if it expires.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
                         Button("Play Offline Demo") {offlineDemo=true}
                             .buttonStyle(.borderedProminent)
-                        Button(working ? "Creating QR…" : "Link ItamarOS Account") {
-                            Task {await startPair()}
-                        }.disabled(working)
+                        Button(working ? "Connecting…" : "Continue with ItamarOS · No QR") {
+                            Task {await startPair(openInApp:true)}
+                        }.buttonStyle(.borderedProminent).disabled(working || pair != nil)
+                        Button("Use QR Code Instead") {
+                            Task {await startPair(openInApp:false)}
+                        }.buttonStyle(.bordered).disabled(working || pair != nil)
                         if let pair {
-                            if let image=makeQRCode(pair.approveUrl) {
+                            if qrVisible,let image=makeQRCode(pair.approveUrl) {
                                 ZStack {
                                     Image(uiImage:image)
                                         .interpolation(.none)
@@ -86,15 +91,17 @@ struct CloudClimbStandaloneHome:View {
                             }
                             Text("Compare code: "+String(pair.requestId.prefix(6)).uppercased())
                                 .font(.headline.monospaced())
-                            Text("Scan the QR on a trusted phone with ItamarOS installed. Approve only after Face ID and verifying the code.")
+                            Text(qrVisible
+                                ? "Scan the QR with a trusted ItamarOS phone, then verify and approve."
+                                : "Confirm this code in ItamarOS on this phone, then return to Cloud Climb. No QR is needed.")
                                 .font(.caption).foregroundStyle(.secondary)
-                            Button("Cancel") {activeRequest=nil;self.pair=nil}
+                            Button("Cancel") {activeRequest=nil;self.pair=nil;qrVisible=false}
                         }
                     }
                     if !info.isEmpty {
                         Text(info).font(.footnote).multilineTextAlignment(.center)
                     }
-                    Text("No SMS is sent by Cloud Climb. A previously authenticated ItamarOS device is needed for QR linking.")
+                    Text("No SMS or QR is required when both apps are installed on the same device. You must approve this login in your signed-in ItamarOS app.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }
                 .padding(20)
@@ -137,8 +144,8 @@ struct CloudClimbStandaloneHome:View {
         return (http.statusCode,body)
     }
 
-    @MainActor private func startPair() async {
-        activeRequest=nil;pair=nil;working=true
+    @MainActor private func startPair(openInApp:Bool) async {
+        activeRequest=nil;pair=nil;qrVisible = !openInApp;working=true
         defer {working=false}
         do {
             let (code,data)=try await post("/start",[:])
@@ -149,10 +156,21 @@ struct CloudClimbStandaloneHome:View {
             }
             let run=UUID()
             activeRequest=run;pair=new
-            info="Open ItamarOS on a signed-in phone and approve this request."
+            info = openInApp
+                ? "Approve this request in ItamarOS on your phone, then return to Cloud Climb."
+                : "Open ItamarOS on a signed-in phone and approve this request."
             Task {await pollPair(new,run:run)}
+            if openInApp,let destination=URL(string:"itamaros://cloud-climb?request="+new.requestId) {
+                // The URL contains an untrusted request ID only — no account
+                // password, claim secret or access token is shared via deep link.
+                openURL(destination) { accepted in
+                    if !accepted {
+                        info="ItamarOS could not be opened. Install it or cancel and use QR linking."
+                    }
+                }
+            }
         }catch {
-            info="QR unavailable: "+error.localizedDescription
+            info="Account linking unavailable: "+error.localizedDescription
         }
     }
     @MainActor private func pollPair(_ entry:CloudClimbPairStart,run:UUID) async {

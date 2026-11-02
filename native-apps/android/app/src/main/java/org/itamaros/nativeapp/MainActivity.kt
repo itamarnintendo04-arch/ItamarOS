@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
     private var incomingGroupInvite by mutableStateOf<String?>(null)
     private var incomingContact by mutableStateOf<String?>(null)
     private var incomingDesktopRequest by mutableStateOf<String?>(null)
+    private var incomingCloudClimbRequest by mutableStateOf<String?>(null)
     private var isTv = false
     private val prefs by lazy { getSharedPreferences("itamaros_native", MODE_PRIVATE) }
 
@@ -168,6 +169,7 @@ class MainActivity : ComponentActivity() {
                     groupInvite = incomingGroupInvite,
                     contactUsername = incomingContact,
                     desktopRequest = incomingDesktopRequest,
+                    cloudClimbRequest = incomingCloudClimbRequest,
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
@@ -216,6 +218,13 @@ class MainActivity : ComponentActivity() {
         } else if (uri.host == "desktop") {
             val request = uri.getQueryParameter("request")
             incomingDesktopRequest=request?.takeIf{it.matches(Regex("[A-Za-z0-9_-]{24,40}"))}
+        } else if (uri.host == "cloud-climb") {
+            // A deep link is only an untrusted request identifier. No login is
+            // granted until the user approves in ItamarOS after device verification.
+            val request=uri.getQueryParameter("request")
+            incomingCloudClimbRequest=request?.takeIf{
+                it.matches(Regex("[A-Za-z0-9_-]{24,40}"))
+            }
         } else if (uri.host == "hub-auth") {
             // Do not treat URL parameters as a verified identity.
             // Hub ticket redemption is disabled until server integration is configured.

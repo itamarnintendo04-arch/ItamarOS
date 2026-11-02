@@ -50,6 +50,7 @@ fun NativeAppScreen(
     groupInvite: String?,
     contactUsername: String?,
     desktopRequest: String?,
+    cloudClimbRequest: String?,
     device: String,
     status: String,
     updateStatus: String,
@@ -85,13 +86,15 @@ fun NativeAppScreen(
             Text("Sign in and create a unique username before using the app.")
             AndroidConnectScreen(
                 api=accountApi,authOnly=true,
+                cloudClimbRequest=cloudClimbRequest,
                 onAccountReady={ accountUsername=it }
             )
         }
         return
     }
-    LaunchedEffect(groupInvite, contactUsername, desktopRequest) {
-        if (!isTv && (groupInvite != null || contactUsername != null || desktopRequest != null)) current = "Connect"
+    LaunchedEffect(groupInvite, contactUsername, desktopRequest, cloudClimbRequest) {
+        if (!isTv && (groupInvite != null || contactUsername != null ||
+            desktopRequest != null || cloudClimbRequest != null)) current = "Connect"
     }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
@@ -129,7 +132,7 @@ fun NativeAppScreen(
                         }
                     }
                     "Connect" -> if (!isTv) item {
-                        AndroidConnectScreen(api=accountApi,groupInvite = groupInvite, contactUsername = contactUsername, desktopRequest = desktopRequest, onSignOut={accountUsername=null})
+                        AndroidConnectScreen(api=accountApi,groupInvite = groupInvite, contactUsername = contactUsername, desktopRequest = desktopRequest, cloudClimbRequest=cloudClimbRequest, onSignOut={accountUsername=null})
                     }
                     "Games" -> item {
                         MobileGamesHub(accountApi)

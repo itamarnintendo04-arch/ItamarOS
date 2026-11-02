@@ -48,6 +48,11 @@ struct ItamarOSApp: App {
                           (24...40).contains(request.count),
                           request.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) {
                     desktopRoute = ItamarDesktopPairRoute(request:request)
+                } else if url.host?.lowercased() == "cloud-climb",
+                          let request = components?.queryItems?.first(where: { $0.name == "request" })?.value,
+                          (24...40).contains(request.count),
+                          request.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) {
+                    desktopRoute = ItamarDesktopPairRoute(request:request,isCloudClimb:true)
                 } else if url.host?.lowercased() == "hub-auth" {
                     // No unverified URL may sign a user in or populate profile fields.
                     // A future native Hub client will redeem server-issued one-use tickets.
@@ -80,7 +85,7 @@ struct ItamarOSApp: App {
                 }
             }
             .sheet(item: $desktopRoute) { route in
-                ItamarDesktopPairApprovalView(request: route.request)
+                ItamarDesktopPairApprovalView(request: route.request,isCloudClimb:route.isCloudClimb)
                     .environmentObject(cloud)
             }
             .sheet(item: $parentRoute) { route in

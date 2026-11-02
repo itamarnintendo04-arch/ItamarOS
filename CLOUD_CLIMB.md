@@ -16,6 +16,15 @@ Cloud Climb is an original platform-adventure prototype available inside ItamarO
 - The [ItamarOS downloads page](downloads.html#cloud-climb) reveals these standalone downloads after entering the discovery code `0000`; it detects iPhone/iPad versus Android and only advertises confirmed, unexpired build artifacts.
 - Cloud Climb remains playable inside the main mobile ItamarOS application's Online Rooms section.
 
+## Same-device ItamarOS sign-in (no QR)
+
+- The standalone Android and iOS apps offer **Continue with ItamarOS · No QR**.
+- Cloud Climb creates a short-lived pairing request with the existing HTTPS broker, then opens the trusted ItamarOS app via `itamaros://cloud-climb?request=...`.
+- Only the non-secret request ID is included in the app link. The claim secret remains inside Cloud Climb. Tokens and passwords are never sent through the URL.
+- ItamarOS shows the matching 6-character request prefix and requires explicit device confirmation (Android secure device credential; iPhone Face ID/Touch ID). After approval, use **Return to Cloud Climb** or switch back manually; the waiting app claims the request and loads online room access.
+- The existing QR route remains available for linking from another device.
+- **Prototype limits:** this reuses the current memory-backed broker that transfers a temporary account bearer session. Neither QR nor app-link sign-in is an OAuth/PKCE implementation; do not treat this as a production security review. The apps must both be installed and the main ItamarOS app must have an authenticated account.
+
 ## Gameplay mechanics (preview)
 
 - Three hearts, +10 earned coins on each completed level, and a three-hit boss at stages 30, 60, 90, etc.

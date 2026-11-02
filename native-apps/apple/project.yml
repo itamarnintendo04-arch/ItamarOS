@@ -23,6 +23,11 @@ targets:
       path: CloudClimb/Info.plist
       properties:
         CFBundleDisplayName: Cloud Climb
+        CFBundleURLTypes:
+          - CFBundleURLName: org.itamaros.cloudclimb
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes:
+              - cloudclimb
         NSFaceIDUsageDescription: "Confirm it is you before approving a Cloud Climb account login."
         ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
