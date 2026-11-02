@@ -24,6 +24,17 @@ for(const component of platformManifest.components) {
 }
 
 const appleRoot='native-apps/apple';
+const appleIconsScript=read(appleRoot+'/prepare-app-icons.sh');
+const appleCI=read('.github/workflows/native-apple.yml');
+const standaloneCloudCI=read('.github/workflows/cloud-climb-ios.yml');
+assert.match(appleIconsScript,/rsvg-convert --format=png --width=1024 --height=1024/,
+ 'Cloud Climb must have a real 1024x1024 AppIcon PNG');
+assert.match(appleCI,/Generate and validate both iPhone AppIcons/,
+ 'Apple CI must generate the second icon before compiling its IPA');
+assert.match(standaloneCloudCI,/prepare-app-icons.sh/,
+ 'Cloud Climb standalone IPA pipeline must include the generated icon');
+assert.match(appleCI,/CloudClimbAppIcon/,
+ 'Apple CI must verify the compiled Cloud Climb AppIcon name');
 const androidRoot='native-apps/android';
 const project=read(appleRoot+'/project.yml');
 for(const name of ['ItamarOSiOS','ItamarOStvOS','ItamarOSmacOS','ItamarOSvisionOS','ItamarOSwatchOS']) {
