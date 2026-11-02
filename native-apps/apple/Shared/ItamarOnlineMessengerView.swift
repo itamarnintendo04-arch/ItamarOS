@@ -149,91 +149,115 @@ struct ItamarOnlineMessengerView: View {
 
 struct ItamarCloudLoginView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
+    @State private var registering = true
+    @State private var email = ""
+    @State private var password = ""
+    @State private var displayName = ""
+    @State private var username = ""
     @State private var phone = ""
-    @State private var smsCode = ""
-    @State private var optionalPassword = ""
-    @State private var optionalPhoto: PhotosPickerItem?
-    @State private var smsRequested = false
-    @State private var processing = false
+    @State private var photo: PhotosPickerItem?
+    @State private var code = ""
+    @State private var awaitingEmail = false
+    @State private var busy = false
     @State private var error = ""
 
     var body: some View {
         Form {
-            Section("Get started with your phone") {
-                Text("A verified phone number is required. Profile photo and password are optional.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                TextField("Phone, e.g. +972501234567", text: $phone)
-                    .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
-                Text("Choose a phone number suggested by iOS, if available, or enter your own number.")
-                    .font(.caption).foregroundStyle(.secondary)
-                PhotosPicker(selection: $optionalPhoto, matching: .images) {
-                    Label("Profile photo (optional)", systemImage: "camera")
-                }
-                .onChange(of: optionalPhoto) { _, item in
-                    Task {
-                        do {
-                            guard let data = try await item?.loadTransferable(type: Data.self),
-                                  let picture = UIImage(data: data),
-                                  let jpeg = picture.jpegData(compressionQuality: 0.65),
+            Section {
+                VStack(spacing: 8) {
+                    Image(systemName: "cloud.sun.fill")
+                        .font(.system(size: 54)).foregroundStyle(.blue)
+                    Text(registering ? "Create your ItamarOS account" : "Welcome back")
+                        .font(.title2.bold())
+                    Text(registering ? "Verify your email to activate your account." : "Sign in with your email and password.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity).padding(.vertical, 14)
+            }
+            Section("Account") {
+                TextField("Email (required)", text: $email)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Password (required, 8+ characters)", text: $password)
+                    .textContentType(registering ? .newPassword : .password)
+                if registering {
+                    TextField("Display name (required)", text: $displayName)
+                        .textContentType(.name)
+                    TextField("Unique username (required)", text: $username)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    TextField("Phone (optional, +972…)", text: $phone)
+                        .keyboardType(.phonePad).textContentType(.telephoneNumber)
+                    PhotosPicker(selection: $photo, matching: .images) {
+                        Label("Profile picture (optional)", systemImage: "camera")
+                    }
+                    .onChange(of: photo) { _, selected in
+                        Task {
+                            guard let data = try? await selected?.loadTransferable(type: Data.self),
+                                  let image = UIImage(data: data),
+                                  let jpeg = image.jpegData(compressionQuality: 0.65),
                                   jpeg.count <= 3 * 1024 * 1024 else {
-                                error = "Choose an image under 3 MB."
+                                error = "Please choose an image under 3 MB."
                                 return
                             }
                             cloud.pendingSignupAvatarJPEG = jpeg
-                            error = ""
-                        } catch { self.error = error.localizedDescription }
-                    }
-                }
-                SecureField("Password (optional, minimum 8 characters)", text: $optionalPassword)
-                    .textContentType(.newPassword)
-                Text("The photo uploads only after verifying your phone and saving your profile.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button(processing ? "Requesting…" : "Next — send SMS") {
-                    processing = true
-                    Task {
-                        do {
-                            try await cloud.requestSMS(phone: phone)
-                            smsRequested = true
-                            error = ""
-                        } catch { self.error = error.localizedDescription }
-                        processing = false
-                    }
-                }
-                .disabled(processing || !phone.hasPrefix("+") ||
-                    (!optionalPassword.isEmpty && optionalPassword.count < 8))
-            }
-            if smsRequested {
-                Section("Verify your phone") {
-                    Text("Enter the SMS code. Never share your verification code.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    TextField("SMS code", text: $smsCode)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                    Button(processing ? "Verifying…" : "Verify and continue") {
-                        processing = true
-                        Task {
-                            do {
-                                try await cloud.verifySMS(phone: phone, code: smsCode)
-                                if !optionalPassword.isEmpty {
-                                    try await cloud.setOptionalPassword(optionalPassword)
-                                    optionalPassword = ""
-                                }
-                                smsCode = ""
-                                error = ""
-                            } catch { self.error = error.localizedDescription }
-                            processing = false
                         }
                     }
-                    .disabled(processing || smsCode.count < 4)
-                    Button("Change phone number") { smsRequested = false; smsCode = "" }
+                    Text("Your phone number is optional and is not used for verification. Your profile photo is optional too.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Button(busy ? "Please wait…" : registering ? "Create account & email code" : "Sign in") {
+                    busy = true
+                    Task {
+                        do {
+                            if registering {
+                                try await cloud.signUp(email: email, password: password)
+                                if cloud.isSignedIn {
+                                    try await cloud.saveProfile(name: displayName, username: username, about: "")
+                                } else {
+                                    awaitingEmail = true
+                                }
+                            } else {
+                                try await cloud.signIn(email: email, password: password)
+                            }
+                            error = ""
+                        } catch { self.error = error.localizedDescription }
+                        busy = false
+                    }
+                }
+                .disabled(busy || !email.contains("@") || password.count < 8 ||
+                    (registering && (displayName.trimmingCharacters(in: .whitespaces).isEmpty ||
+                                      username.count < 3)))
+            }
+            if awaitingEmail && !cloud.isSignedIn {
+                Section("Verify your email") {
+                    Text("Enter the code sent to \\(email). Check spam if needed.")
+                        .font(.footnote)
+                    TextField("Email verification code", text: $code)
+                        .keyboardType(.numberPad).textContentType(.oneTimeCode)
+                    Button(busy ? "Verifying…" : "Verify email") {
+                        busy = true
+                        Task {
+                            do {
+                                try await cloud.verifySignupEmail(email: email, code: code)
+                                try await cloud.saveProfile(name: displayName, username: username, about: "")
+                                error = ""
+                            } catch { self.error = error.localizedDescription }
+                            busy = false
+                        }
+                    }.disabled(busy || code.count < 6)
                 }
             }
             Section {
+                Button(registering ? "Already have an account? Sign in" : "New here? Create an account") {
+                    registering.toggle()
+                    awaitingEmail = false
+                    error = ""
+                }
                 if !error.isEmpty { Text(error).foregroundStyle(.red).font(.caption) }
                 if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
-                Text("Twilio Verify must be configured through Supabase Auth for SMS delivery. Charges may apply.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                Text("Email verification requires Supabase Auth email confirmation and an email OTP template configured on the server.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
