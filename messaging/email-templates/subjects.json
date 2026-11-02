@@ -1,0 +1,15 @@
+{
+  "confirmation": "Confirm your ItamarOS email",
+  "invite": "You're invited to ItamarOS",
+  "magic_link": "Your secure ItamarOS sign-in link",
+  "recovery": "Reset your ItamarOS password",
+  "email_change": "Confirm your new ItamarOS email",
+  "reauthentication": "Your ItamarOS verification code",
+  "password_changed_notification": "Your ItamarOS password was changed",
+  "email_changed_notification": "Your ItamarOS email address was changed",
+  "phone_changed_notification": "Your ItamarOS recovery phone changed",
+  "identity_linked_notification": "New sign-in method linked to ItamarOS",
+  "identity_unlinked_notification": "An ItamarOS sign-in method was removed",
+  "mfa_factor_enrolled_notification": "New ItamarOS verification method added",
+  "mfa_factor_unenrolled_notification": "An ItamarOS verification method was removed"
+}
