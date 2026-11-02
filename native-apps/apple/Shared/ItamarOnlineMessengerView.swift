@@ -8,6 +8,12 @@ import UniformTypeIdentifiers
 // The connected mode is enabled only after the project owner configures a
 // Supabase URL + public publishable key and applies the RLS SQL migration.
 // It is separate from the existing offline message drafts.
+private struct ItamarOfficialNotice: Identifiable {
+    let id:String
+    let body:String
+    let createdAt:String
+}
+
 struct ItamarOnlineMessengerView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @State private var selected = 0
@@ -15,7 +21,28 @@ struct ItamarOnlineMessengerView: View {
     @State private var showNew = false
     @State private var showChannels = false
     @State private var pollTask: Task<Void, Never>?
+    @State private var officialNotices:[ItamarOfficialNotice]=[]
     @State private var error = ""
+
+    @MainActor private func loadOfficialNotices() async {
+        guard let uid=cloud.userID,cloud.deviceSyncEnabled else {
+            officialNotices=[];return
+        }
+        do {
+            let raw=try await cloud.request("/rest/v1/itamar_admin_notices",
+                query:[URLQueryItem(name:"select",value:"id,body,created_at"),
+                       URLQueryItem(name:"recipient_id",value:"eq."+uid.uuidString.lowercased()),
+                       URLQueryItem(name:"order",value:"created_at.desc"),
+                       URLQueryItem(name:"limit",value:"40")])
+            if let messages=try JSONSerialization.jsonObject(with:raw) as? [[String:Any]] {
+                officialNotices=messages.compactMap{row in
+                    guard let id=row["id"] as? String,
+                          let body=row["body"] as? String else{return nil}
+                    return ItamarOfficialNotice(id:id,body:body,createdAt:row["created_at"] as? String ?? "")
+                }
+            }
+        }catch{ /* Existing chat view remains available if the official inbox is offline. */ }
+    }
 
     var body: some View {
         NavigationStack {
@@ -44,7 +71,19 @@ struct ItamarOnlineMessengerView: View {
                         }
                         List {
                             if selected == 2 {
-                                if cloud.updates.isEmpty {
+                                if !officialNotices.isEmpty {
+                                    Section("Official ItamarOS messages") {
+                                        ForEach(officialNotices){notice in
+                                            VStack(alignment:.leading,spacing:4) {
+                                                Label("Official message",systemImage:"checkmark.seal.fill")
+                                                    .font(.headline).foregroundStyle(.green)
+                                                Text(notice.body)
+                                                Text(notice.createdAt).font(.caption).foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                if cloud.updates.isEmpty && officialNotices.isEmpty {
                                     ContentUnavailableView("No new activity", systemImage: "bell.slash",
                                         description: Text("New posts and messages from unmuted rooms appear here while connected."))
                                 }
@@ -92,7 +131,7 @@ struct ItamarOnlineMessengerView: View {
                             }
                         }
                         .refreshable {
-                            do { try await cloud.reload() } catch { self.error = error.localizedDescription }
+                            do { try await cloud.reload();await loadOfficialNotices() } catch { self.error = error.localizedDescription }
                         }
                     }
                     .toolbar {
@@ -136,7 +175,7 @@ struct ItamarOnlineMessengerView: View {
             pollTask = Task {
                 while !Task.isCancelled {
                     if cloud.isSignedIn {
-                        do { try await cloud.reload() }
+                        do { try await cloud.reload();await loadOfficialNotices() }
                         catch { self.error = error.localizedDescription }
                     }
                     try? await Task.sleep(for: .seconds(15))
