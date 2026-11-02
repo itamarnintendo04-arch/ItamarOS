@@ -164,6 +164,9 @@ struct ItamarCloudLoginView: View {
                     .font(.footnote).foregroundStyle(.secondary)
                 TextField("Phone, e.g. +972501234567", text: $phone)
                     .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                Text("Choose a phone number suggested by iOS, if available, or enter your own number.")
+                    .font(.caption).foregroundStyle(.secondary)
                 PhotosPicker(selection: $optionalPhoto, matching: .images) {
                     Label("Profile photo (optional)", systemImage: "camera")
                 }
@@ -204,7 +207,9 @@ struct ItamarCloudLoginView: View {
                 Section("Verify your phone") {
                     Text("Enter the SMS code. Never share your verification code.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    TextField("SMS code", text: $smsCode).keyboardType(.numberPad)
+                    TextField("SMS code", text: $smsCode)
+                        .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
                     Button(processing ? "Verifying…" : "Verify and continue") {
                         processing = true
                         Task {
