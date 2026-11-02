@@ -43,7 +43,7 @@ $('invite').addEventListener('submit',async e=>{
  try{
   const result=await invoke({action:'invite',email});
   invitation=result.invite_link;
-  $('invitationMessage').value='Subject: Your ItamarOS invitation\\n\\nHello,\\n\\nYou have been invited to create an ItamarOS account. Open the private one-time link below and choose your own password:\\n\\n'+invitation+'\\n\\nIf you were not expecting this invitation, ignore the message.';
+  $('invitationMessage').value='Subject: Your ItamarOS invitation\n\nHello,\n\nYou have been invited to create an ItamarOS account. Open the private one-time link below and choose your own password:\n\n'+invitation+'\n\nIf you were not expecting this invitation, ignore the message.';
   $('link').textContent='Invitation ready for '+email+'. Send this message only to that person.';
   $('invitation').hidden=false;
   status('Invitation generated. Copy it and send it privately.');
