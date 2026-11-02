@@ -363,6 +363,43 @@ final class ItamarCloudService: ObservableObject {
                               data: ["password": password])
     }
 
+    // Email confirmation is delivered by Supabase Auth's configured email provider.
+    // The optional contact number is *not* linked to Auth's verified phone identity.
+    func registerEmailAccount(email: String, password: String,
+                              username: String, optionalPhone: String) async throws {
+        let cleanEmail=email.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        let cleanUser=username.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        let cleanPhone=optionalPhone.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard cleanEmail.contains("@"),cleanEmail.contains("."),!cleanEmail.contains(" "),
+              password.count>=8 else {
+            throw ItamarCloudError.badResponse("Enter a valid email and password of at least 8 characters.")
+        }
+        guard cleanUser.range(of:#"^[a-z0-9_.]{3,24}$"#,options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Username must be 3–24 lowercase letters, numbers, _ or .")
+        }
+        guard cleanPhone.isEmpty ||
+              cleanPhone.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                              options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Optional phone must be in international +country format.")
+        }
+        var metadata:[String:String]=["preferred_username":cleanUser]
+        if !cleanPhone.isEmpty {metadata["unverified_contact_phone"]=cleanPhone}
+        let body:[String:Any]=["email":cleanEmail,"password":password,"data":metadata]
+        _ = try await request("/auth/v1/signup",method:"POST",data:body,authorized:false)
+        status="Check your email for a confirmation link. Then return and sign in with your email and password."
+    }
+
+    func preferredSignupUsername() async throws -> String? {
+        let raw=try await request("/auth/v1/user")
+        guard let body=try JSONSerialization.jsonObject(with:raw) as? [String:Any],
+              let metadata=body["user_metadata"] as? [String:Any],
+              let name=metadata["preferred_username"] as? String,
+              name.range(of:#"^[a-z0-9_.]{3,24}$"#,options:.regularExpression) != nil else {
+            return nil
+        }
+        return name
+    }
+
     func signUp(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/signup", method: "POST", data: body, authorized: false)
