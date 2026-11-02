@@ -19,8 +19,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install XcodeGen and AppIcon renderer
+        run: brew install xcodegen librsvg
+      - name: Generate and validate both iPhone AppIcons
+        run: bash native-apps/apple/prepare-app-icons.sh
       - name: Generate native SwiftUI project for Apple platforms
         working-directory: native-apps/apple
         run: xcodegen generate
@@ -50,7 +52,9 @@ jobs:
           set -euo pipefail
           APP="DeviceBuild/Build/Products/Release-iphoneos/ItamarOSiOS.app"
           test -d "$APP"
+          test -s "$APP/Assets.car"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$APP/Info.plist" | grep -q 'AppIcon'
           mkdir -p unsigned/Payload
           ditto "$APP" unsigned/Payload/ItamarOSiOS.app
           (cd unsigned && /usr/bin/zip -qry "../ItamarOS-1.7.0-iOS-UNSIGNED.ipa" Payload)
@@ -65,6 +69,7 @@ jobs:
             native-apps/apple/ItamarOS-1.7.0-iOS-UNSIGNED.ipa
             native-apps/apple/SHA256SUMS-iOS.txt
             native-apps/apple/UNSIGNED-READ-ME.txt
+            native-apps/apple/iOS/Assets.xcassets/AppIcon.appiconset/Icon.png
           if-no-files-found: error
           retention-days: 14
 
@@ -76,6 +81,8 @@ jobs:
           xcodebuild -project ItamarOSNative.xcodeproj -scheme CloudClimbiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$PWD/CloudClimbDeviceBuild" CODE_SIGNING_ALLOWED=NO build
           APP="CloudClimbDeviceBuild/Build/Products/Release-iphoneos/CloudClimbiOS.app"
           test -d "$APP"
+          test -s "$APP/Assets.car"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$APP/Info.plist" | grep -q 'CloudClimbAppIcon'
           mkdir -p cloudclimb-unsigned/Payload
           ditto "$APP" cloudclimb-unsigned/Payload/CloudClimbiOS.app
           (cd cloudclimb-unsigned && /usr/bin/zip -qry "../CloudClimb-iOS-UNSIGNED.ipa" Payload)
@@ -84,7 +91,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CloudClimb-iPhone-iPad-UNSIGNED-IPA
-          path: native-apps/apple/CloudClimb-iOS-UNSIGNED.ipa
+          path: |
+            native-apps/apple/CloudClimb-iOS-UNSIGNED.ipa
+            native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset/Icon.png
           retention-days: 14
           if-no-files-found: error
 
