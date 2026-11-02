@@ -149,117 +149,191 @@ struct ItamarOnlineMessengerView: View {
 
 struct ItamarCloudLoginView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
-    @State private var registering = true
+    @State private var registering = false
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
     @State private var username = ""
     @State private var phone = ""
     @State private var photo: PhotosPickerItem?
-    @State private var code = ""
-    @State private var awaitingEmail = false
     @State private var busy = false
     @State private var error = ""
+    @State private var notice = ""
+
+    private var fieldBackground: Color { Color.white.opacity(0.12) }
 
     var body: some View {
-        Form {
-            Section {
-                VStack(spacing: 8) {
+        ScrollView {
+            VStack(spacing: 18) {
+                Spacer(minLength: 18)
+                ZStack {
+                    Circle().fill(.cyan.opacity(0.20)).frame(width: 140,height: 140).blur(radius: 28)
                     Image(systemName: "cloud.sun.fill")
-                        .font(.system(size: 54)).foregroundStyle(.blue)
-                    Text(registering ? "Create your ItamarOS account" : "Welcome back")
-                        .font(.title2.bold())
-                    Text(registering ? "Verify your email to activate your account." : "Sign in with your email and password.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity).padding(.vertical, 14)
-            }
-            Section("Account") {
-                TextField("Email (required)", text: $email)
-                    .keyboardType(.emailAddress)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                SecureField("Password (required, 8+ characters)", text: $password)
-                    .textContentType(registering ? .newPassword : .password)
-                if registering {
-                    TextField("Display name (required)", text: $displayName)
-                        .textContentType(.name)
-                    TextField("Unique username (required)", text: $username)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                    TextField("Phone (optional, +972…)", text: $phone)
-                        .keyboardType(.phonePad).textContentType(.telephoneNumber)
-                    PhotosPicker(selection: $photo, matching: .images) {
-                        Label("Profile picture (optional)", systemImage: "camera")
+                        .font(.system(size: 73,weight: .semibold))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white,.yellow)
+                        .shadow(color: .cyan.opacity(0.7),radius: 15)
+                }.frame(height: 112)
+                Text("ItamarOS")
+                    .font(.system(size: 43,weight: .black,design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .blue,radius: 12,y: 4)
+                Text(registering ? "Create your account" : "Welcome back!")
+                    .font(.system(size: 22,weight: .bold,design: .rounded))
+                    .foregroundStyle(.white)
+                Text(registering ? "Your world. Your account." : "Sign in and pick up where you left off.")
+                    .font(.subheadline).foregroundStyle(.white.opacity(0.76))
+                HStack(spacing: 5) {
+                    tab("Sign in",active: !registering) { registering = false; error = ""; notice = "" }
+                    tab("Create account",active: registering) { registering = true; error = ""; notice = "" }
+                }
+                .padding(5)
+                .background(.white.opacity(0.12),in: RoundedRectangle(cornerRadius: 17))
+                VStack(spacing: 12) {
+                    if registering {
+                        field("Display name",symbol:"person.fill",value:$displayName)
+                        field("Unique username",symbol:"at",value:$username)
                     }
-                    .onChange(of: photo) { _, selected in
-                        Task {
-                            guard let data = try? await selected?.loadTransferable(type: Data.self),
-                                  let image = UIImage(data: data),
-                                  let jpeg = image.jpegData(compressionQuality: 0.65),
-                                  jpeg.count <= 3 * 1024 * 1024 else {
-                                error = "Please choose an image under 3 MB."
-                                return
+                    HStack(spacing: 11) {
+                        Image(systemName:"envelope.fill").frame(width:22)
+                        TextField("Email address",text:$email)
+                            .keyboardType(.emailAddress)
+                            .textContentType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }.fieldStyle(fieldBackground)
+                    HStack(spacing:11) {
+                        Image(systemName:"lock.fill").frame(width:22)
+                        SecureField("Password (8+ characters)",text:$password)
+                            .textContentType(registering ? .newPassword : .password)
+                    }.fieldStyle(fieldBackground)
+                    if registering {
+                        HStack(spacing:11) {
+                            Image(systemName:"phone.fill").frame(width:22)
+                            TextField("Phone (optional)",text:$phone)
+                                .keyboardType(.phonePad)
+                        }.fieldStyle(fieldBackground)
+                        PhotosPicker(selection:$photo,matching:.images) {
+                            Label(photo == nil ? "Add profile picture (optional)" : "Profile picture selected",
+                                  systemImage:"camera.fill")
+                                .frame(maxWidth:.infinity,alignment:.leading)
+                                .padding(15)
+                                .background(fieldBackground,in:RoundedRectangle(cornerRadius:14))
+                        }
+                        .onChange(of:photo) { _,item in
+                            Task {
+                                guard let data = try? await item?.loadTransferable(type:Data.self),
+                                      let image = UIImage(data:data),
+                                      let jpeg = image.jpegData(compressionQuality:0.65),
+                                      jpeg.count <= 3*1024*1024 else {
+                                    error = "Choose an image under 3 MB."
+                                    return
+                                }
+                                cloud.pendingSignupAvatarJPEG = jpeg
                             }
-                            cloud.pendingSignupAvatarJPEG = jpeg
                         }
                     }
-                    Text("Your phone number is optional and is not used for verification. Your profile photo is optional too.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Button(busy ? "Please wait…" : registering ? "Create account & email code" : "Sign in") {
-                    busy = true
-                    Task {
-                        do {
-                            if registering {
-                                try await cloud.signUp(email: email, password: password)
-                                if cloud.isSignedIn {
-                                    try await cloud.saveProfile(name: displayName, username: username, about: "")
-                                } else {
-                                    awaitingEmail = true
-                                }
-                            } else {
-                                try await cloud.signIn(email: email, password: password)
-                            }
-                            error = ""
-                        } catch { self.error = error.localizedDescription }
-                        busy = false
-                    }
-                }
-                .disabled(busy || !email.contains("@") || password.count < 8 ||
-                    (registering && (displayName.trimmingCharacters(in: .whitespaces).isEmpty ||
-                                      username.count < 3)))
-            }
-            if awaitingEmail && !cloud.isSignedIn {
-                Section("Verify your email") {
-                    Text("Enter the code sent to \(email). Check spam if needed.")
-                        .font(.footnote)
-                    TextField("Email verification code", text: $code)
-                        .keyboardType(.numberPad).textContentType(.oneTimeCode)
-                    Button(busy ? "Verifying…" : "Verify email") {
+                    Button {
                         busy = true
                         Task {
                             do {
-                                try await cloud.verifySignupEmail(email: email, code: code)
-                                try await cloud.saveProfile(name: displayName, username: username, about: "")
+                                if registering {
+                                    try await cloud.signUp(email:email,password:password)
+                                    if cloud.isSignedIn {
+                                        try await cloud.saveProfile(name:displayName,username:username,about:"")
+                                    } else {
+                                        notice = "Account created. Your email provider may require confirmation before signing in."
+                                    }
+                                } else {
+                                    try await cloud.signIn(email:email,password:password)
+                                }
                                 error = ""
                             } catch { self.error = error.localizedDescription }
                             busy = false
                         }
-                    }.disabled(busy || code.count < 6)
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if busy { ProgressView().tint(.white) }
+                            Text(busy ? "Please wait…" : registering ? "Create account" : "Sign in")
+                                .font(.system(size:19,weight:.bold,design:.rounded))
+                            Image(systemName:"arrow.right")
+                            Spacer()
+                        }
+                        .foregroundStyle(.white)
+                        .padding(17)
+                        .background(
+                            LinearGradient(colors:[Color(red:0.16,green:0.72,blue:1),
+                                Color(red:0.32,green:0.27,blue:0.96)],
+                                startPoint:.leading,endPoint:.trailing),
+                            in:RoundedRectangle(cornerRadius:16))
+                        .shadow(color:.blue.opacity(0.45),radius:12,y:5)
+                    }
+                    .disabled(busy || !email.contains("@") || password.count < 8 ||
+                        (registering && (displayName.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty ||
+                                          username.count < 3)))
+                    .opacity(busy ? 0.7 : 1)
+                    if !error.isEmpty {
+                        Text(error).font(.footnote).foregroundStyle(.red)
+                            .frame(maxWidth:.infinity,alignment:.leading)
+                    }
+                    if !notice.isEmpty {
+                        Text(notice).font(.footnote).foregroundStyle(.white)
+                            .frame(maxWidth:.infinity,alignment:.leading)
+                    }
                 }
+                .padding(21)
+                .background(.white.opacity(0.10),in:RoundedRectangle(cornerRadius:25))
+                .overlay(RoundedRectangle(cornerRadius:25)
+                    .stroke(.white.opacity(0.23),lineWidth:1))
+                Text("Secure account powered by Supabase")
+                    .font(.caption2).foregroundStyle(.white.opacity(0.65))
+                Spacer(minLength: 22)
             }
-            Section {
-                Button(registering ? "Already have an account? Sign in" : "New here? Create an account") {
-                    registering.toggle()
-                    awaitingEmail = false
-                    error = ""
-                }
-                if !error.isEmpty { Text(error).foregroundStyle(.red).font(.caption) }
-                if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
-                Text("Email verification requires Supabase Auth email confirmation and an email OTP template configured on the server.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            .padding(.horizontal,22)
+            .frame(maxWidth:510)
+            .frame(maxWidth:.infinity)
         }
+        .background(
+            LinearGradient(colors:[Color(red:0.025,green:0.075,blue:0.23),
+                Color(red:0.09,green:0.23,blue:0.58),
+                Color(red:0.28,green:0.14,blue:0.55)],
+                startPoint:.topLeading,endPoint:.bottomTrailing)
+                .ignoresSafeArea()
+        )
+    }
+
+    private func tab(_ label:String,active:Bool,action:@escaping ()->Void)->some View {
+        Button(action:action) {
+            Text(label).font(.system(size:15,weight:.bold,design:.rounded))
+                .foregroundStyle(active ? Color(red:0.08,green:0.18,blue:0.4) : .white)
+                .frame(maxWidth:.infinity).padding(.vertical,12)
+                .background(active ? Color.white : Color.clear,
+                            in:RoundedRectangle(cornerRadius:13))
+        }.buttonStyle(.plain)
+    }
+    private func field(_ title:String,symbol:String,value:Binding<String>)->some View {
+        HStack(spacing:11) {
+            Image(systemName:symbol).frame(width:22)
+            TextField(title,text:value).textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }.fieldStyle(fieldBackground)
+    }
+}
+
+private struct ItamarAuthFieldStyle:ViewModifier {
+    let color:Color
+    func body(content:Content)->some View {
+        content
+            .foregroundStyle(.white)
+            .tint(.cyan)
+            .padding(15)
+            .background(color,in:RoundedRectangle(cornerRadius:14))
+    }
+}
+private extension View {
+    func fieldStyle(_ color:Color)->some View {
+        modifier(ItamarAuthFieldStyle(color:color))
     }
 }
 
