@@ -664,7 +664,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                     cmd=="/controls show"->{autoHideControls=false;"Touch controls always shown"}
                     cmd=="/tips on"->{showControlHints=true;"Gameplay tips enabled"}
                     cmd=="/tips off"->{showControlHints=false;"Gameplay tips disabled"}
-                    cmd=="/hero list"->"Unlocked: starter"+if(ownedCharacters.isEmpty)"" else ", "+ownedCharacters.sorted().joinToString(", ")
+                    cmd=="/hero list"->"Unlocked: starter"+if(ownedCharacters.isEmpty())"" else ", "+ownedCharacters.sorted().joinToString(", ")
                     cmd=="/save"->{
                         manualSaveRequest+=1
                         if(syncReady)"Account progress save requested" else "Saved on this device (offline)"
