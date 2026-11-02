@@ -43,11 +43,17 @@ $('invite').addEventListener('submit',async e=>{
  try{
   const result=await invoke({action:'invite',email});
   invitation=result.invite_link;
-  $('link').textContent='Invitation ready for '+email+'. Send this link only to that person.';
+  $('invitationMessage').value='Subject: Your ItamarOS invitation\\n\\nHello,\\n\\nYou have been invited to create an ItamarOS account. Open the private one-time link below and choose your own password:\\n\\n'+invitation+'\\n\\nIf you were not expecting this invitation, ignore the message.';
+  $('link').textContent='Invitation ready for '+email+'. Send this message only to that person.';
   $('invitation').hidden=false;
   status('Invitation generated. Copy it and send it privately.');
  }catch(err){status(err?.message||'Cannot invite account')}
 });
+$('copyMessage').onclick=async()=>{
+ if(!invitation)return;
+ try{await navigator.clipboard.writeText($('invitationMessage').value);status('Invitation email copied. Send privately to the intended recipient.');}
+ catch{status('Clipboard unavailable; select and copy the message manually.')}
+};
 $('copy').onclick=async()=>{
  if(!invitation)return;
  try{await navigator.clipboard.writeText(invitation);status('Invitation link copied.');}
