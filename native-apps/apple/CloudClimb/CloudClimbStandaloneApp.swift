@@ -34,64 +34,32 @@ struct CloudClimbStandaloneApp: App {
 private struct CloudClimbSkyIntro:View {
     var body:some View {
         ZStack {
+            Circle()
+                .fill(Color.cyan.opacity(0.18))
+                .frame(width:215,height:150)
+                .blur(radius:24)
             Image(systemName:"cloud.fill")
-                .font(.system(size:180)).foregroundStyle(.white.opacity(0.72))
-                .offset(x:-120,y:25)
+                .font(.system(size:120,weight:.ultraLight))
+                .foregroundStyle(.white.opacity(0.22))
+                .offset(x:-65,y:14)
             Image(systemName:"cloud.fill")
-                .font(.system(size:135)).foregroundStyle(.white.opacity(0.84))
-                .offset(x:130,y:-15)
-            Image(systemName:"flag.fill")
-                .font(.system(size:35,weight:.black))
-                .foregroundStyle(.red).offset(x:135,y:60)
-            Text("☁️ CLOUD\nCLIMB ☁️")
-                .font(.system(size:44,weight:.black,design:.rounded))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.white)
-                .shadow(color:Color(red:0.02,green:0.16,blue:0.54),radius:0,x:5,y:6)
+                .font(.system(size:93,weight:.ultraLight))
+                .foregroundStyle(.white.opacity(0.45))
+                .offset(x:82,y:-19)
+            Image("BrandMark")
+                .resizable().scaledToFit()
+                .frame(width:104,height:104)
+                .padding(16)
+                .background(Color.white.opacity(0.93),in:RoundedRectangle(cornerRadius:32))
+                .shadow(color:.cyan.opacity(0.4),radius:20,y:10)
+            Image(systemName:"sparkle")
+                .font(.system(size:25,weight:.bold))
+                .foregroundStyle(.yellow)
+                .offset(x:91,y:-66)
         }
-        .frame(maxWidth:.infinity).frame(height:175)
+        .frame(maxWidth:.infinity)
+        .frame(height:175)
         .accessibilityHidden(true)
-    }
-}
-
-private struct CloudClimbPixelSky:View {
-    var body:some View {
-        GeometryReader { geo in
-            ZStack {
-                LinearGradient(colors:[Color(red:0.03,green:0.45,blue:0.95),
-                    Color(red:0.18,green:0.7,blue:1),Color(red:0.5,green:0.9,blue:1)],
-                    startPoint:.top,endPoint:.bottom)
-                ForEach(0..<9,id:\.self) { index in
-                    Image(systemName:"cloud.fill")
-                        .font(.system(size:CGFloat(45+(index%3)*23)))
-                        .foregroundStyle(.white.opacity(0.65))
-                        .position(x:CGFloat((index*127+45)%390)/390*geo.size.width,
-                                  y:CGFloat(index*83+50).truncatingRemainder(dividingBy:max(geo.size.height,1)))
-                }
-                VStack {
-                    Spacer()
-                    Image(systemName:"mountain.2.fill")
-                        .resizable().scaledToFit()
-                        .foregroundStyle(Color(red:0.08,green:0.38,blue:0.72).opacity(0.48))
-                        .frame(maxWidth:.infinity)
-                }
-            }.ignoresSafeArea()
-        }.ignoresSafeArea().allowsHitTesting(false)
-    }
-}
-
-private struct CloudClimbPixelButton:ViewModifier {
-    let color:Color
-    func body(content:Content)->some View {
-        content
-            .font(.system(size:20,weight:.black,design:.rounded))
-            .frame(maxWidth:.infinity)
-            .padding(.vertical,16)
-            .foregroundStyle(.white)
-            .background(color,in:RoundedRectangle(cornerRadius:17))
-            .overlay(RoundedRectangle(cornerRadius:17)
-                .stroke(Color(red:0.04,green:0.16,blue:0.46),lineWidth:4))
-            .shadow(color:Color(red:0.03,green:0.2,blue:0.5),radius:0,x:0,y:6)
     }
 }
 
@@ -132,8 +100,8 @@ struct CloudClimbStandaloneHome:View {
                         if let username=cloud.profile?.username {
                             Text("@"+username)
                         }
-                        Button("▶ Play Online") {showOnline=true}
-                            .modifier(CloudClimbPixelButton(color:.green))
+                        Button("Play Online · Shared Room Codes") {showOnline=true}
+                            .buttonStyle(.borderedProminent)
                         Button("Sign Out") {cloud.signOut()}
                             .buttonStyle(.bordered)
                         Text("Your approved session is temporary. Reconnect if it expires.")
@@ -170,7 +138,7 @@ struct CloudClimbStandaloneHome:View {
                                 .frame(maxWidth:.infinity)
                                 .foregroundStyle(.white)
                                 .padding(17)
-                                .background(Color(red:0.13,green:0.55,blue:0.96),
+                                .background(.white.opacity(0.13),
                                     in:RoundedRectangle(cornerRadius:20))
                                 .overlay(RoundedRectangle(cornerRadius:20)
                                     .stroke(.white.opacity(0.35),lineWidth:1))
@@ -218,7 +186,12 @@ struct CloudClimbStandaloneHome:View {
                 .padding(.vertical,28)
                 .frame(maxWidth:.infinity)
             }
-            .background(CloudClimbPixelSky())
+            .background(
+                LinearGradient(colors:[Color(red:0.05,green:0.11,blue:0.3),
+                    Color(red:0.12,green:0.31,blue:0.68),
+                    Color(red:0.23,green:0.65,blue:0.86)],
+                    startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
+            )
             .toolbar(.hidden,for:.navigationBar)
             .sheet(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
