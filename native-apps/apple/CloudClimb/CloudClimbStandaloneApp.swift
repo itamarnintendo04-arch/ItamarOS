@@ -297,6 +297,10 @@ private struct CloudClimbOfflineDemo:View {
     @AppStorage("cloudclimb.offline.characters") private var characterStorage=""
     @AppStorage("cloudclimb.offline.equippedHero") private var equippedHero="starter"
     @AppStorage("cloudclimb.offline.worlds") private var worldStorage=""
+    @AppStorage("cloudclimb.offline.twilight") private var twilight=false
+    @AppStorage("cloudclimb.offline.tips") private var showTips=true
+    @State private var commandInput=""
+    @State private var commandReply="Type /help for Cloud Climb commands."
     @State private var x:CGFloat=48
     @State private var y:CGFloat=430
     @State private var velocity:CGFloat=0
@@ -464,6 +468,19 @@ private struct CloudClimbOfflineDemo:View {
                         }
                     }
                     Text(notice).font(.caption).foregroundStyle(.white)
+                    VStack(alignment:.leading,spacing:8){
+                        Text("Cloud Climb Commands")
+                            .font(.subheadline.bold()).foregroundStyle(.white)
+                        HStack {
+                            TextField("Enter /command",text:$commandInput)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .textFieldStyle(.roundedBorder)
+                            Button("Send"){runOfflineCommand()}
+                                .disabled(!commandInput.hasPrefix("/"))
+                        }
+                        Text(commandReply).font(.caption).foregroundStyle(.white)
+                    }
                     CloudClimbHeroPicker(owned:characters,selected:$equippedHero)
                     Button("🔮 Character Orb · \(characters.count) Characters") {
                         orbOpen=true
@@ -476,7 +493,9 @@ private struct CloudClimbOfflineDemo:View {
                         .buttonStyle(.bordered)
                 }.padding(18)
             }
-            .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
+            .background(LinearGradient(colors:twilight ?
+                [Color(red:0.13,green:0.1,blue:0.34),.purple]:
+                [Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
             .sheet(isPresented:$orbOpen) {
@@ -499,6 +518,48 @@ private struct CloudClimbOfflineDemo:View {
                     }}
                 }
             }
+        }
+    }
+    // Offline commands change only local gameplay and cosmetic choices.
+    private func runOfflineCommand(){
+        let cmd=commandInput.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        defer{commandInput=""}
+        switch cmd {
+        case "/help","/commands":
+            commandReply="/stats · /world 1-11 · /hero list · /hero <id> · /theme day|twilight · /tips on|off · /pause · /resume · /reset-position · /save"
+        case "/stats":
+            commandReply="Level \(level) · World \(world) · Coins \(coins) · Hearts \(hearts)/3 · Blue \(blue.count)/50 · Colored \(colored.count)/10 · Heroes \(characters.count)"
+        case "/pause":
+            paused=true;commandReply="Game paused."
+        case "/resume":
+            paused=false;commandReply="Game resumed."
+        case "/reset-position":
+            resetPosition();commandReply="Returned to the stage start without losing progress."
+        case "/theme day":
+            twilight=false;commandReply="Day theme enabled."
+        case "/theme twilight":
+            twilight=true;commandReply="Twilight theme enabled."
+        case "/tips on":
+            showTips=true;commandReply="Game tips enabled."
+        case "/tips off":
+            showTips=false;commandReply="Game tips disabled."
+        case "/hero list":
+            commandReply="Unlocked: starter"+(characters.isEmpty ? "" : ", "+characters.sorted().joined(separator:", "))
+        case "/save":
+            commandReply="Offline progress is automatically saved on this device."
+        case "/sync","/account":
+            commandReply="Offline Demo never syncs to an account. Sign in with ItamarOS to play online."
+        default:
+            if cmd.hasPrefix("/world "),let n=Int(cmd.dropFirst(7)),
+                worlds.contains(n) || (n==11 && secret) {
+                world=n;resetPosition();commandReply="Entered world \(n)."
+            }else if cmd.hasPrefix("/hero "){
+                let requested=String(cmd.dropFirst(6))
+                if CloudClimbHeroes.unlocked(requested,owned:characters){
+                    equippedHero=requested
+                    commandReply="Equipped \(CloudClimbHeroes.get(requested).name)."
+                }else{commandReply="Hero locked. Use /hero list."}
+            }else{commandReply="Unknown command or locked world. Type /help."}
         }
     }
     private func control(_ name:String,left:Bool)->some View {
