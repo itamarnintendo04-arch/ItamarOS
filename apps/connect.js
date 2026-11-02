@@ -9,12 +9,12 @@ const sd=window.supabase;
 if(!configured||!sd?.createClient){$('offline').hidden=false;return}
 $('offline').hidden=true;
 const client=sd.createClient(config.url,config.publishableKey,{
-  auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false,storageKey:'itamaros-connect-web-auth'}
+  auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,storageKey:'itamaros-connect-web-auth'}
 });
 let user=null,rooms=[],current=null;
 let pendingPassword='',pendingAvatar=null,avatarPreviewURL=null;
 let deviceSync=localStorage.getItem('itamaros-connect-device-sync')!=='off';
-let pendingPhone='',pendingUsername='',pendingMode='signup',authMode='signup',profileReady=false;
+let pendingPhone='',pendingUsername='',pendingEmail='',pendingIdentifier='',pendingVerifyMode='sms',pendingMode='signup',authMode='signup',profileReady=false;
 let messageChannel=null;
 function stopWatching(){
  if(messageChannel){void client.removeChannel(messageChannel);messageChannel=null}
@@ -193,14 +193,18 @@ function setAuthMode(mode){
  authMode=mode==='signin'?'signin':'signup';
  const signup=authMode==='signup';
  $('signupFields').hidden=!signup;
+ $('signupPhoneField').hidden=!signup;
  $('signinFields').hidden=signup;
  $('authSubmit').textContent=signup?'Next — send SMS':'Sign in';
+ $('phone').required=signup;
+ $('signinIdentifier').required=!signup;
+ $('signupEmail').required=signup;
  $('signupUsername').required=signup;
  $('signupAvatar').required=signup&&!$('useDefaultAvatar').checked;
  $('authTitle').textContent=signup?'Create your ItamarOS account':'Sign in to ItamarOS';
  $('authHelp').textContent=signup?
- 'Choose a unique username, verify your phone and choose a photo or default avatar. Passwords are optional.':
- 'Enter your registered phone number. We will send an SMS code to sign in.';
+ 'Username, email and phone are required (*). Your phone receives a verification code; your email receives a confirmation link.':
+ 'Sign in with email or phone and your password, or request an email login link / SMS code.';
  $('signupMode').classList.toggle('primary',signup);
  $('signinMode').classList.toggle('primary',!signup);
 }
@@ -231,36 +235,68 @@ $('signupAvatar').addEventListener('change',()=>{
  $('avatarPreview').src=avatarPreviewURL;$('avatarPreview').hidden=false;
 });
 $('changePhone').onclick=()=>{
- pendingPhone='';pendingPassword='';
+ pendingPhone='';pendingEmail='';pendingIdentifier='';pendingPassword='';
  $('signupPassword').value='';
  $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;$('smsCode').value='';
  setStatus('Enter your phone number and tap Next.');
 };
 $('smsForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
- const phone=$('phone').value.trim();
- if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error('Use your own mobile number with a country code, such as +972...');
  const signup=authMode==='signup';
- const username=signup?$('signupUsername').value.trim().toLowerCase():'';
- if(signup&&!/^[a-z0-9_.]{3,24}$/.test(username))throw Error('Username must contain 3–24 lowercase letters, numbers, _ or .');
- if(signup&&!pendingAvatar&&!$('useDefaultAvatar').checked)throw Error('Upload a photo or choose the default avatar.');
- const password=signup?$('signupPassword').value:'';
- if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
- if(!signup&&$('signinPassword').value){
-  const {error}=await client.auth.signInWithPassword({phone,password:$('signinPassword').value});
+ if(signup){
+  const phone=$('phone').value.trim();
+  const username=$('signupUsername').value.trim().toLowerCase();
+  const email=$('signupEmail').value.trim().toLowerCase();
+  const password=$('signupPassword').value;
+  if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error('Use a phone number with an international prefix, e.g. +972...');
+  if(!/^[a-z0-9_.]{3,24}$/.test(username))throw Error('Username must contain 3–24 lowercase letters, numbers, _ or .');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)throw Error('Enter a valid email address.');
+  if(!pendingAvatar&&!$('useDefaultAvatar').checked)throw Error('Upload a picture or select the default avatar.');
+  if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
+  const {error}=await client.auth.signInWithOtp({phone,options:{shouldCreateUser:true}});
   if(error)throw error;
-  $('signinPassword').value='';
-  pendingPhone='';pendingUsername='';pendingAvatar=null;
-  await drawSession();
-  setStatus('Signed in with your password.');
+  pendingPhone=phone;pendingEmail=email;pendingUsername=username;
+  pendingPassword=password;pendingMode='signup';pendingVerifyMode='sms';
+  $('phoneDestination').textContent=phone;
+  $('verifyTitle').textContent='Enter your SMS verification code';
+  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
+  setStatus('We sent an SMS code. After verification you will receive an email confirmation link.');
   return;
  }
- const {error}=await client.auth.signInWithOtp({phone,options:{shouldCreateUser:signup}});
- if(error)throw error;
- pendingPhone=phone;pendingPassword=password;pendingUsername=username;pendingMode=authMode;
- $('phoneDestination').textContent=phone;
- $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
- setStatus('SMS requested. Enter the code to continue.');
+ const identifier=$('signinIdentifier').value.trim();
+ const isPhone=/^\+[1-9]\d{7,14}$/.test(identifier);
+ const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+ if(!isPhone&&!isEmail)throw Error('Enter a registered email or phone number with country code.');
+ const password=$('signinPassword').value;
+ if(password){
+  const credentials=isPhone?{phone:identifier,password}:{email:identifier,password};
+  const {error}=await client.auth.signInWithPassword(credentials);
+  if(error)throw error;
+  $('signinPassword').value='';
+  pendingPhone='';pendingEmail='';pendingIdentifier='';pendingUsername='';pendingAvatar=null;
+  await drawSession();
+  setStatus('Signed in to your ItamarOS account.');
+  return;
+ }
+ if(isPhone){
+  const {error}=await client.auth.signInWithOtp({phone:identifier,options:{shouldCreateUser:false}});
+  if(error)throw error;
+  pendingPhone=identifier;pendingIdentifier=identifier;pendingMode='signin';pendingVerifyMode='sms';
+  $('phoneDestination').textContent=identifier;
+  $('verifyTitle').textContent='Enter your SMS verification code';
+  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
+  setStatus('SMS requested. Enter the code sent to your phone.');
+ }else{
+  const {error}=await client.auth.signInWithOtp({email:identifier,options:{
+   shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname
+  }});
+  if(error)throw error;
+  pendingIdentifier=identifier;pendingMode='signin';pendingVerifyMode='email';
+  $('phoneDestination').textContent=identifier;
+  $('verifyTitle').textContent='Email sign-in';
+  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
+  setStatus('Check your email for a sign-in link. If your provider sends a numeric OTP, enter it below.');
+ }
 }));
 async function applyPendingAvatar(){
  if(!pendingAvatar||!user)return;
@@ -280,18 +316,29 @@ async function applyPendingAvatar(){
 }
 $('smsVerifyForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
- if(!pendingPhone)throw Error('First request a code for your phone.');
+ if(!pendingIdentifier&&!pendingPhone)throw Error('Request a verification code first.');
  const code=$('smsCode').value.trim();
- if(!/^\d{4,8}$/.test(code))throw Error('Enter the SMS verification code.');
- const {data,error}=await client.auth.verifyOtp({phone:pendingPhone,token:code,type:'sms'});
+ if(!/^\d{4,8}$/.test(code))throw Error('Enter the verification code.');
+ const payload=pendingVerifyMode==='email'
+  ?{email:pendingIdentifier,token:code,type:'email'}
+  :{phone:pendingPhone,token:code,type:'sms'};
+ const {data,error}=await client.auth.verifyOtp(payload);
  if(error)throw error;
- if(!data?.session||!data.user?.phone_confirmed_at)throw Error('Phone verification not completed.');
+ if(!data?.session)throw Error('Verification was not completed.');
+ if(pendingVerifyMode==='sms'&&!data.user?.phone_confirmed_at)
+  throw Error('Phone verification was not completed.');
  user=data.user;
  const {data:existing,error:lookupError}=await client.from('itamar_profiles')
   .select('id').eq('id',user.id).maybeSingle();
  if(lookupError)throw lookupError;
  let newProfileCreated=false;
- if(!existing&&pendingMode==='signup'&&pendingUsername){
+ let confirmationSent=false;
+ if(!existing&&pendingMode==='signup'&&pendingUsername&&pendingEmail){
+  // Link the required email to the SAME phone-authenticated user; do NOT create an unrelated email account.
+  // Supabase sends a confirmation email. Confirmed email identity enables email login.
+  const {error:emailError}=await client.auth.updateUser({email:pendingEmail});
+  if(emailError)throw Error('Phone verified, but email registration could not finish: '+emailError.message);
+  confirmationSent=true;
   const {error:profileError}=await client.from('itamar_profiles').insert({
    id:user.id,username:pendingUsername,display_name:pendingUsername
   });
@@ -305,14 +352,16 @@ $('smsVerifyForm').addEventListener('submit',safe(async e=>{
    if(passwordError)message('Phone verified but optional password could not be saved: '+passwordError.message);
   }
  }
- pendingPassword='';$('signupPassword').value='';
- $('smsCode').value='';pendingPhone='';
+ pendingPassword='';pendingEmail='';$('signupPassword').value='';
+ $('smsCode').value='';pendingPhone='';pendingIdentifier='';
  $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;
  await drawSession();
  if(profileReady){
   if(newProfileCreated)await applyPendingAvatar();
   else pendingAvatar=null;
-  setStatus('Phone verified. Welcome to ItamarOS.');
+  setStatus(confirmationSent?
+   'Phone verified. Confirm the email link sent to your address to enable email sign-in. Your ItamarOS account uses one shared ID.':
+   'Welcome back to your ItamarOS account.');
  }else setStatus('Phone verified. Create your username in Profile to finish.');
 }));
 $('deviceSync').addEventListener('change',safe(async e=>{
