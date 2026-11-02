@@ -102,6 +102,25 @@ class AndroidConnectApi {
         request("/auth/v1/otp","POST",
             JSONObject().put("phone",phone).put("create_user",false),false)
     }
+    // Email/password accounts require email confirmation; phone and photo are optional.
+    suspend fun registerAccount(email:String,password:String,handle:String,phone:String){
+        require(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){"Enter a valid email"}
+        require(password.length>=8){"Password must have at least 8 characters"}
+        require(Regex("^[a-z0-9_.]{3,24}$").matches(handle)){"Username must have 3–24 valid characters"}
+        require(phone.isEmpty()||Regex("^\+[1-9][0-9]{7,14}$").matches(phone)){
+            "Optional phone must start with +country code"
+        }
+        val metadata=JSONObject().put("preferred_username",handle)
+        if(phone.isNotEmpty())metadata.put("unverified_contact_phone",phone)
+        request("/auth/v1/signup","POST",JSONObject()
+            .put("email",email).put("password",password)
+            .put("data",metadata),false)
+        // The user is not considered signed-in until their email has been confirmed.
+    }
+    suspend fun requestedUsername():String{
+        val result=JSONObject(request("/auth/v1/user","GET"))
+        return result.optJSONObject("user_metadata")?.optString("preferred_username").orEmpty()
+    }
     suspend fun approveDesktopPairing(request:String){
         require(Regex("[A-Za-z0-9_-]{24,40}").matches(request)){"Invalid QR request"}
         val jwt=token?:throw IllegalStateException("Sign in to Connect first")
@@ -441,6 +460,7 @@ fun AndroidConnectScreen(
     var signed by remember(api){mutableStateOf(api.token!=null)}
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
+    var registrationUsername by remember{mutableStateOf("")}
     var password by remember{mutableStateOf("")}
     var signInPhone by remember{mutableStateOf("")}
     var otpInput by remember{mutableStateOf("")}
@@ -637,50 +657,68 @@ fun AndroidConnectScreen(
     }
     if(!signed){
         Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
-        Text("Phone verification by SMS is required. A photo and password are optional.")
-        OutlinedTextField(signInPhone,{signInPhone=it},
-            label={Text("Phone (+country code)")},
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
-        TextButton(onClick={offerPhoneHint(forProfile=false,manual=true)}) {
-            Text("Use phone number suggested by my device")
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            Button(onClick={registration=false},enabled=registration){Text("Sign In")}
+            Button(onClick={registration=true},enabled=!registration){Text("Create account")}
         }
-        Button(onClick={chooseSignupAvatar.launch("image/*")}){
-            Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
+        Text(if(registration)
+            "Username, email and password are required. Phone and photo are optional. Check your email for the confirmation link."
+            else "Sign in with your ItamarOS email and password. QR approval is supported in Cloud Climb.")
+        if(registration){
+            OutlinedTextField(registrationUsername,
+                {registrationUsername=it.lowercase().trim().take(24)},
+                label={Text("Username *")},singleLine=true)
         }
-        OutlinedTextField(password,{password=it},label={Text("Password (optional, minimum 8 characters)")},visualTransformation=PasswordVisualTransformation())
-        Text("Your photo uploads only after verifying your phone and saving your profile.")
-        Button(onClick={perform{
-            api.requestSms(signInPhone.trim())
-            codeRequested=true
-        }},enabled=Regex("^\\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()) &&
-            (password.isEmpty()||password.length>=8)){
-            Text("Next — send SMS")
-        }
-        if(codeRequested){
-            OutlinedTextField(otpInput,{otpInput=it},label={Text("SMS verification code")})
+        OutlinedTextField(email,{email=it.trim().take(254)},
+            label={Text("Email *")},singleLine=true,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email))
+        OutlinedTextField(password,{password=it},
+            label={Text("Password * (at least 8 characters)")},
+            visualTransformation=PasswordVisualTransformation(),singleLine=true)
+        if(registration){
+            OutlinedTextField(signInPhone,{signInPhone=it.trim()},
+                label={Text("Phone (optional; unverified)")},singleLine=true,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
+            TextButton(onClick={offerPhoneHint(forProfile=false,manual=true)}) {
+                Text("Suggest my phone number (Android, with approval)")
+            }
+            Button(onClick={chooseSignupAvatar.launch("image/*")}){
+                Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
+            }
             Button(onClick={perform{
-                api.verifySms(signInPhone.trim(),otpInput.trim())
-                if(password.isNotEmpty()){
-                    api.setOptionalPassword(password)
-                    password=""
-                }
-                signed=true;otpInput="";codeRequested=false
+                api.registerAccount(email.trim(),password,
+                    registrationUsername.trim().lowercase(),signInPhone.trim())
+                password=""
+                registration=false
+                notice="Registration requested. Confirm your email, then sign in. No SMS needed."
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+                && password.length>=8 && Regex("^[a-z0-9_.]{3,24}$").matches(registrationUsername)
+                && (signInPhone.isBlank()||Regex("^\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()))){
+                Text("Create account — send verification email")
+            }
+        }else{
+            Button(onClick={perform{
+                api.login(email.trim(),password,register=false)
+                password=""
                 val p=api.profile()
                 handle=p?.optString("username").orEmpty()
+                if(p==null){handle=api.requestedUsername();tab="Profile"}
                 displayName=p?.optString("display_name").orEmpty()
+                signed=true
                 if(p!=null && authOnly)onAccountReady(p.optString("username"))
                 if(p!=null && pendingSignupAvatar!=null){
                     profileAvatar=api.uploadAvatar(ctx,pendingSignupAvatar!!)
                     api.profilePreferences(profileAvatar,true)
                     pendingSignupAvatar=null
                 }
-                if(syncOnThisDevice){rooms=api.rooms()}
-                if(p==null)tab="Profile"
-            }},enabled=otpInput.length>=4){Text("Verify and continue")}
-            TextButton(onClick={codeRequested=false;otpInput=""}){Text("Change number")}
+                if(syncOnThisDevice&&p!=null){rooms=api.rooms()}
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+                && password.isNotEmpty()){
+                Text("Sign in")
+            }
+            Text("Forgot your password? Use the password reset link on the ItamarOS website.")
         }
-        Text("Twilio Verify must be configured in Supabase Auth to deliver SMS codes. SMS charges apply.")
-        if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.error)
+        if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.primary)
         return
     }
 
