@@ -49,6 +49,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("com.google.zxing:core:3.5.4")
+    // User-selected SIM phone number suggestion; no READ_PHONE_STATE permission.
+    implementation("com.google.android.gms:play-services-auth:22.0.0")
     implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
     implementation("com.google.firebase:firebase-messaging")
     debugImplementation("androidx.compose.ui:ui-tooling")
