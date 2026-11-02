@@ -79,6 +79,29 @@ class AndroidConnectApi {
         token=r.optString("access_token").ifEmpty{throw IllegalStateException("Confirm your email, then sign in")}
         userID=r.optJSONObject("user")?.optString("id")
     }
+    // Manual Cloud Climb login uses the SAME Supabase user as ItamarOS.
+    suspend fun loginManually(identifier:String,password:String){
+        val clean=identifier.trim()
+        require(password.isNotBlank()){"Enter your password"}
+        val body=JSONObject().put("password",password)
+        when{
+            Regex("^\\+[1-9][0-9]{7,14}$").matches(clean)->body.put("phone",clean)
+            android.util.Patterns.EMAIL_ADDRESS.matcher(clean).matches()->body.put("email",clean)
+            else->throw IllegalArgumentException("Enter a valid registered email or international phone number")
+        }
+        val result=JSONObject(request("/auth/v1/token?grant_type=password","POST",body,false))
+        val session=result.optString("access_token")
+        val uid=result.optJSONObject("user")?.optString("id").orEmpty()
+        if(session.isBlank()||uid.isBlank())throw IllegalStateException("Invalid sign-in response")
+        token=session;userID=uid
+    }
+    suspend fun requestExistingSms(phone:String){
+        require(Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)){
+            "Enter the phone number registered with your ItamarOS account"
+        }
+        request("/auth/v1/otp","POST",
+            JSONObject().put("phone",phone).put("create_user",false),false)
+    }
     suspend fun approveDesktopPairing(request:String){
         require(Regex("[A-Za-z0-9_-]{24,40}").matches(request)){"Invalid QR request"}
         val jwt=token?:throw IllegalStateException("Sign in to Connect first")
