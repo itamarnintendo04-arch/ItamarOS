@@ -235,10 +235,26 @@ struct ItamarCloudProfileView: View {
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarPath: String?
     @State private var readReceipts = true
+    @State private var accountBadge:String? = nil
 
     var body: some View {
         Form {
             Section("Public profile") {
+                if let id=cloud.userID {
+                    Text("ItamarOS ID: "+id.uuidString.lowercased())
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                    Link(destination:URL(string:"https://itamaros-web-emulator.onrender.com/profile.html?id="+id.uuidString.lowercased())!){
+                        Label("My public profile and QR",systemImage:"qrcode")
+                    }
+                    if accountBadge=="green" {
+                        Label("ItamarOS Official",systemImage:"checkmark.seal.fill")
+                            .foregroundStyle(.green)
+                    }else if accountBadge=="blue" {
+                        Label("ItamarOS Verified",systemImage:"checkmark.seal.fill")
+                            .foregroundStyle(.blue)
+                    }
+                }
                 if let url = cloud.publicAvatarURL(avatarPath) {
                     AsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
@@ -347,6 +363,15 @@ struct ItamarCloudProfileView: View {
             readReceipts = cloud.profile?.read_receipts_enabled ?? true
         }
         .task {
+            if let id=cloud.userID {
+                let target=id.uuidString.lowercased()
+                if let data=try? await cloud.request("/rest/v1/itamar_profile_badges",
+                    query:[URLQueryItem(name:"select",value:"badge"),
+                           URLQueryItem(name:"user_id",value:"eq."+target)]),
+                   let rows=try? JSONSerialization.jsonObject(with:data) as? [[String:Any]] {
+                    accountBadge=rows.first?["badge"] as? String
+                }
+            }
             if required && username.isEmpty && cloud.isSignedIn {
                 if let suggested=try? await cloud.preferredSignupUsername() {
                     if username.isEmpty {username=suggested;name=suggested}
