@@ -74,8 +74,9 @@ private suspend fun pairingCall(path:String,body:JSONObject): Pair<Int,JSONObjec
         val connection=URL(BROKER+path).openConnection() as HttpURLConnection
         try {
             connection.requestMethod="POST"
-            connection.connectTimeout=10000
-            connection.readTimeout=10000
+            // Render can take time to start a sleeping free service.
+            connection.connectTimeout=30000
+            connection.readTimeout=30000
             connection.doOutput=true
             connection.setRequestProperty("Content-Type","application/json")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
@@ -147,7 +148,12 @@ private fun CloudClimbStandaloneHome(){
                     status="Could not open ItamarOS. Sign in with your email below, or install ItamarOS and retry."
                 }
             }
-        }catch(e:Exception){status=e.localizedMessage?:"QR unavailable";wantQR=false}
+        }catch(e:Exception){
+            status="Account linking unavailable. Use email/password below, or retry later. "+
+                (e.localizedMessage ?: "")
+            manualLogin=true
+            wantQR=false
+        }
         finally{connecting=false}
     }
     LaunchedEffect(requestId,claimSecret,wantQR) {
@@ -358,6 +364,20 @@ private fun CloudClimbStandaloneHome(){
                         Text("Use a QR code instead", color=Color.White.copy(alpha=0.9f))
                     }
                     if (wantQR) {
+                        if(useItamarOSApp && requestId.isNotBlank()){
+                            TextButton(onClick={
+                                val link=Uri.Builder().scheme("itamaros").authority("cloud-climb")
+                                    .appendQueryParameter("request",requestId).build()
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW,link)
+                                        .setPackage("org.itamaros.nativeapp"))
+                                } catch (_:Exception) {
+                                    requestId="";claimSecret="";qrUrl="";wantQR=false
+                                    manualLogin=true
+                                    status="Could not open ItamarOS. You can sign in with email."
+                                }
+                            }){Text("Open ItamarOS again",color=Color.White)}
+                        }
                         Text("Compare this code in ItamarOS: "+
                             requestId.take(6).uppercase(),
                             fontWeight=FontWeight.Bold,color=Color.White,

@@ -274,7 +274,7 @@ struct CloudClimbStandaloneHome:View {
     private func post(_ route:String,_ data:[String:Any]) async throws -> (Int,Data) {
         guard let url=URL(string:broker+route) else{throw URLError(.badURL)}
         var req=URLRequest(url:url)
-        req.httpMethod="POST";req.timeoutInterval=13
+        req.httpMethod="POST";req.timeoutInterval=35
         req.setValue("application/json",forHTTPHeaderField:"Content-Type")
         req.httpBody=try JSONSerialization.data(withJSONObject:data)
         let (body,response)=try await URLSession.shared.data(for:req)
@@ -310,7 +310,8 @@ struct CloudClimbStandaloneHome:View {
                 }
             }
         }catch {
-            info="Account linking unavailable: "+error.localizedDescription
+            showManualLogin=true
+            info="Account linking unavailable. Sign in with email/password below. "+error.localizedDescription
         }
     }
     @MainActor private func pollPair(_ entry:CloudClimbPairStart,run:UUID) async {
