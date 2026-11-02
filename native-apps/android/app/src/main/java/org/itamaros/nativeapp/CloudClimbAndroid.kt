@@ -699,7 +699,19 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             }},
             dismissButton={TextButton(onClick={characterOrbOpen=false}){Text("Close")}}
         )
-        Text("💬 Game Chat", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Text("💬 Game Chat — select a game", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Row(modifier=Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            for(index in 1..3) {
+                OutlinedButton(onClick={switchGame(index)},
+                    enabled=index!=saveSlot) {
+                    Text((if(index==saveSlot)"✓ " else "")+slotNames[index-1],
+                        color=Color.White,maxLines=1)
+                }
+            }
+        }
+        Text("Chat commands affect only the selected game's independent save.",
+            color=Color.White,style=MaterialTheme.typography.bodySmall)
         Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
             gameChat.forEach{line->
                 Text(line,color=Color.White,style=MaterialTheme.typography.bodySmall)
@@ -812,6 +824,10 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                         gameChatUndo=null;cancelMenu=false
                     }){Text("Undo Last Chat Change")}
                     TextButton(onClick={nightSky=false;cancelMenu=false}){Text("Reset Theme")}
+                    TextButton(onClick={equippedHero="starter";cancelMenu=false}){Text("Reset Hero")}
+                    TextButton(onClick={showControlHints=true;cancelMenu=false}){Text("Reset Tips")}
+                    TextButton(onClick={autoHideControls=true;cancelMenu=false}){Text("Reset Touch Controls")}
+                    TextButton(onClick={paused=false;cancelMenu=false}){Text("Resume Game")}
                     TextButton(onClick={cancelMenu=false}){Text("Keep Changes")}
                 }
             }
