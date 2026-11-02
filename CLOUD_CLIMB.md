@@ -9,6 +9,12 @@ Cloud Climb is an original platform-adventure prototype available inside ItamarO
 - Android uses a dedicated Cloud Climb vector launcher drawable rather than the ItamarOS app logo.
 - The standalone iOS build renders a 1024x1024 PNG app icon from the vector graphic before compiling; the IPA still requires valid signing.
 
+## Standalone welcome screen and font
+
+- Android and iPhone standalone apps present a Cloud Climb sky-and-cloud welcome screen with the title **Cloud Climb By ItamarOS** in the bundled **Fredoka** display font, a prominent **Sign in with ItamarOS** action, and a separate **Play Offline Demo** action.
+- The ItamarOS account link and QR alternative are unchanged and still require deliberate approval in the signed-in ItamarOS application. Offline demo progress is local and is not automatically merged into the online account.
+- Fredoka is bundled for offline use from the Google Fonts project under the SIL Open Font License; see [the font license](assets/fonts/Fredoka-OFL.txt).
+
 ## Playable characters and original graphics
 
 - The English-only character wardrobe now supports **23 original characters**: free Cloud Scout, 12 regular characters in Character Orb for 500 earned game coins each, and 10 mystery characters earned by collecting the five blue-door cubes in each world.
