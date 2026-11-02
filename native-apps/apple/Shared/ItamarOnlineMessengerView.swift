@@ -8,6 +8,12 @@ import UniformTypeIdentifiers
 // The connected mode is enabled only after the project owner configures a
 // Supabase URL + public publishable key and applies the RLS SQL migration.
 // It is separate from the existing offline message drafts.
+private struct ItamarOfficialNotice: Identifiable {
+    let id:String
+    let body:String
+    let createdAt:String
+}
+
 struct ItamarOnlineMessengerView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @State private var selected = 0
@@ -15,7 +21,28 @@ struct ItamarOnlineMessengerView: View {
     @State private var showNew = false
     @State private var showChannels = false
     @State private var pollTask: Task<Void, Never>?
+    @State private var officialNotices:[ItamarOfficialNotice]=[]
     @State private var error = ""
+
+    @MainActor private func loadOfficialNotices() async {
+        guard let uid=cloud.userID,cloud.deviceSyncEnabled else {
+            officialNotices=[];return
+        }
+        do {
+            let raw=try await cloud.request("/rest/v1/itamar_admin_notices",
+                query:[URLQueryItem(name:"select",value:"id,body,created_at"),
+                       URLQueryItem(name:"recipient_id",value:"eq."+uid.uuidString.lowercased()),
+                       URLQueryItem(name:"order",value:"created_at.desc"),
+                       URLQueryItem(name:"limit",value:"40")])
+            if let messages=try JSONSerialization.jsonObject(with:raw) as? [[String:Any]] {
+                officialNotices=messages.compactMap{row in
+                    guard let id=row["id"] as? String,
+                          let body=row["body"] as? String else{return nil}
+                    return ItamarOfficialNotice(id:id,body:body,createdAt:row["created_at"] as? String ?? "")
+                }
+            }
+        }catch{ /* Existing chat view remains available if the official inbox is offline. */ }
+    }
 
     var body: some View {
         NavigationStack {
@@ -44,7 +71,19 @@ struct ItamarOnlineMessengerView: View {
                         }
                         List {
                             if selected == 2 {
-                                if cloud.updates.isEmpty {
+                                if !officialNotices.isEmpty {
+                                    Section("Official ItamarOS messages") {
+                                        ForEach(officialNotices){notice in
+                                            VStack(alignment:.leading,spacing:4) {
+                                                Label("Official message",systemImage:"checkmark.seal.fill")
+                                                    .font(.headline).foregroundStyle(.green)
+                                                Text(notice.body)
+                                                Text(notice.createdAt).font(.caption).foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                                if cloud.updates.isEmpty && officialNotices.isEmpty {
                                     ContentUnavailableView("No new activity", systemImage: "bell.slash",
                                         description: Text("New posts and messages from unmuted rooms appear here while connected."))
                                 }
@@ -92,7 +131,7 @@ struct ItamarOnlineMessengerView: View {
                             }
                         }
                         .refreshable {
-                            do { try await cloud.reload() } catch { self.error = error.localizedDescription }
+                            do { try await cloud.reload();await loadOfficialNotices() } catch { self.error = error.localizedDescription }
                         }
                     }
                     .toolbar {
@@ -136,7 +175,7 @@ struct ItamarOnlineMessengerView: View {
             pollTask = Task {
                 while !Task.isCancelled {
                     if cloud.isSignedIn {
-                        do { try await cloud.reload() }
+                        do { try await cloud.reload();await loadOfficialNotices() }
                         catch { self.error = error.localizedDescription }
                     }
                     try? await Task.sleep(for: .seconds(15))
@@ -149,90 +188,87 @@ struct ItamarOnlineMessengerView: View {
 
 struct ItamarCloudLoginView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
-    @State private var phone = ""
-    @State private var smsCode = ""
-    @State private var optionalPassword = ""
-    @State private var optionalPhoto: PhotosPickerItem?
-    @State private var smsRequested = false
+    @State private var registering = false
+    @State private var email = ""
+    @State private var username = ""
+    @State private var password = ""
+    @State private var optionalPhone = ""
     @State private var processing = false
     @State private var error = ""
 
     var body: some View {
         Form {
-            Section("Get started with your phone") {
-                Text("A verified phone number is required. Profile photo and password are optional.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                TextField("Phone, e.g. +972501234567", text: $phone)
-                    .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
-                Text("Choose a phone number suggested by iOS, if available, or enter your own number.")
-                    .font(.caption).foregroundStyle(.secondary)
-                PhotosPicker(selection: $optionalPhoto, matching: .images) {
-                    Label("Profile photo (optional)", systemImage: "camera")
+            Section("ItamarOS account") {
+                Picker("Account mode",selection:$registering) {
+                    Text("Sign in").tag(false)
+                    Text("Create account").tag(true)
                 }
-                .onChange(of: optionalPhoto) { _, item in
-                    Task {
-                        do {
-                            guard let data = try await item?.loadTransferable(type: Data.self),
-                                  let picture = UIImage(data: data),
-                                  let jpeg = picture.jpegData(compressionQuality: 0.65),
-                                  jpeg.count <= 3 * 1024 * 1024 else {
-                                error = "Choose an image under 3 MB."
-                                return
-                            }
-                            cloud.pendingSignupAvatarJPEG = jpeg
-                            error = ""
-                        } catch { self.error = error.localizedDescription }
-                    }
+                .pickerStyle(.segmented)
+                if registering {
+                    TextField("Username *",text:$username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Text("Your username must have 3–24 lowercase letters, digits, _ or .")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                SecureField("Password (optional, minimum 8 characters)", text: $optionalPassword)
-                    .textContentType(.newPassword)
-                Text("The photo uploads only after verifying your phone and saving your profile.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button(processing ? "Requesting…" : "Next — send SMS") {
+                TextField("Email *",text:$email)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Password * (8+ characters)",text:$password)
+                    .textContentType(registering ? .newPassword : .password)
+                if registering {
+                    TextField("Phone number (optional)",text:$optionalPhone)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                    Text("A phone suggestion may appear from iOS, but this app cannot read your SIM number automatically. An optional number remains unverified.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Profile picture is optional. Upload it from Profile after confirming your email.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Button(processing ? "Working…" : (registering ?
+                       "Create account — send confirmation email" : "Sign in")) {
                     processing = true
                     Task {
                         do {
-                            try await cloud.requestSMS(phone: phone)
-                            smsRequested = true
-                            error = ""
-                        } catch { self.error = error.localizedDescription }
-                        processing = false
+                            if registering {
+                                try await cloud.registerEmailAccount(
+                                    email:email,password:password,
+                                    username:username,optionalPhone:optionalPhone)
+                                password=""
+                            } else {
+                                try await cloud.signIn(email:email,password:password)
+                                password=""
+                            }
+                            error=""
+                        } catch { self.error=error.localizedDescription }
+                        processing=false
                     }
                 }
-                .disabled(processing || !phone.hasPrefix("+") ||
-                    (!optionalPassword.isEmpty && optionalPassword.count < 8))
-            }
-            if smsRequested {
-                Section("Verify your phone") {
-                    Text("Enter the SMS code. Never share your verification code.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                    TextField("SMS code", text: $smsCode)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                    Button(processing ? "Verifying…" : "Verify and continue") {
-                        processing = true
+                .disabled(processing || !email.contains("@") ||
+                          password.count<8 || (registering &&
+                          username.trimmingCharacters(in:.whitespacesAndNewlines).count<3))
+                if !registering {
+                    Button("Forgot password? Send email reset link") {
+                        processing=true
                         Task {
-                            do {
-                                try await cloud.verifySMS(phone: phone, code: smsCode)
-                                if !optionalPassword.isEmpty {
-                                    try await cloud.setOptionalPassword(optionalPassword)
-                                    optionalPassword = ""
-                                }
-                                smsCode = ""
-                                error = ""
-                            } catch { self.error = error.localizedDescription }
-                            processing = false
+                            do {try await cloud.sendPasswordResetEmail(email:email);error=""}
+                            catch {self.error=error.localizedDescription}
+                            processing=false
                         }
                     }
-                    .disabled(processing || smsCode.count < 4)
-                    Button("Change phone number") { smsRequested = false; smsCode = "" }
+                    .disabled(processing || !email.contains("@"))
+                    Link("Recover with a previously verified phone (SMS)",
+                         destination:URL(string:"https://itamaros-web-emulator.onrender.com/connect.html")!)
+                    Text("Phone recovery is possible only after verifying ownership of the number. SMS delivery must be enabled.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
             Section {
-                if !error.isEmpty { Text(error).foregroundStyle(.red).font(.caption) }
-                if !cloud.status.isEmpty { Text(cloud.status).font(.caption) }
-                Text("Twilio Verify must be configured through Supabase Auth for SMS delivery. Charges may apply.")
+                if !error.isEmpty {Text(error).foregroundStyle(.red).font(.caption)}
+                if !cloud.status.isEmpty {Text(cloud.status).font(.caption)}
+                Text("No SMS is needed. Check your email for confirmation before signing in. Cloud Climb also supports QR approval using your already-signed-in ItamarOS app.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }
@@ -253,10 +289,32 @@ struct ItamarCloudProfileView: View {
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarPath: String?
     @State private var readReceipts = true
+    @State private var accountBadge:String? = nil
+    @State private var privateAccountEmail=""
+    @State private var currentPassword=""
+    @State private var replacementPassword=""
+    @State private var confirmReplacement=""
+    @State private var changingPassword=false
+    @State private var passwordStatus=""
 
     var body: some View {
         Form {
             Section("Public profile") {
+                if let id=cloud.userID {
+                    Text("ItamarOS ID: "+id.uuidString.lowercased())
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                    Link(destination:URL(string:"https://itamaros-web-emulator.onrender.com/profile.html?id="+id.uuidString.lowercased())!){
+                        Label("My public profile and QR",systemImage:"qrcode")
+                    }
+                    if accountBadge=="green" {
+                        Label("ItamarOS Official",systemImage:"checkmark.seal.fill")
+                            .foregroundStyle(.green)
+                    }else if accountBadge=="blue" {
+                        Label("ItamarOS Verified",systemImage:"checkmark.seal.fill")
+                            .foregroundStyle(.blue)
+                    }
+                }
                 if let url = cloud.publicAvatarURL(avatarPath) {
                     AsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
@@ -298,6 +356,37 @@ struct ItamarCloudProfileView: View {
                 if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
             }
             if !required {
+                Section("Private account and security") {
+                    LabeledContent("Email",value:privateAccountEmail.isEmpty ? "Loading…" : privateAccountEmail)
+                    LabeledContent("Password",value:"••••••••")
+                    Text("Your actual password cannot be displayed. Enter the current password to verify your identity and choose a new one.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    SecureField("Current password",text:$currentPassword)
+                        .textContentType(.password)
+                    SecureField("New password (8+ characters)",text:$replacementPassword)
+                        .textContentType(.newPassword)
+                    SecureField("Confirm new password",text:$confirmReplacement)
+                        .textContentType(.newPassword)
+                    Button(changingPassword ? "Verifying…" : "Verify identity and change password") {
+                        changingPassword=true
+                        Task {
+                            do {
+                                guard replacementPassword==confirmReplacement else {
+                                    throw ItamarCloudError.badResponse("New passwords do not match.")
+                                }
+                                try await cloud.changePasswordAfterVerification(
+                                    current:currentPassword,replacement:replacementPassword)
+                                currentPassword="";replacementPassword="";confirmReplacement=""
+                                passwordStatus="Password updated successfully."
+                            } catch {passwordStatus=error.localizedDescription}
+                            changingPassword=false
+                        }
+                    }.disabled(changingPassword || currentPassword.isEmpty ||
+                               replacementPassword.count<8 || confirmReplacement.isEmpty)
+                    if !passwordStatus.isEmpty {Text(passwordStatus).font(.caption)}
+                    Text("If you forgot your password, use the email reset link or your previously verified recovery phone.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Section("Chats and notifications") {
                     Toggle("Send and receive read receipts",isOn:$readReceipts)
                         .onChange(of:readReceipts) { _,enabled in
@@ -363,6 +452,25 @@ struct ItamarCloudProfileView: View {
             about = cloud.profile?.about ?? ""
             avatarPath = cloud.profile?.avatar_path
             readReceipts = cloud.profile?.read_receipts_enabled ?? true
+        }
+        .task {
+            if cloud.isSignedIn {
+                privateAccountEmail=(try? await cloud.privateAccountEmail()) ?? ""
+            }
+            if let id=cloud.userID {
+                let target=id.uuidString.lowercased()
+                if let data=try? await cloud.request("/rest/v1/itamar_profile_badges",
+                    query:[URLQueryItem(name:"select",value:"badge"),
+                           URLQueryItem(name:"user_id",value:"eq."+target)]),
+                   let rows=try? JSONSerialization.jsonObject(with:data) as? [[String:Any]] {
+                    accountBadge=rows.first?["badge"] as? String
+                }
+            }
+            if required && username.isEmpty && cloud.isSignedIn {
+                if let suggested=try? await cloud.preferredSignupUsername() {
+                    if username.isEmpty {username=suggested;name=suggested}
+                }
+            }
         }
         .sheet(isPresented: $showFamily) {
             NavigationStack { ItamarCloudParentInviteView() }

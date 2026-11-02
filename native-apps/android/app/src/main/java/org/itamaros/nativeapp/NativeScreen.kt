@@ -8,11 +8,22 @@ import android.widget.VideoView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +67,9 @@ fun NativeAppScreen(
     updateStatus: String,
     updateDownloadAvailable: Boolean,
     onDownloadUpdate: () -> Unit,
+    downloadState: ItamarApkUpdate.Snapshot,
+    onInstallDownloadedUpdate: () -> Unit,
+    onSetAutoDownloadUpdates: (Boolean) -> Unit,
     bestScore: Int,
     selectedMedia: Uri?,
     selectedApkName: String?,
@@ -79,11 +93,14 @@ fun NativeAppScreen(
     var accountUsername by remember { mutableStateOf<String?>(null) }
     if(accountUsername==null) {
         Column(
-            modifier=Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+            modifier=Modifier.fillMaxSize().background(Brush.verticalGradient(
+                listOf(ItamarColors.midnight,ItamarColors.navy,ItamarColors.midnight)))
+                .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement=Arrangement.spacedBy(12.dp)
         ){
+            ItamarHeroCard(isTv,device)
             Text("Welcome to ItamarOS",style=MaterialTheme.typography.headlineMedium)
-            Text("Sign in and create a unique username before using the app.")
+            Text("Your account keeps your apps and games connected across devices.")
             AndroidConnectScreen(
                 api=accountApi,authOnly=true,
                 cloudClimbRequest=cloudClimbRequest,
@@ -98,16 +115,51 @@ fun NativeAppScreen(
     }
     val tabs = if (isTv) listOf("Home", "Store", "Streaming", "Settings")
         else listOf("Home", "Connect", "Games", "Player", "Apps", "Settings")
-    Scaffold { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Bottom tab bar on phones/tablets; top D-pad controls remain on TV.
+    Scaffold(bottomBar = {
+        if (!isTv) {
+            NavigationBar(containerColor=ItamarColors.midnight,tonalElevation = 3.dp) {
                 tabs.forEach { tab ->
-                    FilledTonalButton(onClick = { current = tab }, modifier = Modifier.weight(1f)) {
-                        Text(AndroidLanguage.tab(tab), maxLines = 1)
+                    val symbol = when(tab) {
+                        "Connect" -> Icons.Filled.Chat
+                        "Games" -> Icons.Filled.SportsEsports
+                        "Player" -> Icons.Filled.PlayCircle
+                        "Apps" -> Icons.Filled.Apps
+                        "Settings" -> Icons.Filled.Settings
+                        else -> Icons.Filled.Home
                     }
+                    NavigationBarItem(
+                        selected = current == tab,
+                        onClick = { current = tab },
+                        icon = { ItamarAppTabIcon(tab,current==tab) },
+                        label = { Text(AndroidLanguage.tab(tab), fontSize = 10.sp,
+                            maxLines = 1, softWrap = false) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor=ItamarColors.cyan,
+                            selectedTextColor=ItamarColors.cyan,
+                            unselectedTextColor=ItamarColors.muted,
+                            indicatorColor=ItamarColors.navy),
+                        alwaysShowLabel = true
+                    )
                 }
             }
-            HorizontalDivider()
+        }
+    }) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)
+            .background(Brush.verticalGradient(listOf(
+                ItamarColors.midnight, ItamarColors.navy,ItamarColors.midnight)))) {
+            if (isTv) {
+                Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tabs.forEach { tab ->
+                        FilledTonalButton(onClick = { current = tab },
+                            modifier = Modifier.weight(1f)) {
+                            Text(AndroidLanguage.tab(tab), maxLines = 1)
+                        }
+                    }
+                }
+                HorizontalDivider()
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(22.dp),
@@ -115,20 +167,15 @@ fun NativeAppScreen(
             ) {
                 when (current) {
                     "Home" -> item {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()) {
-                            Icon(
-                                painter = painterResource(R.drawable.itamaros_logo),
-                                contentDescription = "ItamarOS logo",
-                                modifier = Modifier.size(126.dp)
-                            )
-                            Text("ItamarOS 1.7", style = MaterialTheme.typography.headlineLarge)
-                            Text("Native Android application • Not a WebView", color = MaterialTheme.colorScheme.secondary)
-                            Text("Device: $device", modifier = Modifier.padding(top = 14.dp))
-                            Text(if (isTv) "Android TV / Google TV" else "Android phone or tablet")
-                            Text("This application does not replace Android or a TV operating system.",
-                                modifier = Modifier.padding(top = 20.dp))
-                            Text("Privacy: no GPS permission; local game score remains on this device.")
+                        Column(modifier=Modifier.fillMaxWidth(),
+                            verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                            ItamarHeroCard(isTv,device)
+                            Text("Version 1.7 · Native Android",color=ItamarColors.muted,
+                                style=MaterialTheme.typography.titleSmall)
+                            Text("Connect with friends, play native games and enjoy your media.",
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("This app does not replace Android. Your local game score stays on this device.",
+                                color=ItamarColors.muted,style=MaterialTheme.typography.bodySmall)
                         }
                     }
                     "Connect" -> if (!isTv) item {
@@ -181,8 +228,9 @@ fun NativeAppScreen(
                             AndroidLanguageSettings()
                         }
                         NativeSettings(isTv, device, status, updateStatus, updateDownloadAvailable,
-                            onCheckUpdates, onDownloadUpdate, onChooseUSB, onExport, onStorageSettings,
-                            onEnableUpdateAlerts, onSetAutoUpdateChecks)
+                            downloadState, onCheckUpdates, onDownloadUpdate,
+                            onInstallDownloadedUpdate, onChooseUSB, onExport, onStorageSettings,
+                            onEnableUpdateAlerts, onSetAutoUpdateChecks, onSetAutoDownloadUpdates)
                     }
                 }
             }
@@ -247,38 +295,94 @@ private fun NativeSettings(
     status: String,
     updates: String,
     updateDownloadAvailable: Boolean,
+    downloadState: ItamarApkUpdate.Snapshot,
     check: () -> Unit,
     downloadUpdate: () -> Unit,
+    installUpdate: () -> Unit,
     chooseUSB: () -> Unit,
     export: () -> Unit,
     storageSettings: () -> Unit,
     enableUpdateAlerts: () -> Unit,
-    setAutoUpdateChecks: (Boolean) -> Unit
+    setAutoUpdateChecks: (Boolean) -> Unit,
+    setAutoDownloadUpdates: (Boolean) -> Unit
 ) {
     val context=LocalContext.current
     val prefs=remember { context.getSharedPreferences("itamaros_native",Context.MODE_PRIVATE) }
     var autoChecking by remember { mutableStateOf(prefs.getBoolean("autoUpdateChecks",true)) }
+    var autoDownload by remember { mutableStateOf(prefs.getBoolean("autoDownloadUpdates",false)) }
     var largeText by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium)
         Text("System & device", fontWeight = FontWeight.Bold)
         Text("Manufacturer and model: $device")
         Text("Android version: ${Build.VERSION.RELEASE}")
-        Text("Release information: $updates")
-        Row(verticalAlignment=Alignment.CenterVertically) {
-            Text("Automatic app update checks (Android chooses schedule)",modifier=Modifier.weight(1f))
-            Switch(checked=autoChecking,onCheckedChange={
-                autoChecking=it
-                setAutoUpdateChecks(it)
-            })
-        }
-        Button(onClick=enableUpdateAlerts) { Text("Enable update notifications") }
-        Text("Android checks roughly every 6 hours when conditions allow. Battery restrictions can delay checks. Notifications require your permission. This app never installs updates automatically.",
-            style=MaterialTheme.typography.bodySmall)
-        Button(onClick = check) { Text("Check for app updates") }
-        if (updateDownloadAvailable) {
-            Button(onClick = downloadUpdate) { Text("Download published APK update") }
-            Text("Install only through Android approval. Existing installation may require an identical signing certificate.")
+        Card(shape=RoundedCornerShape(22.dp),
+            colors=CardDefaults.cardColors(containerColor=ItamarColors.panel)) {
+            Column(modifier=Modifier.padding(17.dp),
+                verticalArrangement=Arrangement.spacedBy(13.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    ItamarAppTabIcon("Settings",true)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("Software Update",style=MaterialTheme.typography.titleLarge,
+                            fontWeight=FontWeight.Bold)
+                        Text("Automatic checks · Verified APKs · You approve installation",
+                            style=MaterialTheme.typography.labelSmall,color=ItamarColors.muted)
+                    }
+                }
+                Text(updates,color=ItamarColors.muted)
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Check for updates automatically",
+                        modifier=Modifier.weight(1f))
+                    Switch(checked=autoChecking,onCheckedChange={
+                        autoChecking=it
+                        if(!it) {
+                            autoDownload=false
+                            setAutoDownloadUpdates(false)
+                        }
+                        setAutoUpdateChecks(it)
+                    })
+                }
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Column(modifier=Modifier.weight(1f)) {
+                        Text("Automatically download on Wi-Fi")
+                        Text("Off by default · only verified published releases",
+                            style=MaterialTheme.typography.bodySmall,color=ItamarColors.muted)
+                    }
+                    Switch(checked=autoDownload,onCheckedChange={
+                        autoDownload=it
+                        if(it) {
+                            autoChecking=true
+                            setAutoUpdateChecks(true)
+                        }
+                        setAutoDownloadUpdates(it)
+                    })
+                }
+                Button(onClick=enableUpdateAlerts) {
+                    Text("Enable update notifications")
+                }
+                OutlinedButton(onClick=check) { Text("Check now") }
+                if(updateDownloadAvailable &&
+                    downloadState.phase !in listOf("ready","downloading","pending","paused")) {
+                    Button(onClick=downloadUpdate) { Text("Download verified APK") }
+                }
+                if(downloadState.phase in listOf("downloading","pending","paused")) {
+                    LinearProgressIndicator(progress={downloadState.percent/100f},
+                        modifier=Modifier.fillMaxWidth())
+                }
+                if(downloadState.phase!="none")
+                    Text(downloadState.message,style=MaterialTheme.typography.bodySmall,
+                        color=ItamarColors.cyan)
+                if(downloadState.ready) {
+                    Button(onClick=installUpdate,modifier=Modifier.fillMaxWidth()) {
+                        Text("Install update · Android approval")
+                    }
+                } else if(downloadState.phase=="failed" && updateDownloadAvailable) {
+                    OutlinedButton(onClick=downloadUpdate) { Text("Retry download") }
+                }
+                Text("Installation is not silent. Android may require permission to install updates and may reject APKs signed with a different certificate. Background checks are best effort.",
+                    style=MaterialTheme.typography.bodySmall,color=ItamarColors.muted)
+            }
         }
         HorizontalDivider()
         Text("Accessibility", fontWeight = FontWeight.Bold)

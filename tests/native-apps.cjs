@@ -24,6 +24,17 @@ for(const component of platformManifest.components) {
 }
 
 const appleRoot='native-apps/apple';
+const appleIconsScript=read(appleRoot+'/prepare-app-icons.sh');
+const appleCI=read('.github/workflows/native-apple.yml');
+const standaloneCloudCI=read('.github/workflows/cloud-climb-ios.yml');
+assert.match(appleIconsScript,/rsvg-convert --format=png --width=1024 --height=1024/,
+ 'Cloud Climb must have a real 1024x1024 AppIcon PNG');
+assert.match(appleCI,/Generate and validate both iPhone AppIcons/,
+ 'Apple CI must generate the second icon before compiling its IPA');
+assert.match(standaloneCloudCI,/prepare-app-icons.sh/,
+ 'Cloud Climb standalone IPA pipeline must include the generated icon');
+assert.match(appleCI,/CloudClimbAppIcon/,
+ 'Apple CI must verify the compiled Cloud Climb AppIcon name');
 const androidRoot='native-apps/android';
 const project=read(appleRoot+'/project.yml');
 for(const name of ['ItamarOSiOS','ItamarOStvOS','ItamarOSmacOS','ItamarOSvisionOS','ItamarOSwatchOS']) {
@@ -114,6 +125,56 @@ assert.match(androidMedia,/MediaPlayer/,'Android preview must support audio');
 assert.match(androidManifest,/android\.permission\.REQUEST_INSTALL_PACKAGES/,'APK installer declares the Android install-request permission');
 const androidActivity=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/MainActivity.kt');
 const androidScreen=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/NativeScreen.kt');
+const climbStagesAndroid=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/CloudClimbStageExtras.kt');
+const climbGameAndroid=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/CloudClimbAndroid.kt');
+const standaloneAndroid=read(androidRoot+'/cloudclimb/src/main/AndroidManifest.xml');
+const climbSwift=read(appleRoot+'/Shared/CloudClimbStageExtras.swift');
+const climbOrientationSwift=read(appleRoot+'/Shared/CloudClimbLandscape.swift');
+const climbStandaloneSwift=read(appleRoot+'/CloudClimb/CloudClimbStandaloneApp.swift');
+const climbMultiplayerSwift=read(appleRoot+'/Shared/ItamarPartyGamesView.swift');
+assert.match(climbGameAndroid,/CloudClimbLandscape\(\)/,'Android Cloud Climb uses landscape orientation');
+assert.match(climbGameAndroid,/aspectRatio\(16f \/ 9f\)/,'Android stage view is 16:9');
+assert.match(climbStagesAndroid,/fun danger\(/,'Android stage has patrol enemies');
+assert.match(climbStagesAndroid,/fun spring\(/,'Android stage has spring pads');
+assert.match(climbStagesAndroid,/CHECKPOINT_INDEX/,'Android stage has checkpoint');
+assert.match(standaloneAndroid,/configChanges="orientation\|screenSize\|keyboardHidden"/,
+ 'Android standalone retains gameplay when device rotates');
+assert.match(climbMultiplayerSwift,/aspectRatio\(16.0\/9.0/,'Online iPhone stage is landscape');
+assert.match(climbStandaloneSwift,/aspectRatio\(16\/9/,'Offline iPhone stage is landscape');
+assert.match(climbStagesAndroid,/does not grant coins|Does not grant coins/i,
+ 'Stage gimmicks do not create cloud coins');
+assert.match(climbSwift,/static func isDanger/,'iPhone has enemy collisions');
+assert.match(climbSwift,/static func isSpring/,'iPhone has spring pads');
+assert.match(climbOrientationSwift,/requestGeometryUpdate/,'iPhone requests landscape scene');
+assert.match(read(appleRoot+'/project.yml'),/UIInterfaceOrientationLandscapeRight/,
+ 'iOS bundle permits landscape');
+const autoUpdate=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/ItamarApkUpdate.kt');
+const updateWorker=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/ItamarUpdateWorker.kt');
+const androidMain=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/MainActivity.kt');
+const theme=read(androidRoot+'/app/src/main/java/org/itamaros/nativeapp/ItamarVisualTheme.kt');
+assert.match(androidScreen,/NavigationBarItem\(/,'Android uses labeled bottom navigation');
+assert.match(androidScreen,/ItamarAppTabIcon\(tab,current==tab\)/,'Every Android tab needs a distinct branded icon');
+assert.match(androidScreen,/Automatically download on Wi-Fi/,'Expose opt-in auto-download toggle');
+assert.match(androidScreen,/Install update · Android approval/,'Install must be explicit');
+assert.match(theme,/ItamarVisualTheme/,'Native theme shared by Android app');
+assert.match(theme,/ItamarHeroCard/,'Branded hero in the app');
+assert.match(updateWorker,/autoDownloadUpdates/,'Periodic checks respect auto-download opt in');
+assert.match(autoUpdate,/setAllowedOverMetered\(!automatic\)/,'Background updates are Wi-Fi/unmetered only');
+assert.match(autoUpdate,/MessageDigest.getInstance\("SHA-256"\)/,'Verify APK content before approval');
+assert.match(autoUpdate,/releaseStatus"\) != "published-verified"/,'Only verified published releases qualify');
+assert.match(autoUpdate,/DownloadManager\.Request/,'Android system DownloadManager performs transfers');
+assert.doesNotMatch(autoUpdate,/USER_ACTION_NOT_REQUIRED|INSTALL_PACKAGES|pm install/,'No silent or privileged installer');
+assert.match(androidMain,/ItamarApkUpdate\.openInstaller/,'Installer only opens by explicit action');
+
+assert.match(androidScreen,/NavigationBarItem\(/,'Android phone must have a bottom navigation bar with icons and labels');
+assert.match(androidScreen,/alwaysShowLabel = true/,'Tab labels remain visible in Android');
+assert.match(androidScreen,/if \(!isTv\)/,'Android TV should retain D-pad-friendly top navigation');
+const climbAndroid=read(androidRoot+'/cloudclimb/src/main/java/org/itamaros/nativeapp/CloudClimbStandaloneActivity.kt');
+assert.match(climbAndroid,/manualLogin=true/,'Cloud Climb Android should fall back to manual login');
+assert.match(climbAndroid,/Open ItamarOS again/,'Cloud Climb Android should allow retrying the app handoff');
+const climbApple=read(appleRoot+'/CloudClimb/CloudClimbStandaloneApp.swift');
+assert.match(climbApple,/Open ItamarOS again/,'Cloud Climb iOS should allow app handoff retry');
+assert.match(read(appleRoot+'/Shared/ItamarDesktopPairApprovalView.swift'),/ItamarCloudLoginView\(\)/,'iOS handoff should show a login form when account is signed out');
 assert.ok(androidActivity.includes('ActivityResultContracts.OpenDocumentTree'),'External storage chooser should use SAF');
 assert.ok(androidActivity.includes('DocumentsContract.createDocument'),'External backup requires explicit folder grant');
 assert.ok(androidActivity.includes('Settings.ACTION_APPLICATION_DETAILS_SETTINGS'),'App movement settings controlled by Android');

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
@@ -67,8 +68,12 @@ class AndroidConnectApi {
             val text=(if(success)conn.inputStream else conn.errorStream)
                 ?.bufferedReader()?.use{it.readText()}.orEmpty()
             if(!success){
-                val reason=runCatching{JSONObject(text).optString("message")}.getOrNull().orEmpty()
-                throw IllegalStateException(if(reason.isNotEmpty())reason else "HTTP "+conn.responseCode)
+                val detail=runCatching { JSONObject(text) }.getOrNull()
+                val reason=listOf("msg","error_description","message","error")
+                    .firstNotNullOfOrNull { name ->
+                        detail?.optString(name)?.takeIf { it.isNotBlank() }
+                    }.orEmpty()
+                throw IllegalStateException(reason.ifEmpty { "Request failed (HTTP "+conn.responseCode+")" })
             }
             text
         }finally{conn.disconnect()}
@@ -78,6 +83,70 @@ class AndroidConnectApi {
         val r=JSONObject(request(path,"POST",JSONObject().put("email",email).put("password",password),false))
         token=r.optString("access_token").ifEmpty{throw IllegalStateException("Confirm your email, then sign in")}
         userID=r.optJSONObject("user")?.optString("id")
+    }
+    // Manual Cloud Climb login uses the SAME Supabase user as ItamarOS.
+    suspend fun loginManually(identifier:String,password:String){
+        val clean=identifier.trim()
+        require(password.isNotBlank()){"Enter your password"}
+        val body=JSONObject().put("password",password)
+        when{
+            Regex("^\\+[1-9][0-9]{7,14}$").matches(clean)->body.put("phone",clean)
+            android.util.Patterns.EMAIL_ADDRESS.matcher(clean).matches()->body.put("email",clean)
+            else->throw IllegalArgumentException("Enter a valid registered email or international phone number")
+        }
+        val result=JSONObject(request("/auth/v1/token?grant_type=password","POST",body,false))
+        val session=result.optString("access_token")
+        val uid=result.optJSONObject("user")?.optString("id").orEmpty()
+        if(session.isBlank()||uid.isBlank())throw IllegalStateException("Invalid sign-in response")
+        token=session;userID=uid
+    }
+    suspend fun requestExistingSms(phone:String){
+        require(Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)){
+            "Enter the phone number registered with your ItamarOS account"
+        }
+        request("/auth/v1/otp","POST",
+            JSONObject().put("phone",phone).put("create_user",false),false)
+    }
+    // Email/password accounts require email confirmation; phone and photo are optional.
+    suspend fun registerAccount(email:String,password:String,handle:String,phone:String){
+        require(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){"Enter a valid email"}
+        require(password.length>=8){"Password must have at least 8 characters"}
+        require(Regex("^[a-z0-9_.]{3,24}$").matches(handle)){"Username must have 3–24 valid characters"}
+        require(phone.isEmpty()||Regex("^\\+[1-9][0-9]{7,14}$").matches(phone)){
+            "Optional phone must start with +country code"
+        }
+        val metadata=JSONObject().put("preferred_username",handle)
+        if(phone.isNotEmpty())metadata.put("unverified_contact_phone",phone)
+        request("/auth/v1/signup","POST",JSONObject()
+            .put("email",email).put("password",password)
+            .put("data",metadata),false)
+        // The user is not considered signed-in until their email has been confirmed.
+    }
+    suspend fun privateAccountEmail():String{
+        val response=JSONObject(request("/auth/v1/user","GET"))
+        return response.optString("email").ifBlank{throw IllegalStateException("Email is unavailable")}
+    }
+    suspend fun changePasswordVerifyingCurrent(oldPassword:String,newPassword:String){
+        require(oldPassword.isNotEmpty()&&newPassword.length>=8&&oldPassword!=newPassword){
+            "Enter the current password and a different new password of at least 8 characters"
+        }
+        val email=privateAccountEmail()
+        val verified=JSONObject(request("/auth/v1/token?grant_type=password","POST",
+            JSONObject().put("email",email).put("password",oldPassword),false))
+        val verifiedID=verified.optJSONObject("user")?.optString("id").orEmpty()
+        require(verifiedID.isNotEmpty()&&verifiedID==userID){"Current password verification failed"}
+        request("/auth/v1/user","PUT",JSONObject().put("password",newPassword))
+    }
+    suspend fun requestPasswordReset(email:String){
+        require(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
+            "Enter a valid email to request a reset link"
+        }
+        request("/auth/v1/recover?redirect_to=https%3A%2F%2Fitamaros-web-emulator.onrender.com%2Fconnect.html",
+            "POST",JSONObject().put("email",email),false)
+    }
+    suspend fun requestedUsername():String{
+        val result=JSONObject(request("/auth/v1/user","GET"))
+        return result.optJSONObject("user_metadata")?.optString("preferred_username").orEmpty()
     }
     suspend fun approveDesktopPairing(request:String){
         require(Regex("[A-Za-z0-9_-]{24,40}").matches(request)){"Invalid QR request"}
@@ -418,6 +487,14 @@ fun AndroidConnectScreen(
     var signed by remember(api){mutableStateOf(api.token!=null)}
     var registration by remember{mutableStateOf(false)}
     var email by remember{mutableStateOf("")}
+    var registrationUsername by remember{mutableStateOf("")}
+    var privateAccountEmail by remember(api.userID){mutableStateOf("")}
+    var oldPrivatePassword by remember{mutableStateOf("")}
+    var newPrivatePassword by remember{mutableStateOf("")}
+    var confirmPrivatePassword by remember{mutableStateOf("")}
+    var securityStatus by remember{mutableStateOf("")}
+    var officialNotices by remember(api.userID){mutableStateOf(JSONArray())}
+    var myVerifiedBadge by remember(api.userID){mutableStateOf<String?>(null)}
     var password by remember{mutableStateOf("")}
     var signInPhone by remember{mutableStateOf("")}
     var otpInput by remember{mutableStateOf("")}
@@ -565,7 +642,11 @@ fun AndroidConnectScreen(
     }
 
     fun perform(action:suspend()->Unit){
-        scope.launch{try{action();notice=""}catch(e:Exception){notice=e.localizedMessage?:"Operation failed"}}
+        scope.launch {
+            notice = ""
+            try { action() }
+            catch(e:Exception) { notice=e.localizedMessage ?: "Operation failed" }
+        }
     }
     val chooseSignupAvatar=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){ uri ->
         pendingSignupAvatar=uri
@@ -607,6 +688,19 @@ fun AndroidConnectScreen(
             }
         }
     }
+    LaunchedEffect(api.userID,signed){
+        privateAccountEmail=if(signed)runCatching{api.privateAccountEmail()}.getOrNull().orEmpty() else ""
+    }
+    LaunchedEffect(api.userID,signed){
+        myVerifiedBadge=null
+        val id=api.userID
+        if(signed && !id.isNullOrBlank()){
+            try{
+                val payload=api.request("/rest/v1/itamar_profile_badges?select=badge&user_id=eq."+id,"GET")
+                myVerifiedBadge=JSONArray(payload).optJSONObject(0)?.optString("badge")?.takeIf{it in listOf("green","blue")}
+            }catch(_:Exception){}
+        }
+    }
     if(!api.configured){
         Text("ItamarOS Connect needs a separately configured Supabase project before real chats can synchronize.")
         Text("No contacts are uploaded and no online accounts are created until cloud mode is configured.")
@@ -614,36 +708,57 @@ fun AndroidConnectScreen(
     }
     if(!signed){
         Text("ItamarOS Connect",style=MaterialTheme.typography.headlineMedium)
-        Text("Phone verification by SMS is required. A photo and password are optional.")
-        OutlinedTextField(signInPhone,{signInPhone=it},
-            label={Text("Phone (+country code)")},
-            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
-        TextButton(onClick={offerPhoneHint(forProfile=false,manual=true)}) {
-            Text("Use phone number suggested by my device")
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            Button(onClick={registration=false},enabled=registration){Text("Sign In")}
+            Button(onClick={registration=true},enabled=!registration){Text("Create account")}
         }
-        Button(onClick={chooseSignupAvatar.launch("image/*")}){
-            Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
+        Text(if(registration)
+            "Username, email and password are required. Phone and photo are optional. Check your email for the confirmation link."
+            else "Sign in with your ItamarOS email and password. QR approval is supported in Cloud Climb.")
+        if(registration){
+            OutlinedTextField(registrationUsername,
+                {registrationUsername=it.lowercase().trim().take(24)},
+                label={Text("Username *")},singleLine=true)
         }
-        OutlinedTextField(password,{password=it},label={Text("Password (optional, minimum 8 characters)")},visualTransformation=PasswordVisualTransformation())
-        Text("Your photo uploads only after verifying your phone and saving your profile.")
-        Button(onClick={perform{
-            api.requestSms(signInPhone.trim())
-            codeRequested=true
-        }},enabled=Regex("^\\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()) &&
-            (password.isEmpty()||password.length>=8)){
-            Text("Next — send SMS")
-        }
-        if(codeRequested){
-            OutlinedTextField(otpInput,{otpInput=it},label={Text("SMS verification code")})
+        OutlinedTextField(email,{email=it.trim().take(254)},
+            label={Text("Email *")},singleLine=true,
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Email))
+        OutlinedTextField(password,{password=it},
+            label={Text("Password * (at least 8 characters)")},
+            visualTransformation=PasswordVisualTransformation(),singleLine=true)
+        if(registration){
+            OutlinedTextField(signInPhone,{signInPhone=it.trim()},
+                label={Text("Phone (optional; unverified)")},singleLine=true,
+                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone))
+            TextButton(onClick={offerPhoneHint(forProfile=false,manual=true)}) {
+                Text("Suggest my phone number (Android, with approval)")
+            }
+            Button(onClick={chooseSignupAvatar.launch("image/*")}){
+                Text(if(pendingSignupAvatar==null)"Choose profile photo (optional)" else "Photo selected — change")
+            }
             Button(onClick={perform{
-                api.verifySms(signInPhone.trim(),otpInput.trim())
-                if(password.isNotEmpty()){
-                    api.setOptionalPassword(password)
-                    password=""
-                }
-                signed=true;otpInput="";codeRequested=false
-                val p=api.profile()
+                api.registerAccount(email.trim(),password,
+                    registrationUsername.trim().lowercase(),signInPhone.trim())
+                password=""
+                registration=false
+                notice="Registration requested. Confirm your email, then sign in. No SMS needed."
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+                && password.length>=8 && Regex("^[a-z0-9_.]{3,24}$").matches(registrationUsername)
+                && (signInPhone.isBlank()||Regex("^\\+[1-9][0-9]{7,14}$").matches(signInPhone.trim()))){
+                Text("Create account — send verification email")
+            }
+        }else{
+            Button(onClick={perform{
+                api.login(email.trim(),password,register=false)
+                password=""
+                // Authentication and profile/chat loading fail independently.
+                signed=true
+                val p=runCatching { api.profile() }.getOrNull()
                 handle=p?.optString("username").orEmpty()
+                if(p==null){
+                    handle=runCatching { api.requestedUsername() }.getOrDefault("")
+                    tab="Profile"
+                }
                 displayName=p?.optString("display_name").orEmpty()
                 if(p!=null && authOnly)onAccountReady(p.optString("username"))
                 if(p!=null && pendingSignupAvatar!=null){
@@ -651,13 +766,23 @@ fun AndroidConnectScreen(
                     api.profilePreferences(profileAvatar,true)
                     pendingSignupAvatar=null
                 }
-                if(syncOnThisDevice){rooms=api.rooms()}
-                if(p==null)tab="Profile"
-            }},enabled=otpInput.length>=4){Text("Verify and continue")}
-            TextButton(onClick={codeRequested=false;otpInput=""}){Text("Change number")}
+                if(syncOnThisDevice&&p!=null){rooms=runCatching { api.rooms() }.getOrDefault(JSONArray())}
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+                && password.isNotEmpty()){
+                Text("Sign in")
+            }
+            TextButton(onClick={perform{
+                api.requestPasswordReset(email.trim())
+                notice="If this account exists, a reset link has been requested by email."
+            }},enabled=android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()){
+                Text("Forgot password? Send email reset link")
+            }
+            TextButton(onClick={
+                ctx.startActivity(Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://itamaros-web-emulator.onrender.com/connect.html")))
+            }){Text("Recover account with verified phone (requires SMS)")}
         }
-        Text("Twilio Verify must be configured in Supabase Auth to deliver SMS codes. SMS charges apply.")
-        if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.error)
+        if(notice.isNotEmpty())Text(notice,color=MaterialTheme.colorScheme.primary)
         return
     }
 
@@ -784,6 +909,45 @@ fun AndroidConnectScreen(
     when(tab){
         "Profile"->{
             Text("Public profile")
+            Text("Private account credentials")
+            OutlinedTextField(privateAccountEmail,{},label={Text("My email")},
+                readOnly=true,singleLine=true)
+            OutlinedTextField("••••••••",{},label={Text("Password (never displayed)")},
+                readOnly=true,singleLine=true)
+            Text("For security, the current password cannot be revealed. Verify your current password below to choose a new one.")
+            OutlinedTextField(oldPrivatePassword,{oldPrivatePassword=it},
+                label={Text("Current password")},
+                visualTransformation=PasswordVisualTransformation())
+            OutlinedTextField(newPrivatePassword,{newPrivatePassword=it},
+                label={Text("New password (8+ characters)")},
+                visualTransformation=PasswordVisualTransformation())
+            OutlinedTextField(confirmPrivatePassword,{confirmPrivatePassword=it},
+                label={Text("Confirm new password")},
+                visualTransformation=PasswordVisualTransformation())
+            Button(onClick={perform{
+                require(newPrivatePassword==confirmPrivatePassword){"New passwords do not match"}
+                api.changePasswordVerifyingCurrent(oldPrivatePassword,newPrivatePassword)
+                oldPrivatePassword="";newPrivatePassword="";confirmPrivatePassword=""
+                securityStatus="Password changed successfully."
+            }},enabled=oldPrivatePassword.isNotEmpty()&&newPrivatePassword.length>=8&&
+                confirmPrivatePassword.isNotEmpty()){Text("Verify and change password")}
+            if(securityStatus.isNotEmpty())Text(securityStatus)
+            Text("Forgot your password? Use email or previously verified-phone recovery on the ItamarOS account website.")
+            val id=api.userID
+            if(!id.isNullOrBlank()){
+                Text("My ItamarOS ID: "+id)
+                if(myVerifiedBadge=="green")Text("✿ ✓ ItamarOS Official",color=Color(0xFF17AA60))
+                if(myVerifiedBadge=="blue")Text("✿ ✓ Verified",color=Color(0xFF2988E8))
+                Text("My public profile QR")
+                val myProfileURL="https://itamaros-web-emulator.onrender.com/profile.html?id="+id
+                PublicLinkQR(myProfileURL)
+                Button(onClick={
+                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{
+                        type="text/plain"
+                        putExtra(Intent.EXTRA_TEXT,myProfileURL)
+                    },"Share my public profile"))
+                }){Text("Share profile link")}
+            }
             OutlinedTextField(displayName,{displayName=it},label={Text("Name")})
             OutlinedTextField(handle,{handle=it},label={Text("Unique @username")})
             Button(onClick={perform{
@@ -903,7 +1067,30 @@ fun AndroidConnectScreen(
                     if(kind!="channel")
                         OutlinedTextField(other,{other=it},label={Text(if(kind=="group")"Usernames, comma separated" else "@username")})
                     Button(onClick={perform{api.create(kind,title,other);rooms=api.rooms()}}){Text("Create")}
-                }else Text("Updates from unmuted chats and channels. Push notifications require APNs/FCM.")
+                }else {
+                    Text("Official ItamarOS messages and updates")
+                    LaunchedEffect(api.userID){
+                        if(!api.userID.isNullOrBlank())try{
+                            officialNotices=JSONArray(api.request(
+                                "/rest/v1/itamar_admin_notices?select=id,body,created_at"+
+                                "&recipient_id=eq."+api.userID+
+                                "&order=created_at.desc&limit=40","GET"))
+                        }catch(_:Exception){}
+                    }
+                    Button(onClick={perform{
+                        officialNotices=JSONArray(api.request(
+                            "/rest/v1/itamar_admin_notices?select=id,body,created_at"+
+                            "&recipient_id=eq."+api.userID+
+                            "&order=created_at.desc&limit=40","GET"))
+                    }}){Text("Refresh official inbox")}
+                    if(officialNotices.length()==0)Text("No official messages yet")
+                    for(i in 0 until officialNotices.length()){
+                        val note=officialNotices.optJSONObject(i)?:continue
+                        Text("✓ ItamarOS Official",color=Color(0xFF16A34A))
+                        Text(note.optString("body"))
+                        Text(note.optString("created_at"),style=MaterialTheme.typography.bodySmall)
+                    }
+                }
             }else{
                 Button(onClick={
                     if(recordingVoice){voiceRecorder.discard();recordingVoice=false}

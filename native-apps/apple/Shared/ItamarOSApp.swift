@@ -14,6 +14,7 @@ struct ItamarOSApp: App {
     @State private var groupRoute: ItamarGroupRoute?
     @State private var desktopRoute: ItamarDesktopPairRoute?
     @State private var hubReturnPending = false
+    @State private var showAccountFromLink = false
     #endif
 
     @ViewBuilder
@@ -53,6 +54,10 @@ struct ItamarOSApp: App {
                           (24...40).contains(request.count),
                           request.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }) {
                     desktopRoute = ItamarDesktopPairRoute(request:request,isCloudClimb:true)
+                } else if url.host?.lowercased() == "account" {
+                    // An invite/confirmation link is redeemed on HTTPS first.
+                    // Deep links never grant a session or carry a password/token.
+                    showAccountFromLink = true
                 } else if url.host?.lowercased() == "hub-auth" {
                     // No unverified URL may sign a user in or populate profile fields.
                     // A future native Hub client will redeem server-issued one-use tickets.
@@ -63,6 +68,17 @@ struct ItamarOSApp: App {
                 Button("OK",role:.cancel) { }
             } message: {
                 Text("The app received a Hub callback, but Hub sign-in has not been enabled. No account was linked or profile imported.")
+            }
+            .sheet(isPresented:$showAccountFromLink) {
+                NavigationStack {
+                    if cloud.isSignedIn {
+                        ItamarCloudProfileView(required:false)
+                            .environmentObject(cloud)
+                    } else {
+                        ItamarCloudLoginView()
+                            .environmentObject(cloud)
+                    }
+                }
             }
             .sheet(item: $contactRoute) { route in
                 NavigationStack {

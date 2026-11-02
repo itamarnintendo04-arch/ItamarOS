@@ -32,6 +32,13 @@ jobs:
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/ItamarOSBuild" \
             CODE_SIGNING_ALLOWED=NO build
+      - name: Verify ItamarOS AppIcon
+        run: |
+          test -s native-apps/apple/iOS/Assets.xcassets/AppIcon.appiconset/Icon.png
+          /usr/bin/sips -g pixelWidth -g pixelHeight native-apps/apple/iOS/Assets.xcassets/AppIcon.appiconset/Icon.png | grep -q 'pixelWidth: 1024'
+          APP="$RUNNER_TEMP/ItamarOSBuild/Build/Products/Release-iphoneos/ItamarOSiOS.app"
+          test -s "$APP/Assets.car"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$APP/Info.plist" | grep -q AppIcon
       - name: Package unsigned IPA
         run: |
           APP="$RUNNER_TEMP/ItamarOSBuild/Build/Products/Release-iphoneos/ItamarOSiOS.app"
@@ -44,6 +51,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ItamarOS-iOS-1.7.0-unsigned-IPA
-          path: output/ItamarOS-iOS-1.7.0-unsigned.ipa
+          path: |
+            output/ItamarOS-iOS-1.7.0-unsigned.ipa
+            native-apps/apple/iOS/Assets.xcassets/AppIcon.appiconset/Icon.png
           if-no-files-found: error
           retention-days: 90

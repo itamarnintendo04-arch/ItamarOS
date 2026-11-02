@@ -28,16 +28,27 @@ import kotlinx.coroutines.delay
 import org.json.JSONObject
 import kotlin.math.abs
 
+private data class CloudClimbChatUndo(
+    val world:Int, val hero:String, val night:Boolean, val auto:Boolean,
+    val tips:Boolean, val paused:Boolean
+)
+
 /**
  * Original Cloud Climb platformer prototype. Progress is saved on this device,
  * with optional authenticated cloud sync and an offline local demonstration.
  */
 @Composable
 fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onExit: () -> Unit) {
+    CloudClimbLandscape()
     val room = match?.optString("code").orEmpty()
     val roomSeed = match?.optInt("seed") ?: 0
     val context = LocalContext.current
-    val accountKey = "cloud_climb_v1_" + (api.userID?.toString() ?: "guest")
+    val baseKey = "cloud_climb_v1_" + (api.userID?.toString() ?: "guest")
+    val slotPrefs=remember(baseKey){context.getSharedPreferences(baseKey+"_slots",Context.MODE_PRIVATE)}
+    var saveSlot by remember(baseKey){mutableIntStateOf(slotPrefs.getInt("selected",1).coerceIn(1,3))}
+    var slotNames by remember(baseKey){mutableStateOf((1..3).map { slotPrefs.getString("name_$it","My Game $it") ?: "My Game $it" })}
+    var renameSlot by remember(saveSlot){mutableStateOf("")}
+    val accountKey = baseKey + "_save_" + saveSlot
     val prefs = remember(accountKey) {
         context.getSharedPreferences(accountKey, Context.MODE_PRIVATE)
     }
@@ -57,6 +68,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var right by remember { mutableStateOf(false) }
     var jump by remember { mutableStateOf(false) }
     var lastBossHit by remember { mutableLongStateOf(0L) }
+    var checkpointSeed by remember { mutableIntStateOf(Int.MIN_VALUE) }
+    var lastEnemyHit by remember { mutableLongStateOf(0L) }
     var controllerConnected by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var autoHideControls by remember(accountKey) {
@@ -72,12 +85,16 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var syncRevision by remember(accountKey) { mutableLongStateOf(0L) }
     var syncRefresh by remember(accountKey) { mutableIntStateOf(0) }
     var syncStatus by remember(accountKey) { mutableStateOf("Local save") }
+    var preferencesLoaded by remember(accountKey) { mutableStateOf(false) }
+    var manualSaveRequest by remember(accountKey) { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     var playerName by remember(accountKey) { mutableStateOf("Player") }
     var activeWorld by remember(accountKey) {
         mutableIntStateOf(prefs.getInt("active_world",1).coerceIn(1,11))
     }
-    var unlockedWorlds by remember(accountKey) { mutableStateOf(setOf(1)) }
+    var unlockedWorlds by remember(accountKey) { mutableStateOf(
+        prefs.getStringSet("local_worlds",setOf("1"))!!.mapNotNull{it.toIntOrNull()}.toSet()+1
+    ) }
     var collectedCubes by remember(accountKey) {
         mutableStateOf(prefs.getStringSet("local_blue_doors",emptySet())!!.mapNotNull {
             val parts=it.split(":")
@@ -106,6 +123,21 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     var rewardsStatus by remember(accountKey) { mutableStateOf("World progress loads after sign-in") }
     var slashInput by remember { mutableStateOf("") }
     var slashReply by remember { mutableStateOf("Type /help for Cloud Climb commands") }
+    var gameChat by remember { mutableStateOf(listOf("Game: Welcome to Cloud Climb! Type /help.")) }
+    var gameChatUndo by remember { mutableStateOf<CloudClimbChatUndo?>(null) }
+    var cancelMenu by remember { mutableStateOf(false) }
+    fun recordNames(){
+        slotNames.forEachIndexed {index,name->
+            slotPrefs.edit().putString("name_"+(index+1),name).apply()
+        }
+    }
+    fun switchGame(index:Int){
+        if(index !in 1..3||index==saveSlot) return
+        saveSlot=index
+        slotPrefs.edit().putInt("selected",index).apply()
+        gameChatUndo=null
+        gameChat=listOf("Game: You selected "+slotNames[index-1]+". Type /help.")
+    }
     val worldKeys = ((level - 1) / 100 - (unlockedWorlds.size - 1)).coerceAtLeast(0)
     val secretWorldReady = coloredBosses.size == 10
     val unopenedDoors = if(activeWorld in 1..10)
@@ -132,41 +164,22 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             } ?: "Player"
         } catch (_: Exception) {}
     }
-    LaunchedEffect(accountKey, rewardsRefresh, syncReady) {
-        if (!syncReady || api.userID.isNullOrBlank()) return@LaunchedEffect
-        try {
-            val rewards=JSONObject(api.request("/rest/v1/rpc/itamar_climb_rewards_state",
-                "POST",JSONObject()))
-            val worlds=rewards.optJSONArray("worlds")
-            unlockedWorlds=buildSet {
-                add(1)
-                if (worlds!=null) for(i in 0 until worlds.length()) add(worlds.optInt(i))
-            }
-            val cubes=rewards.optJSONArray("blue_cubes")
-            collectedCubes=buildSet {
-                if(cubes!=null)for(i in 0 until cubes.length()) {
-                    val cube=cubes.optJSONObject(i) ?: continue
-                    add(cube.optInt("world") to cube.optInt("cube"))
-                }
-            }
-            val colored=rewards.optJSONArray("colored_bosses")
-            coloredBosses=buildSet {
-                if(colored!=null)for(i in 0 until colored.length())add(colored.optInt(i))
-            }
-            val chars=rewards.optJSONArray("characters")
-            ownedCharacters=buildSet {
-                if(chars!=null)for(i in 0 until chars.length())add(chars.optString(i))
-            }
-            if(activeWorld !in unlockedWorlds && !(activeWorld==11 && coloredBosses.size==10))
-                activeWorld=1
-            rewardsStatus="Blue doors "+collectedCubes.size+"/50 · Colored "+coloredBosses.size+"/10"
-        }catch(_:Exception) { rewardsStatus="World rewards temporarily unavailable" }
+    // Cloud slot response below restores all rewards and preferences for that slot.
+    LaunchedEffect(accountKey) {preferencesLoaded=true}
+    // Signed-in user preferences use the same auth identity on every device.
+    // The standalone offline demo never writes to the account's cloud.
+    LaunchedEffect(accountKey,activeWorld,equippedHero,nightSky,autoHideControls,showControlHints) {
+        prefs.edit().putInt("active_world",activeWorld)
+            .putString("equipped_hero",equippedHero)
+            .putBoolean("night_sky",nightSky)
+            .putBoolean("auto_hide_controls",autoHideControls)
+            .putBoolean("show_control_hints",showControlHints).apply()
     }
     LaunchedEffect(level,syncRevision,syncReady) {
         if(nextColoredBoss !in 1..10 ||
             nextColoredBoss in coloredBosses)return@LaunchedEffect
-        if(api.userID.isNullOrBlank() || !syncReady) {
-            if(api.userID.isNullOrBlank()) {
+        if(api.userID.isNullOrBlank() || !syncReady || saveSlot!=1) {
+            if(api.userID.isNullOrBlank() || saveSlot!=1) {
                 val claimAt=nextColoredBoss*30+1+
                     Math.floorMod((accountKey+nextColoredBoss).hashCode(),3)
                 if(level>claimAt) {
@@ -193,7 +206,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         characterBusy=true
         scope.launch {
             try {
-                if(syncReady && !api.userID.isNullOrBlank()){
+                if(syncReady && !api.userID.isNullOrBlank() && saveSlot==1){
                     syncReady=false
                     val result=JSONObject(api.request("/rest/v1/rpc/itamar_climb_buy_random_character",
                         "POST",JSONObject()))
@@ -231,7 +244,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         val world=activeWorld
         scope.launch {
             try {
-                if(syncReady && !api.userID.isNullOrBlank()){
+                if(syncReady && !api.userID.isNullOrBlank() && saveSlot==1){
                     val result=JSONObject(api.request("/rest/v1/rpc/itamar_climb_enter_blue_door",
                         "POST",JSONObject().put("p_world",world).put("p_cube",door)))
                     if(result.optInt("blue_collected")==5) {
@@ -264,50 +277,116 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     LaunchedEffect(accountKey, syncRefresh) {
         syncReady = false
         if (api.userID.isNullOrBlank()) {
-            syncStatus = "Local save · Sign in with verified SMS to sync"
+            syncStatus = "Local save · Sign in with ItamarOS to sync"
             return@LaunchedEffect
         }
         try {
-            val remote = JSONObject(api.request("/rest/v1/rpc/itamar_cloud_climb_state", "POST", JSONObject()))
-            if (remote.optBoolean("exists", false)) {
-                level = remote.optInt("level", 1).coerceAtLeast(1)
-                coins = remote.optInt("coins", 0).coerceAtLeast(0)
-                hearts = remote.optInt("hearts", 3).coerceIn(0, 3)
-                bossHealth = remote.optInt("boss_health", 3).coerceIn(1, 3)
-                shopDue = remote.optInt("shop_due", 0).coerceAtLeast(0)
-                gameOver = remote.optBoolean("game_over", false)
+            val remote=JSONObject(api.request("/rest/v1/rpc/itamar_climb_slot_state",
+                "POST",JSONObject().put("p_slot",saveSlot)))
+            val name=remote.optString("name","My Game $saveSlot")
+            if(name.isNotBlank() && slotNames[saveSlot-1]!=name){
+                slotNames=slotNames.toMutableList().also{it[saveSlot-1]=name}
+                recordNames()
             }
-            syncRevision = remote.optLong("revision", 0L)
-            syncStatus = "Cloud save connected · Same verified phone, same account"
-            syncReady = true
-        } catch (_: Exception) {
-            syncStatus = "Local save · Cloud sync unavailable"
+            if(remote.optBoolean("exists",false)) {
+                val game=remote.optJSONObject("game") ?: JSONObject()
+                level=game.optInt("level",1).coerceAtLeast(1)
+                coins=game.optInt("coins",0).coerceAtLeast(0)
+                hearts=game.optInt("hearts",3).coerceIn(0,3)
+                bossHealth=game.optInt("boss_health",3).coerceIn(1,3)
+                shopDue=game.optInt("shop_due",0).coerceAtLeast(0)
+                gameOver=game.optBoolean("game_over",false)
+                val worlds=game.optJSONArray("worlds")
+                unlockedWorlds=buildSet {
+                    add(1)
+                    if(worlds!=null)for(i in 0 until worlds.length())add(worlds.optInt(i))
+                }
+                val cubes=game.optJSONArray("blue_cubes")
+                collectedCubes=buildSet {
+                    if(cubes!=null)for(i in 0 until cubes.length()){
+                        val parts=cubes.optString(i).split(":")
+                        if(parts.size==2){
+                            val w=parts[0].toIntOrNull()
+                            val c=parts[1].toIntOrNull()
+                            if(w!=null&&c!=null)add(w to c)
+                        }
+                    }
+                }
+                val colored=game.optJSONArray("colored_bosses")
+                coloredBosses=buildSet {
+                    if(colored!=null)for(i in 0 until colored.length())add(colored.optInt(i))
+                }
+                val characters=game.optJSONArray("characters")
+                ownedCharacters=buildSet {
+                    if(characters!=null)for(i in 0 until characters.length())add(characters.optString(i))
+                }
+                val preferredWorld=game.optInt("selected_world",1)
+                activeWorld=if(preferredWorld in unlockedWorlds ||
+                    (preferredWorld==11&&coloredBosses.size==10))preferredWorld else 1
+                val preferredHero=game.optString("equipped_hero","starter")
+                equippedHero=if(preferredHero=="starter"||preferredHero in ownedCharacters)
+                    preferredHero else "starter"
+                nightSky=game.optBoolean("twilight_sky",false)
+                autoHideControls=game.optBoolean("auto_hide_controls",true)
+                showControlHints=game.optBoolean("show_tips",true)
+            }
+            syncRevision=remote.optLong("revision",0L)
+            syncStatus="Game $saveSlot connected to your ItamarOS account"
+            syncReady=true
+        }catch(_:Exception){
+            syncStatus="Local save · Account sync unavailable"
         }
     }
-    LaunchedEffect(accountKey, level, coins, hearts, bossHealth, shopDue, gameOver, syncReady) {
-        if (!syncReady) return@LaunchedEffect
+    LaunchedEffect(accountKey,level,coins,hearts,bossHealth,shopDue,gameOver,
+        activeWorld,nightSky,autoHideControls,showControlHints,equippedHero,
+        unlockedWorlds,collectedCubes,coloredBosses,ownedCharacters,syncReady,
+        manualSaveRequest,slotNames) {
+        prefs.edit().putInt("level",level).putInt("coins",coins)
+            .putInt("hearts",hearts).putInt("boss_health",bossHealth)
+            .putInt("shop_due",shopDue).putBoolean("game_over",gameOver)
+            .putInt("active_world",activeWorld)
+            .putStringSet("local_worlds",unlockedWorlds.map{it.toString()}.toSet())
+            .putStringSet("local_blue_doors",
+                collectedCubes.map{it.first.toString()+":"+it.second}.toSet())
+            .putStringSet("local_colored_bosses",
+                coloredBosses.map{it.toString()}.toSet())
+            .putStringSet("local_characters",ownedCharacters).apply()
+        if(!syncReady) return@LaunchedEffect
         delay(350)
         try {
-            val response = JSONObject(api.request("/rest/v1/rpc/itamar_cloud_climb_save",
-                "POST", JSONObject()
-                    .put("p_level", level).put("p_coins", coins).put("p_hearts", hearts)
-                    .put("p_boss_health", bossHealth).put("p_shop_due", shopDue)
-                    .put("p_game_over", gameOver).put("p_revision", syncRevision)))
-            if (response.optBoolean("saved")) {
-                syncRevision = response.optLong("revision", syncRevision)
-                syncStatus = "Cloud progress saved to your account"
-            } else {
-                syncStatus = "Updated on another device · Reloading cloud save"
-                syncReady = false
-                syncRefresh += 1
+            val game=JSONObject()
+                .put("level",level).put("coins",coins).put("hearts",hearts)
+                .put("boss_health",bossHealth).put("shop_due",shopDue)
+                .put("game_over",gameOver).put("selected_world",activeWorld)
+                .put("equipped_hero",equippedHero).put("twilight_sky",nightSky)
+                .put("auto_hide_controls",autoHideControls).put("show_tips",showControlHints)
+                .put("worlds",org.json.JSONArray(unlockedWorlds.toList().sorted()))
+                .put("blue_cubes",org.json.JSONArray(collectedCubes.map{it.first.toString()+":"+it.second}))
+                .put("colored_bosses",org.json.JSONArray(coloredBosses.toList().sorted()))
+                .put("characters",org.json.JSONArray(ownedCharacters.toList().sorted()))
+            val response=JSONObject(api.request("/rest/v1/rpc/itamar_climb_slot_save",
+                "POST",JSONObject().put("p_slot",saveSlot)
+                    .put("p_name",slotNames[saveSlot-1]).put("p_game",game)
+                    .put("p_revision",syncRevision)))
+            if(response.optBoolean("saved")){
+                syncRevision=response.optLong("revision",syncRevision)
+                syncStatus="Saved "+slotNames[saveSlot-1]+" to your ItamarOS account"
+            }else{
+                syncStatus="Newer save exists · Reloading"
+                syncReady=false
+                syncRefresh+=1
             }
-        } catch (_: Exception) {
-            syncStatus = "Local save · Cloud sync will retry on next update"
+        }catch(_:Exception){
+            syncStatus="Local save · Account upload will retry"
         }
     }
-    fun resetPosition() {
-        px = 48f; py = 430f; vy = 0f; landed = true
-        jump = false; left = false; right = false
+    fun resetPosition(useCheckpoint:Boolean=false) {
+        val checkpoint=if(useCheckpoint && checkpointSeed==seed)
+            platforms.getOrNull(CloudClimbStageExtras.CHECKPOINT_INDEX) else null
+        px=checkpoint?.let{it.first+it.third/2f} ?: 48f
+        py=checkpoint?.let{it.second-3f} ?: 430f
+        vy=0f;landed=true
+        jump=false;left=false;right=false
     }
     fun advanceStage() {
         val completed = level
@@ -322,7 +401,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     }
     fun loseHeart() {
         hearts = (hearts - 1).coerceAtLeast(0)
-        resetPosition()
+        resetPosition(useCheckpoint=true)
         if (hearts == 0) {
             gameOver = true
             message = "No hearts left. Try again from level " + level + "."
@@ -381,16 +460,29 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             py += vy
             if (vy >= 0f) {
                 landed = false
-                for (platform in platforms) {
+                for ((index,platform) in platforms.withIndex()) {
                     if (px + 11f > platform.first && px - 11f < platform.first + platform.third &&
                         previousBottom <= platform.second && py + 3f >= platform.second) {
                         py = platform.second - 3f
                         vy = 0f; landed = true
+                        if(CloudClimbStageExtras.isCheckpoint(index))checkpointSeed=seed
+                        if(CloudClimbStageExtras.spring(index,px,platform)) {
+                            vy=-11.2f;landed=false
+                        }
                         break
                     }
                 }
             }
             if (py > 495f) { loseHeart(); continue }
+            val current=SystemClock.elapsedRealtime()
+            if(current-lastEnemyHit>1400L &&
+               CloudClimbStageExtras.danger(px,py,platforms,current/1000f)){
+                lastEnemyHit=current
+                loseHeart()
+                message="A sky sprite caught you! "+hearts+" hearts remaining. "+
+                    (if(checkpointSeed==seed)"Checkpoint restored." else "")
+                continue
+            }
             if (landed && py < 110f && !bossStage) { advanceStage(); continue }
             val time = SystemClock.elapsedRealtime()
             if (room != "local-cloudclimb" && time - lastSent > 650L) {
@@ -412,6 +504,31 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("☁  CLOUD CLIMB", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+        Text("My Games · Three independent saves",color=Color.White,
+            style=MaterialTheme.typography.titleMedium)
+        Row(modifier=Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(7.dp)){
+            for(index in 1..3){
+                OutlinedButton(onClick={switchGame(index)}) {
+                    Text(slotNames[index-1],maxLines=1,color=Color.White)
+                }
+            }
+        }
+        OutlinedTextField(renameSlot,{renameSlot=it.take(32)},
+            modifier=Modifier.fillMaxWidth(),singleLine=true,
+            label={Text("Name this game")})
+        TextButton(onClick={
+            val clean=renameSlot.trim()
+            if(clean.isNotEmpty()){
+                slotNames=slotNames.toMutableList().also{it[saveSlot-1]=clean}
+                recordNames()
+                manualSaveRequest+=1
+                renameSlot=""
+            }
+        },enabled=renameSlot.isNotBlank()){Text("Save game name",color=Color.White)}
+        Text("Chat commands apply to the selected game: "+slotNames[saveSlot-1]+
+            ". Other games keep their own progress.",color=Color.White)
+
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("LEVEL " + level, color = goldAccent, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
@@ -453,7 +570,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         if (bossStage) Text("BOSS ENCOUNTER · " + bossHealth + "/3",
             color = goldAccent, style = MaterialTheme.typography.titleMedium)
         if (showControlHints) Text(
-            "Reach the top platform. Earn 10 coins per stage · Boss every 30 levels.",
+            "Landscape · dodge sky sprites, jump on spring pads and reach the glowing checkpoint. Boss every 30 stages.",
             color = Color.White.copy(alpha = 0.9f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { settingsOpen = true },
@@ -495,7 +612,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Button(onClick = { paused = false }) { Text("Resume") }
             Button(onClick = onExit) { Text("Exit to menu") }
         } else {
-            Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f)) {
+            Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
                 val sx = size.width / 400f; val sy = size.height / 500f
                 drawRect(brush = Brush.verticalGradient(listOf(darkBackground, lightBackground)))
                 repeat(12) { i ->
@@ -519,6 +636,9 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                     drawRoundRect(Color(0xFF1558D6),topLeft=Offset(dx,dy),
                         size=Size(24f*sx,37f*sy),cornerRadius=CornerRadius(8f))
                     drawCircle(Color(0xFF7DD9FF),3f*sx,Offset(dx+17f*sx,dy+20f*sy))
+                }
+                with(CloudClimbStageExtras) {
+                    render(platforms,sx,sy,timeSeconds(),checkpointSeed==seed)
                 }
                 if (bossStage) {
                     drawCircle(Color(0xFFAF4EF2), 21f * sx, Offset(bossX * sx, 65f * sy))
@@ -602,33 +722,139 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             }},
             dismissButton={TextButton(onClick={characterOrbOpen=false}){Text("Close")}}
         )
-        Text("Cloud Climb Commands", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Text("💬 Game Chat — select a game", color=Color.White,style=MaterialTheme.typography.titleMedium)
+        Row(modifier=Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            for(index in 1..3) {
+                OutlinedButton(onClick={switchGame(index)},
+                    enabled=index!=saveSlot) {
+                    Text((if(index==saveSlot)"✓ " else "")+slotNames[index-1],
+                        color=Color.White,maxLines=1)
+                }
+            }
+        }
+        Text("Chat commands affect only the selected game's independent save.",
+            color=Color.White,style=MaterialTheme.typography.bodySmall)
+        Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
+            gameChat.forEach{line->
+                Text(line,color=Color.White,style=MaterialTheme.typography.bodySmall)
+            }
+        }
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            OutlinedTextField(slashInput,{slashInput=it.take(100)},
+            OutlinedTextField(slashInput,{slashInput=it.take(140)},
                 modifier=Modifier.weight(1f),singleLine=true,
-                label={Text("Enter /command")})
+                label={Text("Message game: /help, /undo…")})
             Button(onClick={
-                val cmd=slashInput.trim().lowercase()
+                val typed=slashInput.trim()
+                val cmd=(if(typed.startsWith("/"))typed else "/"+typed).lowercase()
+                val previous=CloudClimbChatUndo(activeWorld,equippedHero,nightSky,
+                    autoHideControls,showControlHints,paused)
                 slashReply=when {
-                    cmd=="/help"->"/stats · /world 1-11 · /pause · /resume · /theme day · /theme twilight · /room"
-                    cmd=="/stats"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue ${collectedCubes.size}/50 · Colored ${coloredBosses.size}/10 · Characters ${ownedCharacters.size} · Keys $worldKeys"
-                    cmd=="/pause"->{paused=true;"Game paused."}
-                    cmd=="/resume"->{paused=false;"Game resumed."}
+                    cmd=="/help" || cmd=="/commands" ->
+                        "/stats · /where · /account · /room · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /controls auto|show|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save · /sync"
+                    cmd=="/stats" || cmd=="/status"->"Level $level · World $activeWorld · Coins $coins · Hearts $hearts/3 · Blue "+collectedCubes.size+"/50 · Colored "+coloredBosses.size+"/10 · Characters "+ownedCharacters.size+" · Keys $worldKeys"
+                    cmd=="/where" || cmd=="/world current"->"World $activeWorld, stage $level. Use /world N to enter an unlocked world."
+                    cmd=="/account"->if(api.userID.isNullOrBlank())"Offline demo · Save stays on this device"
+                        else "Linked to your ItamarOS account · $syncStatus"
+                    cmd=="/pause"->{paused=true;"Game paused. Type /resume to continue."}
+                    cmd=="/resume" || cmd=="/unpause"->{paused=false;"Game resumed."}
+                    cmd=="/reset-position" || cmd=="/position reset"->{resetPosition();"Returned to stage start; progress kept. Position reset cannot be undone."}
                     cmd=="/room"->if(room=="local-cloudclimb")"Offline demo · no room code" else "Room code: $room"
-                    cmd=="/theme day"->{nightSky=false;prefs.edit().putBoolean("night_sky",false).apply();"Day theme enabled"}
-                    cmd=="/theme twilight"->{nightSky=true;prefs.edit().putBoolean("night_sky",true).apply();"Twilight theme enabled"}
+                    cmd=="/theme day" || cmd=="/theme reset"->{nightSky=false;"Day theme enabled"}
+                    cmd=="/theme twilight"->{nightSky=true;"Twilight theme enabled"}
+                    cmd=="/controls auto" || cmd=="/controls reset"->{autoHideControls=true;"Touch controls hide with controller"}
+                    cmd=="/controls show"->{autoHideControls=false;"Touch controls always shown"}
+                    cmd=="/tips on" || cmd=="/tips reset"->{showControlHints=true;"Gameplay tips enabled"}
+                    cmd=="/tips off"->{showControlHints=false;"Gameplay tips disabled"}
+                    cmd=="/hero list"->"Unlocked: starter"+if(ownedCharacters.isEmpty())"" else ", "+ownedCharacters.sorted().joinToString(", ")
+                    cmd=="/hero reset"->{equippedHero="starter";"Equipped default hero"}
+                    cmd=="/world back"->{
+                        val back=gameChatUndo
+                        if(back!=null && back.world!=activeWorld &&
+                            (back.world in unlockedWorlds || (back.world==11 && secretWorldReady))){
+                            activeWorld=back.world;resetPosition();gameChatUndo=null
+                            "Returned to World $activeWorld"
+                        }else "No previous world change to reverse. Use /undo right after switching worlds."
+                    }
+                    cmd=="/cancel"->{cancelMenu=true;"Choose what to cancel using the buttons."}
+                    cmd=="/undo" || cmd=="/revert"->{
+                        val back=gameChatUndo
+                        if(back==null) "Nothing to undo; only game-chat setting changes can be reversed."
+                        else {
+                            if(back.world!=activeWorld && (back.world in unlockedWorlds ||
+                                 (back.world==11 && secretWorldReady))){
+                                activeWorld=back.world;resetPosition()
+                            }
+                            if(back.hero=="starter" || back.hero in ownedCharacters)equippedHero=back.hero
+                            nightSky=back.night;autoHideControls=back.auto
+                            showControlHints=back.tips;paused=back.paused
+                            gameChatUndo=null
+                            "Last game-chat setting change undone."
+                        }
+                    }
+                    cmd=="/save"->{
+                        manualSaveRequest+=1
+                        if(syncReady)"Account progress save requested" else "Saved on this device"
+                    }
+                    cmd=="/sync"->{
+                        if(api.userID.isNullOrBlank())"Sign in with ItamarOS first; offline saves stay separate"
+                        else {syncRefresh+=1;"Reloading your account save"}
+                    }
                     cmd.startsWith("/world ")-> {
                         val chosen=cmd.removePrefix("/world ").toIntOrNull()
-                        if(chosen!=null && (chosen in unlockedWorlds || chosen==11 && secretWorldReady)){
+                        if(chosen!=null && (chosen in unlockedWorlds || (chosen==11 && secretWorldReady))){
                             activeWorld=chosen;resetPosition();"Entered world $chosen"
                         }else "World locked or invalid. Unlock it with a key."
                     }
+                    cmd.startsWith("/hero ")->{
+                        val chosen=cmd.removePrefix("/hero ")
+                        if(chosen=="starter" || chosen in ownedCharacters){
+                            equippedHero=chosen
+                            "Equipped "+CloudHeroes.get(chosen).name
+                        }else "Hero locked. Use /hero list."
+                    }
                     else->"Unknown command. Type /help."
                 }
+                val changed=previous.world!=activeWorld || previous.hero!=equippedHero ||
+                    previous.night!=nightSky || previous.auto!=autoHideControls ||
+                    previous.tips!=showControlHints || previous.paused!=paused
+                if(changed && cmd !in setOf("/undo","/cancel","/revert","/world back")){
+                    gameChatUndo=previous
+                }
+                gameChat=(gameChat+listOf("You: "+typed,"Game: "+slashReply)).takeLast(12)
                 slashInput=""
-            },enabled=slashInput.startsWith("/")){Text("Send")}
+            },enabled=slashInput.isNotBlank()){Text("Send")}
         }
-        Text(slashReply,color=Color.White,style=MaterialTheme.typography.bodySmall)
+        if(cancelMenu) AlertDialog(
+            onDismissRequest={cancelMenu=false},
+            title={Text("Choose what to cancel")},
+            text={Text("Saved levels, coins, unlocked characters and other games are never deleted.")},
+            confirmButton={Button(onClick={
+                nightSky=false;autoHideControls=true;showControlHints=true
+                equippedHero="starter";paused=false;gameChatUndo=null
+                gameChat=(gameChat+"Game: Cancel All reset visual settings. Saves are safe.").takeLast(12)
+                cancelMenu=false
+            }){Text("Cancel All Changes")}},
+            dismissButton={
+                Column {
+                    TextButton(onClick={
+                        gameChatUndo?.let {back ->
+                            if(back.world in unlockedWorlds)activeWorld=back.world
+                            if(back.hero=="starter"||back.hero in ownedCharacters)equippedHero=back.hero
+                            nightSky=back.night;autoHideControls=back.auto
+                            showControlHints=back.tips;paused=back.paused
+                        }
+                        gameChatUndo=null;cancelMenu=false
+                    }){Text("Undo Last Chat Change")}
+                    TextButton(onClick={nightSky=false;cancelMenu=false}){Text("Reset Theme")}
+                    TextButton(onClick={equippedHero="starter";cancelMenu=false}){Text("Reset Hero")}
+                    TextButton(onClick={showControlHints=true;cancelMenu=false}){Text("Reset Tips")}
+                    TextButton(onClick={autoHideControls=true;cancelMenu=false}){Text("Reset Touch Controls")}
+                    TextButton(onClick={paused=false;cancelMenu=false}){Text("Resume Game")}
+                    TextButton(onClick={cancelMenu=false}){Text("Keep Changes")}
+                }
+            }
+        )
         if (settingsOpen) AlertDialog(
             onDismissRequest = { settingsOpen = false },
             title = { Text("Cloud Climb Settings") },
@@ -652,7 +878,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                             nightSky = it; prefs.edit().putBoolean("night_sky", it).apply()
                         })
                     }
-                    Text("Account: verified phone SMS sign-in through ItamarOS Connect.")
+                    Text("Account: linked to your signed-in ItamarOS profile. Offline demo remains local.")
                     Text("Progress: " + syncStatus)
                 }
             },

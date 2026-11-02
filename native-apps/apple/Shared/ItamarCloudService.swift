@@ -270,6 +270,47 @@ final class ItamarCloudService: ObservableObject {
         }
     }
 
+    // Private account data requires an existing authenticated session.
+    // The server never returns the account's current password.
+    func privateAccountEmail() async throws -> String {
+        let raw=try await request("/auth/v1/user")
+        guard let body=try JSONSerialization.jsonObject(with:raw) as? [String:Any],
+              let email=body["email"] as? String, !email.isEmpty else {
+            throw ItamarCloudError.badResponse("Account email is unavailable.")
+        }
+        return email
+    }
+
+    func changePasswordAfterVerification(current: String, replacement: String) async throws {
+        guard replacement.count>=8, !current.isEmpty,
+              current != replacement, let expected=userID else {
+            throw ItamarCloudError.badResponse("Enter the current password and a different new password (8+ characters).")
+        }
+        let email=try await privateAccountEmail()
+        let raw=try await request("/auth/v1/token",method:"POST",
+                                  data:["email":email,"password":current],authorized:false,
+                                  query:[URLQueryItem(name:"grant_type",value:"password")])
+        let verified=try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard verified.user?.id==expected else {
+            throw ItamarCloudError.badResponse("Password verification failed.")
+        }
+        _=try await request("/auth/v1/user",method:"PUT",
+                            data:["password":replacement])
+        status="Password changed. No existing password was displayed."
+    }
+
+    func sendPasswordResetEmail(email: String) async throws {
+        let clean=email.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard clean.contains("@"),clean.contains(".") else {
+            throw ItamarCloudError.badResponse("Enter your email to receive a reset link.")
+        }
+        _=try await request("/auth/v1/recover",method:"POST",
+                            data:["email":clean],authorized:false,
+                            query:[URLQueryItem(name:"redirect_to",
+                              value:"https://itamaros-web-emulator.onrender.com/connect.html")])
+        status="If an account exists, a password-reset link will be sent."
+    }
+
     func signIn(email: String, password: String) async throws {
         let body = ["email": email.trimmingCharacters(in: .whitespacesAndNewlines), "password": password]
         let raw = try await request("/auth/v1/token", method: "POST", data: body,
@@ -278,6 +319,43 @@ final class ItamarCloudService: ObservableObject {
         guard let uid = result.user?.id else { throw ItamarCloudError.badResponse("Sign in failed") }
         setSession(access: result.access_token, refresh: result.refresh_token, userID: uid)
         try await reload()
+    }
+
+    /// Cloud Climb manual login reuses the existing ItamarOS account; no new user is created.
+    /// The identifier may be the verified email or verified international phone number.
+    func signInManually(identifier: String, password: String) async throws {
+        let clean=identifier.trimmingCharacters(in:.whitespacesAndNewlines)
+        let isPhone=clean.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                                options:.regularExpression) != nil
+        let isEmail=clean.contains("@") && clean.contains(".") && !clean.contains(" ")
+        guard isPhone || isEmail, !password.isEmpty else {
+            throw ItamarCloudError.badResponse("Enter your registered email or phone and password.")
+        }
+        let body:[String:String]=isPhone
+            ? ["phone":clean,"password":password]
+            : ["email":clean,"password":password]
+        let raw=try await request("/auth/v1/token",method:"POST",data:body,
+                                  authorized:false,
+                                  query:[URLQueryItem(name:"grant_type",value:"password")])
+        let session=try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard let userID=session.user?.id else {
+            throw ItamarCloudError.badResponse("Sign-in failed.")
+        }
+        setSession(access:session.access_token,refresh:session.refresh_token,userID:userID)
+        try await reload()
+    }
+
+    /// Existing user only: never create an incomplete account from the login form.
+    func requestExistingSMS(phone: String) async throws {
+        let clean=phone.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard clean.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                          options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter a registered international phone number.")
+        }
+        _=try await request("/auth/v1/otp",method:"POST",data:[
+            "phone":clean,"create_user":false
+        ],authorized:false)
+        status="Code requested. Enter the SMS to finish signing in."
     }
 
     // Twilio is configured as Supabase Auth's SMS provider on the server.
@@ -324,6 +402,43 @@ final class ItamarCloudService: ObservableObject {
         }
         _ = try await request("/auth/v1/user", method: "PUT",
                               data: ["password": password])
+    }
+
+    // Email confirmation is delivered by Supabase Auth's configured email provider.
+    // The optional contact number is *not* linked to Auth's verified phone identity.
+    func registerEmailAccount(email: String, password: String,
+                              username: String, optionalPhone: String) async throws {
+        let cleanEmail=email.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        let cleanUser=username.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
+        let cleanPhone=optionalPhone.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard cleanEmail.contains("@"),cleanEmail.contains("."),!cleanEmail.contains(" "),
+              password.count>=8 else {
+            throw ItamarCloudError.badResponse("Enter a valid email and password of at least 8 characters.")
+        }
+        guard cleanUser.range(of:#"^[a-z0-9_.]{3,24}$"#,options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Username must be 3–24 lowercase letters, numbers, _ or .")
+        }
+        guard cleanPhone.isEmpty ||
+              cleanPhone.range(of:#"^\+[1-9][0-9]{7,14}$"#,
+                              options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Optional phone must be in international +country format.")
+        }
+        var metadata:[String:String]=["preferred_username":cleanUser]
+        if !cleanPhone.isEmpty {metadata["unverified_contact_phone"]=cleanPhone}
+        let body:[String:Any]=["email":cleanEmail,"password":password,"data":metadata]
+        _ = try await request("/auth/v1/signup",method:"POST",data:body,authorized:false)
+        status="Check your email for a confirmation link. Then return and sign in with your email and password."
+    }
+
+    func preferredSignupUsername() async throws -> String? {
+        let raw=try await request("/auth/v1/user")
+        guard let body=try JSONSerialization.jsonObject(with:raw) as? [String:Any],
+              let metadata=body["user_metadata"] as? [String:Any],
+              let name=metadata["preferred_username"] as? String,
+              name.range(of:#"^[a-z0-9_.]{3,24}$"#,options:.regularExpression) != nil else {
+            return nil
+        }
+        return name
     }
 
     func signUp(email: String, password: String) async throws {

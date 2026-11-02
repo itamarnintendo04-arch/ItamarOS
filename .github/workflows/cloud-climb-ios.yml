@@ -20,12 +20,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install XcodeGen and SVG renderer
         run: brew install xcodegen librsvg
-      - name: Generate Cloud Climb icon for iOS
-        run: |
-          set -euo pipefail
-          ICON_DIR="native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset"
-          mkdir -p "$ICON_DIR"
-          rsvg-convert --format=png --width=1024 --height=1024 assets/branding/cloud-climb-icon.svg > "$ICON_DIR/Icon.png"
+      - name: Generate and verify both iPhone AppIcons
+        run: bash native-apps/apple/prepare-app-icons.sh
       - name: Generate Xcode project
         working-directory: native-apps/apple
         run: xcodegen generate
@@ -41,6 +37,8 @@ jobs:
         run: |
           APP="$RUNNER_TEMP/CloudClimbBuild/Build/Products/Release-iphoneos/CloudClimbiOS.app"
           test -d "$APP"
+          test -s "$APP/Assets.car"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$APP/Info.plist" | grep -q 'CloudClimbAppIcon'
           mkdir -p "$RUNNER_TEMP/ipa/Payload" output
           cp -R "$APP" "$RUNNER_TEMP/ipa/Payload/"
           cd "$RUNNER_TEMP/ipa"
@@ -48,6 +46,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CloudClimb-iOS-standalone-UNSIGNED-IPA
-          path: output/CloudClimb-iOS-0.1.0-UNSIGNED.ipa
+          path: |
+            output/CloudClimb-iOS-0.1.0-UNSIGNED.ipa
+            native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset/Icon.png
           if-no-files-found: error
           retention-days: 90

@@ -24,6 +24,14 @@ targets:
       path: CloudClimb/Info.plist
       properties:
         CFBundleDisplayName: Cloud Climb
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         CFBundleURLTypes:
           - CFBundleURLName: org.itamaros.cloudclimb
             CFBundleTypeRole: Viewer
@@ -52,6 +60,14 @@ targets:
       path: iOS/Info.plist
       properties:
         NSFaceIDUsageDescription: "Confirm it is you before approving sign-in on another ItamarOS device."
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSContactsUsageDescription: "Contacts are used only when you explicitly choose names for private local message drafts. They are never uploaded."
         NSMicrophoneUsageDescription: "Record a voice message only when you explicitly tap Record in ItamarOS Connect."
         ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"

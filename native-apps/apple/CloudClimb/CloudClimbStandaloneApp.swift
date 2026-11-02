@@ -73,7 +73,10 @@ struct CloudClimbStandaloneHome:View {
     @State private var showOnline=false
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
-    private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
+    @State private var showManualLogin=false
+    @State private var manualIdentifier=""
+    @State private var manualPassword=""
+     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
         NavigationStack {
@@ -104,7 +107,7 @@ struct CloudClimbStandaloneHome:View {
                             .buttonStyle(.borderedProminent)
                         Button("Sign Out") {cloud.signOut()}
                             .buttonStyle(.bordered)
-                        Text("Your approved session is temporary. Reconnect if it expires.")
+                        Text("Account-linked progress is restored from your ItamarOS cloud save. QR sessions may expire and need approval again.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
                         Button {
@@ -132,6 +135,35 @@ struct CloudClimbStandaloneHome:View {
                         }
                         .buttonStyle(.plain)
                         .disabled(working || pair != nil)
+                        Button(showManualLogin ? "Hide manual login" : "Sign in manually") {
+                            showManualLogin.toggle()
+                         }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(working || pair != nil)
+                        if showManualLogin {
+                            VStack(alignment:.leading,spacing:10) {
+                                Text("Email")
+                                    .font(.headline).foregroundStyle(.white)
+                                TextField("email@example.com",text:$manualIdentifier)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .textContentType(.username)
+                                    .textFieldStyle(.roundedBorder)
+                                SecureField("Password",text:$manualPassword)
+                                    .textContentType(.password)
+                                    .textFieldStyle(.roundedBorder)
+                                Button("Sign in with password") {
+                                    Task {await signInManually()}
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(working || manualIdentifier.isEmpty || manualPassword.isEmpty)
+                                Text("Or select QR login and approve it from an already signed-in ItamarOS app. No SMS is required.")
+                                    .font(.caption).foregroundStyle(.white.opacity(0.8))
+                            }
+                            .padding()
+                            .background(.white.opacity(0.11),in:RoundedRectangle(cornerRadius:15))
+                        }
                         Button {offlineDemo=true} label: {
                             Label("Play Offline Demo",systemImage:"gamecontroller.fill")
                                 .font(.system(size:18,weight:.bold,design:.rounded))
@@ -171,6 +203,19 @@ struct CloudClimbStandaloneHome:View {
                                 ? "Scan the QR with a trusted ItamarOS phone, then verify and approve."
                                 : "Confirm this code in ItamarOS on this phone, then return to Cloud Climb. No QR is needed.")
                                 .font(.caption).foregroundStyle(.secondary)
+                            if !qrVisible {
+                                Button("Open ItamarOS again") {
+                                    guard let destination=URL(string:"itamaros://cloud-climb?request="+pair.requestId) else{return}
+                                    openURL(destination) { accepted in
+                                        if !accepted {
+                                            activeRequest=nil
+                                            self.pair=nil
+                                            showManualLogin=true
+                                            info="Could not open ItamarOS. Sign in with email and password instead."
+                                        }
+                                    }
+                                }.buttonStyle(.borderedProminent)
+                            }
                             Button("Cancel") {activeRequest=nil;self.pair=nil;qrVisible=false}
                         }
                     }
@@ -193,16 +238,28 @@ struct CloudClimbStandaloneHome:View {
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
             .toolbar(.hidden,for:.navigationBar)
-            .sheet(isPresented:$showOnline) {
+            .fullScreenCover(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
                     .environmentObject(cloud)
             }
-            .sheet(isPresented:$offlineDemo) {
+            .fullScreenCover(isPresented:$offlineDemo) {
                 CloudClimbOfflineDemo()
             }
         }
     }
 
+    @MainActor private func signInManually() async {
+        guard !working else{return}
+        working=true
+        defer{working=false}
+        do {
+            try await cloud.signInManually(identifier:manualIdentifier,password:manualPassword)
+            manualPassword="";showManualLogin=false
+            info="Signed in with your existing ItamarOS account."
+        }catch {
+            info="Manual login failed: "+error.localizedDescription
+        }
+    }
     private func makeQRCode(_ value:String)->UIImage? {
         let generator=CIFilter.qrCodeGenerator()
         generator.message=Data(value.utf8)
@@ -217,7 +274,7 @@ struct CloudClimbStandaloneHome:View {
     private func post(_ route:String,_ data:[String:Any]) async throws -> (Int,Data) {
         guard let url=URL(string:broker+route) else{throw URLError(.badURL)}
         var req=URLRequest(url:url)
-        req.httpMethod="POST";req.timeoutInterval=13
+        req.httpMethod="POST";req.timeoutInterval=35
         req.setValue("application/json",forHTTPHeaderField:"Content-Type")
         req.httpBody=try JSONSerialization.data(withJSONObject:data)
         let (body,response)=try await URLSession.shared.data(for:req)
@@ -246,12 +303,15 @@ struct CloudClimbStandaloneHome:View {
                 // password, claim secret or access token is shared via deep link.
                 openURL(destination) { accepted in
                     if !accepted {
-                        info="ItamarOS could not be opened. Install it or cancel and use QR linking."
+                        activeRequest=nil;pair=nil;qrVisible=false
+                         showManualLogin=true
+                         info="ItamarOS could not be opened. Sign in with email/password or install ItamarOS."
                     }
                 }
             }
         }catch {
-            info="Account linking unavailable: "+error.localizedDescription
+            showManualLogin=true
+            info="Account linking unavailable. Sign in with email/password below. "+error.localizedDescription
         }
     }
     @MainActor private func pollPair(_ entry:CloudClimbPairStart,run:UUID) async {
@@ -297,6 +357,12 @@ private struct CloudClimbOfflineDemo:View {
     @AppStorage("cloudclimb.offline.characters") private var characterStorage=""
     @AppStorage("cloudclimb.offline.equippedHero") private var equippedHero="starter"
     @AppStorage("cloudclimb.offline.worlds") private var worldStorage=""
+    @AppStorage("cloudclimb.offline.twilight") private var twilight=false
+    @AppStorage("cloudclimb.offline.tips") private var showTips=true
+    @State private var commandInput=""
+    @State private var commandReply="Type /help for Cloud Climb commands."
+    @State private var offlineChat:[String]=["Game: Welcome! Type /help for commands."]
+    @State private var offlineUndo:(world:Int,hero:String,twilight:Bool,tips:Bool,paused:Bool)?
     @State private var x:CGFloat=48
     @State private var y:CGFloat=430
     @State private var velocity:CGFloat=0
@@ -309,6 +375,8 @@ private struct CloudClimbOfflineDemo:View {
     @State private var notice="Complete stages to earn game coins and discover blue doors."
     @State private var orbOpen=false
     @State private var lastBossHit=Date.distantPast
+    @State private var lastEnemyHit=Date.distantPast
+    @State private var checkpointStage:Int=Int.min
     @State private var controllerConnected=false
     @State private var lastMenuButton=false
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
@@ -319,6 +387,7 @@ private struct CloudClimbOfflineDemo:View {
     private var worlds:Set<Int> {Set([1]).union(worldStorage.split(separator:",").compactMap{Int($0)})}
     private var keys:Int {max(0,(level-1)/100-(worlds.count-1))}
     private var boss:Bool {level%30==0}
+    private var stageKey:Int {level &* 2039 &+ world &* 1009}
     private var secret:Bool {colored.count==10}
     private var stages:[CGRect] {
         var value=UInt64(UInt32(truncatingIfNeeded:level &* 2039 &+ world &* 1009))
@@ -431,6 +500,9 @@ private struct CloudClimbOfflineDemo:View {
                                 let rect=CGRect(x:(bossX-21)*sx,y:45*sy,width:42*sx,height:42*sy)
                                 ctx.fill(Path(ellipseIn:rect),with:.color(.purple))
                             }
+                            CloudClimbStageExtras.draw(ctx,platforms:stages,sx:sx,sy:sy,
+                                time:Date.timeIntervalSinceReferenceDate,
+                                checkpointActive:checkpointStage==stageKey)
                             CloudClimbHeroes.draw(ctx,
                                 hero:CloudClimbHeroes.unlocked(equippedHero,owned:characters)
                                     ? equippedHero : "starter",
@@ -439,7 +511,9 @@ private struct CloudClimbOfflineDemo:View {
                                 .font(.system(size:11,weight:.bold)),
                                 at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
-                        .aspectRatio(4/5,contentMode:.fit)
+                        .aspectRatio(16/9,contentMode:.fit)
+                        .frame(maxWidth:820)
+                        .frame(maxHeight:310)
                         .clipShape(RoundedRectangle(cornerRadius:16))
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
@@ -464,6 +538,26 @@ private struct CloudClimbOfflineDemo:View {
                         }
                     }
                     Text(notice).font(.caption).foregroundStyle(.white)
+                    if showTips {
+                        Text("Tip: Explore sky sprites, spring pads and glowing checkpoints. Each stage has a different layout.")
+                            .font(.caption2).foregroundStyle(.white.opacity(0.82))
+                    }
+                    VStack(alignment:.leading,spacing:8){
+                        Text("💬 Game Chat")
+                            .font(.subheadline.bold()).foregroundStyle(.white)
+                        ForEach(offlineChat.indices,id:\.self){index in
+                            Text(offlineChat[index]).font(.caption).foregroundStyle(.white)
+                        }
+                        HStack {
+                            TextField("Message game: /help, /undo…",text:$commandInput)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .textFieldStyle(.roundedBorder)
+                                .onSubmit{runOfflineCommand()}
+                            Button("Send"){runOfflineCommand()}
+                                .disabled(commandInput.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                        }
+                    }
                     CloudClimbHeroPicker(owned:characters,selected:$equippedHero)
                     Button("🔮 Character Orb · \(characters.count) Characters") {
                         orbOpen=true
@@ -476,9 +570,13 @@ private struct CloudClimbOfflineDemo:View {
                         .buttonStyle(.bordered)
                 }.padding(18)
             }
-            .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
+            .background(LinearGradient(colors:twilight ?
+                [Color(red:0.13,green:0.1,blue:0.34),.purple]:
+                [Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
+            .onAppear { CloudClimbLandscape.setActive(true) }
+            .onDisappear { CloudClimbLandscape.setActive(false) }
             .sheet(isPresented:$orbOpen) {
                 NavigationStack {
                     VStack(spacing:16) {
@@ -500,6 +598,79 @@ private struct CloudClimbOfflineDemo:View {
                 }
             }
         }
+    }
+    // Offline game chat never alters currency, earned rewards, or locked levels.
+    private func runOfflineCommand(){
+        let typed=commandInput.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !typed.isEmpty else{return}
+        let cmd=(typed.hasPrefix("/") ? typed : "/"+typed).lowercased()
+        commandInput=""
+        offlineChat.append("You: "+typed)
+        let before=(world:world,hero:equippedHero,twilight:twilight,tips:showTips,paused:paused)
+        switch cmd {
+        case "/help", "/commands":
+            commandReply="/stats · /where · /world N · /world back · /hero list · /hero ID · /hero reset · /theme day|twilight|reset · /tips on|off|reset · /pause · /resume · /undo · /cancel · /reset-position · /save"
+        case "/stats", "/status":
+            commandReply="Level \(level) · World \(world) · Coins \(coins) · Hearts \(hearts)/3 · Blue \(blue.count)/50 · Colored \(colored.count)/10 · Heroes \(characters.count)"
+        case "/where", "/world current":
+            commandReply="World \(world), stage \(level)."
+        case "/pause":
+            paused=true;commandReply="Game paused. Type /resume to continue."
+        case "/resume", "/unpause":
+            paused=false;commandReply="Game resumed."
+        case "/reset-position", "/position reset":
+            resetPosition();commandReply="Returned to stage start; progress kept. Position reset cannot be undone."
+        case "/theme day", "/theme reset":
+            twilight=false;commandReply="Day theme enabled."
+        case "/theme twilight":
+            twilight=true;commandReply="Twilight theme enabled."
+        case "/tips on", "/tips reset":
+            showTips=true;commandReply="Tips enabled."
+        case "/tips off":
+            showTips=false;commandReply="Tips disabled."
+        case "/hero list":
+            commandReply="Unlocked: starter"+(characters.isEmpty ? "" : ", "+characters.sorted().joined(separator:", "))
+        case "/hero reset":
+            equippedHero="starter";commandReply="Default hero equipped."
+        case "/world back":
+            if let back=offlineUndo,back.world != world,
+               worlds.contains(back.world) || (back.world==11 && secret) {
+                world=back.world;resetPosition();offlineUndo=nil
+                commandReply="Returned to World \(world)."
+            }else{commandReply="No recent world change. Use /undo immediately after switching."}
+        case "/undo", "/cancel", "/revert":
+            if let back=offlineUndo {
+                if back.world != world,worlds.contains(back.world) || (back.world==11 && secret) {
+                    world=back.world;resetPosition()
+                }
+                if CloudClimbHeroes.unlocked(back.hero,owned:characters) {equippedHero=back.hero}
+                twilight=back.twilight;showTips=back.tips;paused=back.paused
+                offlineUndo=nil
+                commandReply="Previous game-chat setting change undone."
+            }else{commandReply="Nothing to undo. /undo only restores the most recent chat change."}
+        case "/save":
+            commandReply="Offline progress is automatically saved on this device."
+        case "/sync", "/account":
+            commandReply="Offline demo does not sync. Sign in with ItamarOS to play online."
+        default:
+            if cmd.hasPrefix("/world "),let n=Int(cmd.dropFirst(7)),
+                worlds.contains(n) || (n==11 && secret) {
+                world=n;resetPosition();commandReply="Entered World \(n)."
+            }else if cmd.hasPrefix("/hero "){
+                let requested=String(cmd.dropFirst(6))
+                if CloudClimbHeroes.unlocked(requested,owned:characters){
+                    equippedHero=requested
+                    commandReply="Equipped \(CloudClimbHeroes.get(requested).name)."
+                }else{commandReply="Hero locked. Use /hero list."}
+            }else{commandReply="Unknown command or locked world. Type /help."}
+        }
+        if cmd != "/undo" && cmd != "/cancel" && cmd != "/revert" && cmd != "/world back",
+           before.world != world || before.hero != equippedHero ||
+           before.twilight != twilight || before.tips != showTips || before.paused != paused {
+            offlineUndo=before
+        }
+        offlineChat.append("Game: "+commandReply)
+        if offlineChat.count>12{offlineChat.removeFirst(offlineChat.count-12)}
     }
     private func control(_ name:String,left:Bool)->some View {
         Text(name).font(.title2.bold()).padding(15)
@@ -532,23 +703,44 @@ private struct CloudClimbOfflineDemo:View {
         y+=velocity
         if velocity>=0 {
             grounded=false
-            for platform in stages {
+            for (index,platform) in stages.enumerated() {
                 if x+11>platform.minX && x-11<platform.maxX &&
                     previousBottom<=platform.minY && y+3>=platform.minY {
-                    y=platform.minY-3;velocity=0;grounded=true;break
+                    y=platform.minY-3;velocity=0;grounded=true
+                    if index==CloudClimbStageExtras.checkpointIndex {checkpointStage=stageKey}
+                    if CloudClimbStageExtras.isSpring(index:index,x:x,platform:platform) {
+                        velocity = -11.2;grounded=false
+                    }
+                    break
                 }
             }
         }
         if y>495 {
-            hearts=max(0,hearts-1)
-            if hearts==0 {finished=true;notice="No hearts remaining."}
-            resetPosition()
+            loseHeart(fromEnemy:false)
+            return
+        }
+        let now=Date()
+        if now.timeIntervalSince(lastEnemyHit)>1.4 &&
+           CloudClimbStageExtras.isDanger(x:x,y:y,stages:stages,
+                   time:now.timeIntervalSinceReferenceDate) {
+            lastEnemyHit=now
+            loseHeart(fromEnemy:true)
             return
         }
         if grounded && y<110 && !boss {completeLevel()}
     }
-    private func resetPosition() {
-        x=48;y=430;velocity=0;grounded=true;left=false;right=false;jump=false
+    private func loseHeart(fromEnemy:Bool) {
+        hearts=max(0,hearts-1)
+        notice = (fromEnemy ? "A sky sprite caught you. " : "You fell. ") + "\(hearts) hearts remaining." + (checkpointStage==stageKey ? " Checkpoint restored." : "")
+        if hearts==0 {finished=true}
+        resetPosition(useCheckpoint:true)
+    }
+    private func resetPosition(useCheckpoint:Bool=false) {
+        let checkpoint=(useCheckpoint && checkpointStage==stageKey)
+            ? stages[CloudClimbStageExtras.checkpointIndex] : nil
+        x=checkpoint?.midX ?? 48
+        y=checkpoint.map{$0.minY-3} ?? 430
+        velocity=0;grounded=true;left=false;right=false;jump=false
     }
     private func hitBoss() {
         guard boss,!paused,!finished,shopDue==0,

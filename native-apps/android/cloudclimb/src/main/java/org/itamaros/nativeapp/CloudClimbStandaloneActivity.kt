@@ -37,6 +37,8 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -72,8 +74,9 @@ private suspend fun pairingCall(path:String,body:JSONObject): Pair<Int,JSONObjec
         val connection=URL(BROKER+path).openConnection() as HttpURLConnection
         try {
             connection.requestMethod="POST"
-            connection.connectTimeout=10000
-            connection.readTimeout=10000
+            // Render can take time to start a sleeping free service.
+            connection.connectTimeout=30000
+            connection.readTimeout=30000
             connection.doOutput=true
             connection.setRequestProperty("Content-Type","application/json")
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
@@ -113,6 +116,10 @@ private fun CloudClimbStandaloneHome(){
     var expiry by remember { mutableLongStateOf(0L) }
     var status by remember { mutableStateOf("Choose Play Offline or Link ItamarOS Account") }
     var connecting by remember { mutableStateOf(false) }
+    var manualLogin by remember { mutableStateOf(false) }
+    var manualIdentifier by remember { mutableStateOf("") }
+    var manualPassword by remember { mutableStateOf("") }
+    val scope= rememberCoroutineScope()
 
     LaunchedEffect(wantQR) {
         if(!wantQR)return@LaunchedEffect
@@ -136,10 +143,17 @@ private fun CloudClimbStandaloneHome(){
                     context.startActivity(Intent(Intent.ACTION_VIEW,deepLink)
                         .setPackage("org.itamaros.nativeapp"))
                 }catch(_:Exception){
-                    status="Could not open ItamarOS. Install the current app or use QR linking."
+                    requestId="";claimSecret="";qrUrl="";wantQR=false
+                    manualLogin=true
+                    status="Could not open ItamarOS. Sign in with your email below, or install ItamarOS and retry."
                 }
             }
-        }catch(e:Exception){status=e.localizedMessage?:"QR unavailable";wantQR=false}
+        }catch(e:Exception){
+            status="Account linking unavailable. Use email/password below, or retry later. "+
+                (e.localizedMessage ?: "")
+            manualLogin=true
+            wantQR=false
+        }
         finally{connecting=false}
     }
     LaunchedEffect(requestId,claimSecret,wantQR) {
@@ -267,6 +281,72 @@ private fun CloudClimbStandaloneHome(){
                             fontFamily=FontFamily(Font(R.font.fredoka)))
                     }
                     OutlinedButton(
+                        onClick={
+                            manualLogin=!manualLogin
+
+                        },
+                        enabled=!connecting && !wantQR,
+                        modifier=Modifier.fillMaxWidth()
+                    ) {
+                        Text(if(manualLogin)"Hide manual login" else "Sign in manually",
+                            color=Color.White)
+                    }
+                    if(manualLogin && !wantQR){
+                        if(status.contains("failed",ignoreCase=true) ||
+                           status.contains("could not",ignoreCase=true) ||
+                           status.contains("error",ignoreCase=true))
+                            Text(status,color=Color(0xFFFFDAA3),fontSize=13.sp)
+                        Column(Modifier.fillMaxWidth(),
+                            verticalArrangement=Arrangement.spacedBy(9.dp)){
+                            OutlinedTextField(
+                                value=manualIdentifier,
+                                onValueChange={manualIdentifier=it.take(254)},
+                                label={Text("Email")},
+                                singleLine=true,
+                                modifier=Modifier.fillMaxWidth(),
+                                colors=OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor=Color.White,
+                                    unfocusedTextColor=Color.White,
+                                    focusedLabelColor=Color.White,
+                                    unfocusedLabelColor=Color.White
+                                )
+                            )
+                            OutlinedTextField(
+                                value=manualPassword,
+                                onValueChange={manualPassword=it.take(256)},
+                                label={Text("Password")},
+                                singleLine=true,
+                                visualTransformation=PasswordVisualTransformation(),
+                                modifier=Modifier.fillMaxWidth(),
+                                colors=OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor=Color.White,
+                                    unfocusedTextColor=Color.White,
+                                    focusedLabelColor=Color.White,
+                                    unfocusedLabelColor=Color.White
+                                )
+                            )
+                            Button(
+                                onClick={
+                                    scope.launch {
+                                        connecting=true
+                                        try{
+                                            api.loginManually(manualIdentifier,manualPassword)
+                                            manualPassword="";manualLogin=false
+                                            isAuthenticated=true
+                                            status="Signed in with your ItamarOS account."
+                                        }catch(e:Exception){
+                                            status=e.localizedMessage ?: "Manual login failed"
+                                        }finally{connecting=false}
+                                    }
+                                },
+                                enabled=!connecting && manualIdentifier.isNotBlank()
+                                    && manualPassword.isNotBlank()
+                            ){Text("Sign in with password")}
+                            Text("Or use QR login and approve it in your signed-in ItamarOS app. No SMS is required.",
+                                color=Color.White.copy(alpha=0.77f),fontSize=12.sp)
+                        }
+                    }
+                    OutlinedButton(
                         onClick={localPlay=true},
                         modifier=Modifier.fillMaxWidth().heightIn(min=61.dp),
                         shape=RoundedCornerShape(20.dp),
@@ -284,6 +364,20 @@ private fun CloudClimbStandaloneHome(){
                         Text("Use a QR code instead", color=Color.White.copy(alpha=0.9f))
                     }
                     if (wantQR) {
+                        if(useItamarOSApp && requestId.isNotBlank()){
+                            TextButton(onClick={
+                                val link=Uri.Builder().scheme("itamaros").authority("cloud-climb")
+                                    .appendQueryParameter("request",requestId).build()
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW,link)
+                                        .setPackage("org.itamaros.nativeapp"))
+                                } catch (_:Exception) {
+                                    requestId="";claimSecret="";qrUrl="";wantQR=false
+                                    manualLogin=true
+                                    status="Could not open ItamarOS. You can sign in with email."
+                                }
+                            }){Text("Open ItamarOS again",color=Color.White)}
+                        }
                         Text("Compare this code in ItamarOS: "+
                             requestId.take(6).uppercase(),
                             fontWeight=FontWeight.Bold,color=Color.White,

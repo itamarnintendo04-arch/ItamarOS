@@ -22,6 +22,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
@@ -45,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private var selectedApkName by mutableStateOf<String?>(null)
     private var bestScore by mutableIntStateOf(0)
     private var updateStatus by mutableStateOf("Not checked yet")
+    private var updateCandidate by mutableStateOf<ItamarApkUpdate.PublishedApk?>(null)
+    private var downloadState by mutableStateOf(ItamarApkUpdate.Snapshot("none","No update downloaded"))
     private var incomingGroupInvite by mutableStateOf<String?>(null)
     private var incomingContact by mutableStateOf<String?>(null)
     private var incomingDesktopRequest by mutableStateOf<String?>(null)
@@ -72,6 +77,24 @@ class MainActivity : ComponentActivity() {
         ItamarUpdateWorker.schedule(this,enabled)
         status = if (enabled) "Automatic Android update checks enabled."
                  else "Automatic Android update checks disabled."
+    }
+
+    private fun setAutomaticUpdateDownloads(enabled:Boolean) {
+        prefs.edit().putBoolean("autoDownloadUpdates",enabled)
+            .putBoolean("autoUpdateChecks",if(enabled)true else prefs.getBoolean("autoUpdateChecks",true)).apply()
+        if(enabled) {
+            ItamarUpdateWorker.schedule(this,true)
+            updateCandidate?.let { target ->
+                try {
+                    ItamarApkUpdate.enqueue(this,target,automatic=true)
+                    status="Automatic update download scheduled on Wi-Fi."
+                } catch (e:Exception) {
+                    status="Could not start update download: ${e.localizedMessage}"
+                }
+            }
+        }
+        status=if(enabled) "Automatic verified APK downloads enabled for unmetered Wi-Fi."
+               else "Automatic downloads disabled. Manual downloads remain available."
     }
 
     private val chooseUSB = registerForActivityResult(
@@ -163,7 +186,18 @@ class MainActivity : ComponentActivity() {
         selectedTree = prefs.getString("usbFolder", null)?.let(Uri::parse)
         bestScore = prefs.getInt("bestGuess", 0)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            ItamarVisualTheme {
+                LaunchedEffect(Unit) {
+                    while(true) {
+                        val next=runCatching {
+                            withContext(Dispatchers.IO) {
+                                ItamarApkUpdate.snapshot(this@MainActivity)
+                            }
+                        }.getOrNull()
+                        if(next!=null) downloadState=next
+                        delay(1700)
+                    }
+                }
                 NativeAppScreen(
                     isTv = isTv,
                     groupInvite = incomingGroupInvite,
@@ -173,8 +207,11 @@ class MainActivity : ComponentActivity() {
                     device = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
                     status = status,
                     updateStatus = updateStatus,
-                    updateDownloadAvailable = updateApkUrl != null,
-                    onDownloadUpdate = ::openUpdateDownload,
+                    updateDownloadAvailable = updateCandidate != null,
+                    onDownloadUpdate = ::downloadUpdate,
+                    downloadState = downloadState,
+                    onInstallDownloadedUpdate = ::installDownloadedUpdate,
+                    onSetAutoDownloadUpdates = ::setAutomaticUpdateDownloads,
                     bestScore = bestScore,
                     selectedMedia = selectedMedia,
                     selectedApkName = selectedApkName,
@@ -198,6 +235,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        checkUpdates()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -225,6 +263,10 @@ class MainActivity : ComponentActivity() {
             incomingCloudClimbRequest=request?.takeIf{
                 it.matches(Regex("[A-Za-z0-9_-]{24,40}"))
             }
+        } else if (uri.host == "account") {
+            // Browser validated the one-use invitation before suggesting the app.
+            // This opens the app, but only normal account sign-in authenticates.
+            status = "Open ItamarOS Connect to sign in with the password you just created."
         } else if (uri.host == "hub-auth") {
             // Do not treat URL parameters as a verified identity.
             // Hub ticket redemption is disabled until server integration is configured.
@@ -232,64 +274,67 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private var updateApkUrl by mutableStateOf<String?>(null)
-
     private fun checkUpdates() {
-        updateStatus = "Checking public release metadata…"
-        updateApkUrl = null
+        updateStatus="Checking available software updates…"
+        updateCandidate=null
         Thread {
-            val result = try {
-                val connection = URL(
-                    "https://raw.githubusercontent.com/itamarnintendo04-arch/ItamarOS/main/updates/native-apps.json"
-                ).openConnection()
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
-                val data = connection.getInputStream().bufferedReader().use { it.readText() }
-                val manifest = JSONObject(data)
-                val id = if (isTv) "itamaros-android-tv" else "itamaros-android"
-                val components = manifest.getJSONArray("components")
-                val component = (0 until components.length())
-                    .map { components.getJSONObject(it) }
-                    .firstOrNull { it.optString("id") == id }
-                val installed = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.0.0"
-                val remote = component?.optString("version").orEmpty()
-                val asset = component?.optString("package").orEmpty()
-                val trustedLink = asset.startsWith(
-                    "https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/"
-                ) && asset.endsWith(".apk")
-                val newer = remote.split('.').map { it.toIntOrNull() ?: 0 }
-                    .let { r -> installed.split('.').map { it.toIntOrNull() ?: 0 }.let { local ->
-                        (0 until maxOf(r.size, local.size)).firstNotNullOfOrNull { index ->
-                            val diff = r.getOrElse(index) { 0 } - local.getOrElse(index) { 0 }
-                            if (diff == 0) null else diff > 0
-                        } ?: false
-                    } }
-
-                if (manifest.optInt("schemaVersion") != 1 || component == null) {
-                    "Invalid or missing Android release metadata."
-                } else if (newer && trustedLink) {
-                    runOnUiThread { updateApkUrl = asset }
-                    "Android $remote is published as an unverified preview APK. Download it from GitHub, then review installation in Android. Updating in place requires the same signing key as the installed version."
-                } else if (newer) {
-                    "Android source version $remote is newer, but no downloadable APK for this device is published."
-                } else {
-                    "Installed version $installed. Latest source version $remote. No newer APK found."
+            val result=try {
+                val connection=URL(ItamarApkUpdate.MANIFEST_URL).openConnection()
+                connection.connectTimeout=12000
+                connection.readTimeout=12000
+                val manifest=JSONObject(connection.getInputStream().bufferedReader().use{it.readText()})
+                val installed=packageManager.getPackageInfo(packageName,0).versionName ?: "0.0.0"
+                val target=ItamarApkUpdate.publishedTarget(manifest,isTv,installed)
+                val id=if(isTv) "itamaros-android-tv" else "itamaros-android"
+                val components=manifest.optJSONArray("components")
+                val row=(0 until (components?.length()?:0))
+                    .mapNotNull{components?.optJSONObject(it)}
+                    .firstOrNull{it.optString("id")==id}
+                val remote=row?.optString("version") ?: "unknown"
+                runOnUiThread {
+                    updateCandidate=target
+                    if(target!=null && prefs.getBoolean("autoDownloadUpdates",false)) {
+                        try { ItamarApkUpdate.enqueue(this,target,automatic=true) }
+                        catch(e:Exception) {
+                            status="Unable to schedule automatic download: ${e.localizedMessage}"
+                        }
+                    }
                 }
-            } catch (e: Exception) {
-                "Unable to check releases: ${e.localizedMessage}"
+                when {
+                    manifest.optInt("schemaVersion")!=1 || row==null ->
+                        "Invalid Android update metadata."
+                    target!=null ->
+                        "Verified ItamarOS ${target.version} is available. " +
+                            "You can download it or enable automatic Wi-Fi downloads."
+                    ItamarApkUpdate.newer(remote,installed) ->
+                        "Source version ${remote} exists, but no SHA-256-verified release APK is published for automatic updates."
+                    else ->
+                        "ItamarOS ${installed} is current. Latest listed: ${remote}."
+                }
+            } catch(e:Exception) {
+                "Could not check for updates: ${e.localizedMessage}"
             }
-            runOnUiThread { updateStatus = result }
+            runOnUiThread {updateStatus=result}
         }.start()
     }
 
-    private fun openUpdateDownload() {
-        val url = updateApkUrl ?: return
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-            status = "Opened official GitHub APK download. Android must approve installation; no update has been installed yet."
-        } catch (e: Exception) {
-            status = "Unable to open release link: ${e.localizedMessage}"
+    private fun downloadUpdate() {
+        val target=updateCandidate
+        if(target==null){
+            status="No verified release APK is available."
+            return
         }
+        try {
+            ItamarApkUpdate.enqueue(this,target,automatic=false)
+            status="Update queued in Android Download Manager. Install only after verification."
+        }catch(e:Exception){
+            status="Unable to download update: ${e.localizedMessage}"
+        }
+    }
+
+    private fun installDownloadedUpdate() {
+        try { status=ItamarApkUpdate.openInstaller(this) }
+        catch(e:Exception) { status="Android installer could not open: ${e.localizedMessage}" }
     }
 
     private fun launchTVService(pkg: String?, name: String) {
