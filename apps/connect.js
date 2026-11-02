@@ -14,7 +14,7 @@ const client=sd.createClient(config.url,config.publishableKey,{
 let user=null,rooms=[],current=null;
 let pendingPassword='',pendingAvatar=null,avatarPreviewURL=null;
 let deviceSync=localStorage.getItem('itamaros-connect-device-sync')!=='off';
-let pendingPhone='',pendingUsername='',pendingEmail='',pendingIdentifier='',pendingVerifyMode='sms',pendingMode='signup',authMode='signup',profileReady=false;
+let pendingUsername='',authMode='signup',profileReady=false;
 let messageChannel=null;
 function stopWatching(){
  if(messageChannel){void client.removeChannel(messageChannel);messageChannel=null}
@@ -173,17 +173,18 @@ async function loadProfile(){
 async function drawSession(){
  const {data,error}=await client.auth.getUser();
  if(error||!data?.user){user=null;$('auth').hidden=false;$('app').hidden=true;return}
- if(!data.user.phone_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('SMS phone verification is required.',true);return}
+ if(!data.user.email_confirmed_at){await client.auth.signOut();user=null;$('auth').hidden=false;$('app').hidden=true;setStatus('Confirm your email before signing in.',true);return}
  user=data.user;$('auth').hidden=true;$('app').hidden=false;
  const {data:profile,error:profileError}=await client.from('itamar_profiles').select('id').eq('id',user.id).maybeSingle();
  if(profileError)throw profileError;
  profileReady=Boolean(profile);
  if(!profileReady){
   clearCloudView();
-  $('username').value=pendingUsername||'';
-  $('displayName').value=pendingUsername||'';
+  const proposed=pendingUsername||data.user.user_metadata?.preferred_username||'';
+  $('username').value=proposed;
+  $('displayName').value=proposed;
   selectTab('profile');
-  setStatus('Phone verified. Save your unique username to finish your profile.');
+  setStatus('Email confirmed. Save your username to finish your profile.');
   return;
  }
  if(deviceSync){await refreshRooms();await loadProfile();await showBlocks();}
@@ -195,16 +196,18 @@ function setAuthMode(mode){
  $('signupFields').hidden=!signup;
  $('signupPhoneField').hidden=!signup;
  $('signinFields').hidden=signup;
- $('authSubmit').textContent=signup?'Next — send SMS':'Sign in';
- $('phone').required=signup;
+ $('authSubmit').textContent=signup?'Create account — send confirmation email':'Sign in';
+ $('phone').required=false;
  $('signinIdentifier').required=!signup;
+ $('signinPassword').required=!signup;
  $('signupEmail').required=signup;
+ $('signupPassword').required=signup;
  $('signupUsername').required=signup;
- $('signupAvatar').required=signup&&!$('useDefaultAvatar').checked;
+ $('signupAvatar').required=false;
  $('authTitle').textContent=signup?'Create your ItamarOS account':'Sign in to ItamarOS';
  $('authHelp').textContent=signup?
- 'Username, email and phone are required (*). Your phone receives a verification code; your email receives a confirmation link.':
- 'Sign in with email or phone and your password, or request an email login link / SMS code.';
+  'Username, email and password are required (*). Phone and profile photo are optional. Confirm your email to activate your account.':
+  'Enter your ItamarOS email address and password, or approve QR login inside Cloud Climb.';
  $('signupMode').classList.toggle('primary',signup);
  $('signinMode').classList.toggle('primary',!signup);
 }
@@ -217,7 +220,7 @@ $('useDefaultAvatar').addEventListener('change',()=>{
   $('avatarPreview').hidden=true;
   if(avatarPreviewURL){URL.revokeObjectURL(avatarPreviewURL);avatarPreviewURL=null;}
  }
- $('signupAvatar').required=authMode==='signup'&&!$('useDefaultAvatar').checked;
+ $('signupAvatar').required=false;
 });
 setAuthMode('signup');
 $('signupAvatar').addEventListener('change',()=>{
@@ -230,73 +233,49 @@ $('signupAvatar').addEventListener('change',()=>{
  }
  pendingAvatar=selected;
  $('useDefaultAvatar').checked=false;
- $('signupAvatar').required=authMode==='signup';
+ $('signupAvatar').required=false;
  avatarPreviewURL=URL.createObjectURL(selected);
  $('avatarPreview').src=avatarPreviewURL;$('avatarPreview').hidden=false;
 });
-$('changePhone').onclick=()=>{
- pendingPhone='';pendingEmail='';pendingIdentifier='';pendingPassword='';
- $('signupPassword').value='';
- $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;$('smsCode').value='';
- setStatus('Enter your phone number and tap Next.');
-};
 $('smsForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
- const signup=authMode==='signup';
- if(signup){
-  const phone=$('phone').value.trim();
+ if(authMode==='signup'){
   const username=$('signupUsername').value.trim().toLowerCase();
   const email=$('signupEmail').value.trim().toLowerCase();
   const password=$('signupPassword').value;
-  if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error('Use a phone number with an international prefix, e.g. +972...');
-  if(!/^[a-z0-9_.]{3,24}$/.test(username))throw Error('Username must contain 3–24 lowercase letters, numbers, _ or .');
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)throw Error('Enter a valid email address.');
-  if(!pendingAvatar&&!$('useDefaultAvatar').checked)throw Error('Upload a picture or select the default avatar.');
-  if(password&&password.length<8)throw Error('Optional password must be at least 8 characters.');
-  const {error}=await client.auth.signInWithOtp({phone,options:{shouldCreateUser:true}});
+  const phone=$('phone').value.trim();
+  if(!/^[a-z0-9_.]{3,24}$/.test(username))
+   throw Error('Username: 3–24 lowercase letters, numbers, _ or .');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)
+   throw Error('Enter a valid email.');
+  if(password.length<8)throw Error('Choose a password of at least 8 characters.');
+  if(phone && !/^\+[1-9]\d{7,14}$/.test(phone))
+   throw Error('Optional phone must use +country-code format, e.g. +972...');
+  const {data,error}=await client.auth.signUp({
+   email,password,
+   options:{
+    emailRedirectTo:window.location.origin+window.location.pathname,
+    data:{preferred_username:username,...(phone?{unverified_contact_phone:phone}:{})}
+   }
+  });
   if(error)throw error;
-  pendingPhone=phone;pendingEmail=email;pendingUsername=username;
-  pendingPassword=password;pendingMode='signup';pendingVerifyMode='sms';
-  $('phoneDestination').textContent=phone;
-  $('verifyTitle').textContent='Enter your SMS verification code';
-  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
-  setStatus('We sent an SMS code. After verification you will receive an email confirmation link.');
+  pendingUsername=username;
+  // Username survives in private Auth metadata across email-confirmation redirects.
+  // A selected optional photo can be added after sign-in from the Profile tab.
+  $('signupPassword').value='';
+  if(data?.session){await client.auth.signOut();}
+  setStatus('Check your inbox and confirm the email address. Then return here and sign in. No SMS is needed.');
   return;
  }
- const identifier=$('signinIdentifier').value.trim();
- const isPhone=/^\+[1-9]\d{7,14}$/.test(identifier);
- const isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
- if(!isPhone&&!isEmail)throw Error('Enter a registered email or phone number with country code.');
+ const email=$('signinIdentifier').value.trim().toLowerCase();
  const password=$('signinPassword').value;
- if(password){
-  const credentials=isPhone?{phone:identifier,password}:{email:identifier,password};
-  const {error}=await client.auth.signInWithPassword(credentials);
-  if(error)throw error;
-  $('signinPassword').value='';
-  pendingPhone='';pendingEmail='';pendingIdentifier='';pendingUsername='';pendingAvatar=null;
-  await drawSession();
-  setStatus('Signed in to your ItamarOS account.');
-  return;
- }
- if(isPhone){
-  const {error}=await client.auth.signInWithOtp({phone:identifier,options:{shouldCreateUser:false}});
-  if(error)throw error;
-  pendingPhone=identifier;pendingIdentifier=identifier;pendingMode='signin';pendingVerifyMode='sms';
-  $('phoneDestination').textContent=identifier;
-  $('verifyTitle').textContent='Enter your SMS verification code';
-  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
-  setStatus('SMS requested. Enter the code sent to your phone.');
- }else{
-  const {error}=await client.auth.signInWithOtp({email:identifier,options:{
-   shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname
-  }});
-  if(error)throw error;
-  pendingIdentifier=identifier;pendingMode='signin';pendingVerifyMode='email';
-  $('phoneDestination').textContent=identifier;
-  $('verifyTitle').textContent='Email sign-in';
-  $('smsForm').hidden=true;$('smsVerifyForm').hidden=false;
-  setStatus('Check your email for a sign-in link. If your provider sends a numeric OTP, enter it below.');
- }
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!password)
+  throw Error('Enter your email and password.');
+ const {error}=await client.auth.signInWithPassword({email,password});
+ if(error)throw error;
+ $('signinPassword').value='';
+ await drawSession();
+ setStatus('Signed in to your ItamarOS account.');
 }));
 async function applyPendingAvatar(){
  if(!pendingAvatar||!user)return;
@@ -314,55 +293,29 @@ async function applyPendingAvatar(){
  pendingAvatar=null;$('signupAvatar').value='';$('avatarPreview').hidden=true;
  if(avatarPreviewURL){URL.revokeObjectURL(avatarPreviewURL);avatarPreviewURL=null}
 }
-$('smsVerifyForm').addEventListener('submit',safe(async e=>{
+$('forgotPassword').onclick=()=>{
+ $('forgotPasswordForm').hidden=false;
+ $('recoveryEmail').value=$('signinIdentifier').value.trim();
+};
+$('cancelForgot').onclick=()=>{$('forgotPasswordForm').hidden=true;};
+$('forgotPasswordForm').addEventListener('submit',safe(async e=>{
  e.preventDefault();
- if(!pendingIdentifier&&!pendingPhone)throw Error('Request a verification code first.');
- const code=$('smsCode').value.trim();
- if(!/^\d{4,8}$/.test(code))throw Error('Enter the verification code.');
- const payload=pendingVerifyMode==='email'
-  ?{email:pendingIdentifier,token:code,type:'email'}
-  :{phone:pendingPhone,token:code,type:'sms'};
- const {data,error}=await client.auth.verifyOtp(payload);
+ const email=$('recoveryEmail').value.trim();
+ const {error}=await client.auth.resetPasswordForEmail(email,{
+  redirectTo:window.location.origin+window.location.pathname
+ });
  if(error)throw error;
- if(!data?.session)throw Error('Verification was not completed.');
- if(pendingVerifyMode==='sms'&&!data.user?.phone_confirmed_at)
-  throw Error('Phone verification was not completed.');
- user=data.user;
- const {data:existing,error:lookupError}=await client.from('itamar_profiles')
-  .select('id').eq('id',user.id).maybeSingle();
- if(lookupError)throw lookupError;
- let newProfileCreated=false;
- let confirmationSent=false;
- if(!existing&&pendingMode==='signup'&&pendingUsername&&pendingEmail){
-  // Link the required email to the SAME phone-authenticated user; do NOT create an unrelated email account.
-  // Supabase sends a confirmation email. Confirmed email identity enables email login.
-  const {error:emailError}=await client.auth.updateUser({email:pendingEmail});
-  if(emailError)throw Error('Phone verified, but email registration could not finish: '+emailError.message);
-  confirmationSent=true;
-  const {error:profileError}=await client.from('itamar_profiles').insert({
-   id:user.id,username:pendingUsername,display_name:pendingUsername
-  });
-  if(profileError){
-   await drawSession();
-   throw Error('Could not save that username. Choose another in Profile. '+profileError.message);
-  }
-  newProfileCreated=true;
-  if(pendingPassword){
-   const {error:passwordError}=await client.auth.updateUser({password:pendingPassword});
-   if(passwordError)message('Phone verified but optional password could not be saved: '+passwordError.message);
-  }
- }
- pendingPassword='';pendingEmail='';$('signupPassword').value='';
- $('smsCode').value='';pendingPhone='';pendingIdentifier='';
- $('smsForm').hidden=false;$('smsVerifyForm').hidden=true;
- await drawSession();
- if(profileReady){
-  if(newProfileCreated)await applyPendingAvatar();
-  else pendingAvatar=null;
-  setStatus(confirmationSent?
-   'Phone verified. Confirm the email link sent to your address to enable email sign-in. Your ItamarOS account uses one shared ID.':
-   'Welcome back to your ItamarOS account.');
- }else setStatus('Phone verified. Create your username in Profile to finish.');
+ $('forgotPasswordForm').hidden=true;
+ setStatus('If that account exists, a password reset link has been sent by email.');
+}));
+$('resetPasswordForm').addEventListener('submit',safe(async e=>{
+ e.preventDefault();
+ const value=$('newPassword').value;
+ if(value.length<8)throw Error('Password must contain at least 8 characters.');
+ const {error}=await client.auth.updateUser({password:value});
+ if(error)throw error;
+ $('newPassword').value='';$('passwordRecovery').hidden=true;
+ setStatus('Password updated successfully.');
 }));
 $('deviceSync').addEventListener('change',safe(async e=>{
  deviceSync=Boolean(e.target.checked);
@@ -428,7 +381,10 @@ $('discover').onclick=safe(async()=>{
 });
 $('reloadUpdates').onclick=()=>safe(loadUpdates)();
 for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>selectTab(button.dataset.tab);
-client.auth.onAuthStateChange((_event,session)=>{if(!session){stopWatching();user=null;profileReady=false;$('app').hidden=true;$('auth').hidden=false}});
+client.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'){$('passwordRecovery').hidden=false;}
+ if(!session){stopWatching();user=null;profileReady=false;$('app').hidden=true;$('auth').hidden=false;}
+});
 // RLS-protected Realtime is primary; polling heals reconnects and new room invitations.
 window.setInterval(()=>{
  if(!user||!deviceSync||document.visibilityState!=='visible')return;
