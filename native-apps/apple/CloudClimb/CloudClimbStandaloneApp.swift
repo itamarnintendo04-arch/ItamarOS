@@ -117,7 +117,7 @@ struct CloudClimbStandaloneHome:View {
                         colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { selectedMenu="Shop" }
                     HStack(spacing:8) {
                         ForEach(["🏆 Achievements","🥇 Leaderboard","🎁 Daily Reward",
-                                 "🎯 Challenges"],id: \\.self) { title in
+                                 "🎯 Challenges"],id: \.self) { title in
                             Button(title) {selectedMenu=title}
                                 .font(.system(size:11,weight:.bold,design:.rounded))
                                 .frame(maxWidth:.infinity,minHeight:47)
@@ -244,7 +244,7 @@ struct CloudClimbStandaloneHome:View {
             )) {
                 Button("OK") {selectedMenu=nil}
             } message: {
-                Text("\\(selectedMenu ?? "Feature") is being prepared. Play the offline demo now.")
+                Text("\(selectedMenu ?? "Feature") is being prepared. Play the offline demo now.")
             }
             .sheet(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
