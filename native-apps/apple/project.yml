@@ -29,6 +29,7 @@ targets:
             CFBundleTypeRole: Viewer
             CFBundleURLSchemes:
               - cloudclimb
+        NSCameraUsageDescription: "Scan Cloud Climb and ItamarOS login QR codes to review and approve sign-in requests."
         NSFaceIDUsageDescription: "Confirm it is you before approving a Cloud Climb account login."
         UIAppFonts:
           - Fredoka.ttf
