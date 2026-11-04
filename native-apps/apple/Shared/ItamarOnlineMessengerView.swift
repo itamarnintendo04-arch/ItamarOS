@@ -572,7 +572,7 @@ private struct ItamarPeopleSearchView:View {
                     try? await Task.sleep(for:.milliseconds(350))
                     guard query == term else {return}
                     do { results=try await cloud.searchPeople(term);error="" }
-                    catch {error=error.localizedDescription}
+                    catch {self.error=error.localizedDescription}
                 }
             }
         }
