@@ -14,6 +14,8 @@ struct ItamarOnlineMessengerView: View {
     @State private var showProfile = false
     @State private var showNew = false
     @State private var showChannels = false
+    @State private var showPeople = false
+    @State private var chatFilter = ""
     @State private var pollTask: Task<Void, Never>?
     @State private var error = ""
 
@@ -43,6 +45,28 @@ struct ItamarOnlineMessengerView: View {
                                 .padding(.horizontal)
                         }
                         List {
+                            if selected == 0 {
+                                Button { showPeople = true } label: {
+                                    Label("New chat · Find people",systemImage:"person.crop.circle.badge.plus")
+                                }
+                            }
+                            if selected == 1 {
+                                Button { showChannels = true } label: {
+                                    Label("Browse all channels",systemImage:"magnifyingglass")
+                                }
+                                ForEach(cloud.channels.filter { candidate in
+                                    !cloud.rooms.contains(where:{$0.id == candidate.id})
+                                }) { candidate in
+                                    HStack {
+                                        Label(candidate.title,systemImage:"megaphone.fill")
+                                        Spacer()
+                                        Button("Follow") {
+                                            Task { do { try await cloud.joinChannel(candidate.id) }
+                                                catch { self.error=error.localizedDescription } }
+                                        }
+                                    }
+                                }
+                            }
                             if selected == 2 {
                                 if cloud.updates.isEmpty {
                                     ContentUnavailableView("No new activity", systemImage: "bell.slash",
@@ -64,7 +88,9 @@ struct ItamarOnlineMessengerView: View {
                                 }
                             } else {
                                 let kind = selected == 0 ? "chat" : (selected == 3 ? "group" : "channel")
-                                ForEach(cloud.rooms.filter { $0.kind == kind }) { room in
+                                ForEach(cloud.rooms.filter { $0.kind == kind &&
+                                    (selected != 0 || chatFilter.isEmpty ||
+                                     $0.title.localizedCaseInsensitiveContains(chatFilter)) }) { room in
                                     NavigationLink {
                                         ItamarCloudThreadView(room: room)
                                     } label: {
@@ -91,8 +117,12 @@ struct ItamarOnlineMessengerView: View {
                                 }
                             }
                         }
+                        .searchable(text:$chatFilter,prompt:"Search chats")
                         .refreshable {
-                            do { try await cloud.reload() } catch { self.error = error.localizedDescription }
+                            do {
+                                try await cloud.reload()
+                                if selected == 1 { try await cloud.loadPublicChannels() }
+                            } catch { self.error = error.localizedDescription }
                         }
                     }
                     .toolbar {
@@ -108,9 +138,19 @@ struct ItamarOnlineMessengerView: View {
                                 }.accessibilityLabel("Discover channels")
                             }
                             if selected != 2 {
-                                Button { showNew = true } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                }.accessibilityLabel("New chat or channel")
+                                Menu {
+                                    Button("New contact · Search username",systemImage:"person.crop.circle.badge.plus") {
+                                        showPeople = true
+                                    }
+                                    Button("New group",systemImage:"person.3.fill") {
+                                        selected = 3; showNew = true
+                                    }
+                                    Button("New channel",systemImage:"megaphone.fill") {
+                                        selected = 1; showNew = true
+                                    }
+                                } label: {
+                                    Image(systemName:"plus.circle.fill")
+                                }.accessibilityLabel("Add contact, group or channel")
                             }
                         }
                     }
@@ -123,6 +163,15 @@ struct ItamarOnlineMessengerView: View {
             .sheet(isPresented: $showNew) {
                 NavigationStack { if selected == 3 { ItamarCreateGroupView() }
                 else { ItamarCloudNewRoomView(kind: selected == 1 ? "channel" : "chat") } }
+            }
+            .sheet(isPresented:$showPeople) {
+                NavigationStack { ItamarPeopleSearchView() }
+            }
+            .onChange(of:selected) { _,tab in
+                if tab == 1 {
+                    Task { do { try await cloud.loadPublicChannels() }
+                        catch { self.error=error.localizedDescription } }
+                }
             }
             .sheet(isPresented: $showChannels) {
                 NavigationStack { ItamarCloudExploreView() }
@@ -468,7 +517,73 @@ struct ItamarCloudProfileView: View {
     }
 }
 
-private struct ItamarCloudNewRoomView: View {
+private private struct ItamarPeopleSearchView:View {
+    @EnvironmentObject private var cloud:ItamarCloudService
+    @Environment(\.dismiss) private var dismiss
+    @State private var query=""
+    @State private var results:[ItamarCloudProfile]=[]
+    @State private var error=""
+    @State private var busy=false
+
+    var body:some View {
+        List {
+            if query.trimmingCharacters(in:.whitespacesAndNewlines).count < 2 {
+                ContentUnavailableView("Find a contact",systemImage:"person.crop.circle.badge.magnifyingglass",
+                    description:Text("Search by username or display name."))
+            }
+            ForEach(results,id:\.id) { person in
+                HStack(spacing:12) {
+                    if let url=cloud.publicAvatarURL(person.avatar_path) {
+                        AsyncImage(url:url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Image(systemName:"person.crop.circle.fill")
+                        }
+                        .frame(width:45,height:45).clipShape(Circle())
+                    } else {
+                        Image(systemName:"person.crop.circle.fill")
+                            .font(.system(size:42)).foregroundStyle(.blue)
+                    }
+                    VStack(alignment:.leading) {
+                        Text(person.display_name).font(.headline)
+                        Text("@"+person.username).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Chat") {
+                        busy=true
+                        Task {
+                            do {
+                                try await cloud.createRoom(kind:"chat",
+                                    title:person.display_name,username:person.username)
+                                dismiss()
+                            } catch { self.error=error.localizedDescription }
+                            busy=false
+                        }
+                    }.disabled(busy)
+                }
+            }
+            if !error.isEmpty { Text(error).foregroundStyle(.red) }
+        }
+        .searchable(text:$query,prompt:"Search people by name or @username")
+        .onChange(of:query) { _,term in
+            results=[]
+            if term.trimmingCharacters(in:.whitespacesAndNewlines).count >= 2 {
+                Task {
+                    try? await Task.sleep(for:.milliseconds(350))
+                    guard query == term else {return}
+                    do { results=try await cloud.searchPeople(term);error="" }
+                    catch {error=error.localizedDescription}
+                }
+            }
+        }
+        .navigationTitle("Find people")
+        .toolbar { ToolbarItem(placement:.confirmationAction) {
+            Button("Done") {dismiss()}
+        }}
+    }
+}
+
+struct ItamarCloudNewRoomView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @Environment(\.dismiss) private var dismiss
     let kind: String
