@@ -88,7 +88,6 @@ struct CloudClimbStandaloneHome:View {
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
     @State private var selectedMenu:String?
-    @State private var gameSearch=""
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
     @State private var secretVisible=false
     @State private var secretChatVisible=false
@@ -99,16 +98,6 @@ struct CloudClimbStandaloneHome:View {
             ScrollView {
                 VStack(spacing:16) {
                     CloudClimbSkyIntro()
-                    HStack {
-                        Image(systemName:"magnifyingglass")
-                        TextField("Search games",text:$gameSearch)
-                            .textInputAutocapitalization(.never)
-                            .onChange(of:gameSearch) { _,value in
-                                if value == "0000" { secretUnlocked=true }
-                            }
-                    }
-                    .padding(12)
-                    .background(.white.opacity(0.9),in:RoundedRectangle(cornerRadius:14))
                     if secretUnlocked {
                         Button {
                             secretChatVisible=true
