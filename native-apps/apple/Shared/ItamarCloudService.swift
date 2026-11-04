@@ -469,6 +469,26 @@ final class ItamarCloudService: ObservableObject {
         }
     }
 
+    /// Search only public profile fields. Never expose email or phone.
+    func searchPeople(_ term: String) async throws -> [ItamarCloudProfile] {
+        let clean = term.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+        guard clean.count >= 2 else { return [] }
+        let escaped = clean.replacingOccurrences(of: "%", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "*", with: "")
+            .replacingOccurrences(of: "(", with: "")
+            .replacingOccurrences(of: ")", with: "")
+        guard escaped.count >= 2 else { return [] }
+        let raw = try await request("/rest/v1/itamar_profiles", query: [
+            URLQueryItem(name:"or",value:"(username.ilike.*\(escaped)*,display_name.ilike.*\(escaped)*)"),
+            URLQueryItem(name:"select",value:"id,username,display_name,about,avatar_path,read_receipts_enabled"),
+            URLQueryItem(name:"limit",value:"30")
+        ])
+        return try JSONDecoder().decode([ItamarCloudProfile].self,from:raw)
+            .filter { $0.id != userID }
+    }
+
     func createRoom(kind: String, title: String, username: String? = nil) async throws {
         _ = try await request("/rest/v1/rpc/itamar_create_room", method: "POST",
             data: ["p_kind": kind, "p_title": title, "p_username": username ?? ""])
