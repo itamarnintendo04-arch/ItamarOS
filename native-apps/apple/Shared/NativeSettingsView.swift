@@ -5,6 +5,8 @@ import UserNotifications
 #endif
 
 struct NativeSettingsView: View {
+    @State private var disconnectOtherDevicesConfirm=false
+    @State private var disconnectOtherDevicesStatus=""
     @AppStorage("itamaros.settings.accent") private var accent = "blue"
     @AppStorage("itamaros.settings.sounds") private var sounds = true
     @AppStorage("itamaros.settings.largeText") private var largeText = false
@@ -83,11 +85,34 @@ struct NativeSettingsView: View {
                                 }
                             }
                             Section("Other devices") {
-                                Text("Other device sessions cannot be listed or revoked from this version yet. A secure server-side session management service is required.")
+                                Text("Revoke other sign-in sessions. Individual device names are not available yet.")
                                     .foregroundStyle(.secondary)
+                                Button("Disconnect all other devices", role: .destructive) {
+                                    disconnectOtherDevicesConfirm=true
+                                }
+                                .disabled(!cloud.isSignedIn)
+                                if !disconnectOtherDevicesStatus.isEmpty {
+                                    Text(disconnectOtherDevicesStatus).font(.caption)
+                                }
+                                Text("Existing access tokens may remain valid until they expire.")
+                                    .font(.caption).foregroundStyle(.secondary)
                             }
                         }
                         .navigationTitle("Connected Devices")
+                        .confirmationDialog("Disconnect other devices?", isPresented:$disconnectOtherDevicesConfirm) {
+                            Button("Disconnect all other devices", role:.destructive) {
+                                Task {
+                                    do {
+                                        try await cloud.signOutOtherDevices()
+                                        disconnectOtherDevicesStatus="Other sign-in sessions were revoked."
+                                    } catch {
+                                        disconnectOtherDevicesStatus="Unable to disconnect: " + error.localizedDescription
+                                    }
+                                }
+                            }
+                        } message: {
+                            Text("Other devices will need to sign in again after their current access expires. This device stays signed in.")
+                        }
                     }
                 }
                 Section("Messages and family") {
