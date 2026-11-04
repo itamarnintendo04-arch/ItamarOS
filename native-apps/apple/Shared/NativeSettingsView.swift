@@ -8,7 +8,9 @@ struct NativeSettingsView: View {
     @State private var deviceVerificationCode=""
     @State private var deviceVerificationEmail=""
     @State private var deviceVerificationSent=false
-    @State private var deviceVerificationApproved=false
+    @State private var deviceVerificationExpiresAt=Date.distantPast
+    @State private var verificationClock=Date()
+    @State private var verifiedAccountID: UUID?
     @State private var deviceVerificationBusy=false
     @State private var deviceVerificationStatus=""
     @State private var disconnectOtherDevicesConfirm=false
@@ -23,6 +25,12 @@ struct NativeSettingsView: View {
     #if os(iOS)
     @AppStorage("itamaros.connect.syncEnabled") private var connectSync = true
     @EnvironmentObject private var cloud: ItamarCloudService
+    #endif
+
+    #if os(iOS)
+    private var securityUnlocked: Bool {
+        cloud.isSignedIn && verifiedAccountID == cloud.userID && verificationClock < deviceVerificationExpiresAt
+    }
     #endif
 
     var body: some View {
@@ -81,6 +89,47 @@ struct NativeSettingsView: View {
                 }
                 #if os(iOS)
                 Section("Privacy & Security") {
+                    if !securityUnlocked {
+                                Section("Email verification required") {
+                                    Text("Verify your account email before viewing or managing connected devices.")
+                                    if !deviceVerificationEmail.isEmpty {
+                                        Text("Code destination: " + deviceVerificationEmail).font(.caption)
+                                    }
+                                    if deviceVerificationSent {
+                                        TextField("6-digit email code", text: $deviceVerificationCode)
+                                            .keyboardType(.numberPad)
+                                            .textContentType(.oneTimeCode)
+                                        Button("Verify code") {
+                                            Task {
+                                                deviceVerificationBusy=true
+                                                defer { deviceVerificationBusy=false }
+                                                do {
+                                                    try await cloud.verifyConnectedDevicesEmail(code:deviceVerificationCode, email:deviceVerificationEmail)
+                                                    deviceVerificationExpiresAt=Date().addingTimeInterval(300)
+                                                    verifiedAccountID=cloud.userID
+                                                    verificationClock=Date()
+                                                    deviceVerificationCode=""
+                                                    deviceVerificationStatus=""
+                                                } catch { deviceVerificationStatus=error.localizedDescription }
+                                            }
+                                        }.disabled(deviceVerificationBusy || deviceVerificationCode.count != 6)
+                                    }
+                                    Button(deviceVerificationSent ? "Send a new code" : "Send verification code") {
+                                        Task {
+                                            deviceVerificationBusy=true
+                                            defer { deviceVerificationBusy=false }
+                                            do {
+                                                deviceVerificationEmail=try await cloud.sendConnectedDevicesEmailCode()
+                                                deviceVerificationSent=true
+                                                deviceVerificationStatus="Check your email for the verification code."
+                                            } catch { deviceVerificationStatus=error.localizedDescription }
+                                        }
+                                    }.disabled(deviceVerificationBusy || !cloud.isSignedIn)
+                                    if !deviceVerificationStatus.isEmpty { Text(deviceVerificationStatus).font(.caption) }
+                                }
+                            }
+                    if securityUnlocked {
+                        Text("Verified for 5 minutes").font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Password & account security") {
                         List {
                             Section("Password") {
@@ -103,44 +152,7 @@ struct NativeSettingsView: View {
                     }
                     NavigationLink("Connected devices") {
                         List {
-                            if !deviceVerificationApproved {
-                                Section("Email verification required") {
-                                    Text("Verify your account email before viewing or managing connected devices.")
-                                    if !deviceVerificationEmail.isEmpty {
-                                        Text("Code destination: " + deviceVerificationEmail).font(.caption)
-                                    }
-                                    if deviceVerificationSent {
-                                        TextField("6-digit email code", text: $deviceVerificationCode)
-                                            .keyboardType(.numberPad)
-                                            .textContentType(.oneTimeCode)
-                                        Button("Verify code") {
-                                            Task {
-                                                deviceVerificationBusy=true
-                                                defer { deviceVerificationBusy=false }
-                                                do {
-                                                    try await cloud.verifyConnectedDevicesEmail(code:deviceVerificationCode, email:deviceVerificationEmail)
-                                                    deviceVerificationApproved=true
-                                                    deviceVerificationCode=""
-                                                    deviceVerificationStatus=""
-                                                } catch { deviceVerificationStatus=error.localizedDescription }
-                                            }
-                                        }.disabled(deviceVerificationBusy || deviceVerificationCode.count != 6)
-                                    }
-                                    Button(deviceVerificationSent ? "Send a new code" : "Send verification code") {
-                                        Task {
-                                            deviceVerificationBusy=true
-                                            defer { deviceVerificationBusy=false }
-                                            do {
-                                                deviceVerificationEmail=try await cloud.sendConnectedDevicesEmailCode()
-                                                deviceVerificationSent=true
-                                                deviceVerificationStatus="Check your email for the verification code."
-                                            } catch { deviceVerificationStatus=error.localizedDescription }
-                                        }
-                                    }.disabled(deviceVerificationBusy || !cloud.isSignedIn)
-                                    if !deviceVerificationStatus.isEmpty { Text(deviceVerificationStatus).font(.caption) }
-                                }
-                            }
-                            if deviceVerificationApproved {
+                            if securityUnlocked {
                             Section("This device") {
                                 LabeledContent("Connection", value: cloud.isSignedIn ? "Signed in" : "Not signed in")
                                 LabeledContent("Device", value: UIDevice.current.name)
@@ -164,13 +176,7 @@ struct NativeSettingsView: View {
                             }
                         }
                         .navigationTitle("Connected Devices")
-                        .onDisappear {
-                            deviceVerificationApproved=false
-                            deviceVerificationSent=false
-                            deviceVerificationCode=""
-                            deviceVerificationEmail=""
-                            deviceVerificationStatus=""
-                        }
+
                         .confirmationDialog("Disconnect other devices?", isPresented:$disconnectOtherDevicesConfirm) {
                             Button("Disconnect all other devices", role:.destructive) {
                                 Task {
@@ -187,7 +193,7 @@ struct NativeSettingsView: View {
                         }
                     }
                 }
-                Section("Messages and family") {
+
                     Toggle("Sync ItamarConnect chats and contacts on this device",
                            isOn:$connectSync)
                         .onChange(of:connectSync) { _,enabled in
@@ -243,6 +249,18 @@ struct NativeSettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            #if os(iOS)
+            .task {
+                while !Task.isCancelled {
+                    verificationClock=Date()
+                    try? await Task.sleep(for:.seconds(1))
+                }
+            }
+            .onChange(of:cloud.userID) { _, _ in
+                deviceVerificationExpiresAt = .distantPast
+                verifiedAccountID = nil
+            }
+            #endif
         }
     }
 }
