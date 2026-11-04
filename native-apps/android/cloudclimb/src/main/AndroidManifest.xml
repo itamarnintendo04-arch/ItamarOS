@@ -6,10 +6,11 @@
               android:allowBackup="false" android:supportsRtl="true"
               android:theme="@android:style/Theme.Material.NoActionBar">
    <activity android:name=".CloudClimbStandaloneActivity"
-       android:exported="true" android:screenOrientation="unspecified">
+       android:exported="true" android:screenOrientation="landscape">
       <intent-filter>
          <action android:name="android.intent.action.MAIN" />
          <category android:name="android.intent.category.LAUNCHER" />
+         <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
       </intent-filter>
       <intent-filter>
          <action android:name="android.intent.action.VIEW" />
