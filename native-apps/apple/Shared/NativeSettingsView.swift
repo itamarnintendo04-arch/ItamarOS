@@ -5,6 +5,7 @@ import UserNotifications
 #endif
 
 struct NativeSettingsView: View {
+    @State private var connectedSessionRows: [[String:Any]]=[]
     @State private var deviceVerificationCode=""
     @State private var deviceVerificationEmail=""
     @State private var deviceVerificationSent=false
@@ -109,6 +110,7 @@ struct NativeSettingsView: View {
                                                     deviceVerificationExpiresAt=Date().addingTimeInterval(300)
                                                     verifiedAccountID=cloud.userID
                                                     verificationClock=Date()
+                                                    connectedSessionRows=try await cloud.verifiedConnectedSessions()
                                                     deviceVerificationCode=""
                                                     deviceVerificationStatus=""
                                                 } catch { deviceVerificationStatus=error.localizedDescription }
@@ -162,12 +164,18 @@ struct NativeSettingsView: View {
                                 }
                             }
                             Section("Other devices") {
-                                Text("Revoke other sign-in sessions. Individual device names are not available yet.")
+                                ForEach(Array(connectedSessionRows.enumerated()),id:\.offset) { _, item in
+                                    VStack(alignment:.leading,spacing:4) {
+                                        Text((item["user_agent"] as? String) ?? "Unknown device").lineLimit(2)
+                                        Text((item["created_at"] as? String) ?? "").font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Text("Disconnecting other devices will require additional server-side authorization.")
                                     .foregroundStyle(.secondary)
                                 Button("Disconnect all other devices", role: .destructive) {
                                     disconnectOtherDevicesConfirm=true
                                 }
-                                .disabled(!cloud.isSignedIn)
+                                .disabled(true)
                                 if !disconnectOtherDevicesStatus.isEmpty {
                                     Text(disconnectOtherDevicesStatus).font(.caption)
                                 }
