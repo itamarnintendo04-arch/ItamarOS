@@ -41,7 +41,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     val prefs = remember(accountKey) {
         context.getSharedPreferences(accountKey, Context.MODE_PRIVATE)
     }
-    var level by remember(accountKey) { mutableIntStateOf(prefs.getInt("level", 1).coerceAtLeast(1)) }
+    var level by remember(accountKey) { mutableIntStateOf(prefs.getInt("level", 1).coerceAtLeast(1).let { if (api.userID == null) it.coerceAtMost(2) else it }) }
     var coins by remember(accountKey) { mutableIntStateOf(prefs.getInt("coins", 0).coerceAtLeast(0)) }
     var hearts by remember(accountKey) { mutableIntStateOf(prefs.getInt("hearts", 3).coerceIn(0, 3)) }
     var bossHealth by remember(accountKey) { mutableIntStateOf(prefs.getInt("boss_health", 3).coerceIn(1, 3)) }
@@ -310,6 +310,11 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         jump = false; left = false; right = false
     }
     fun advanceStage() {
+        if (api.userID == null && level >= 2) {
+            paused = true
+            message = "Demo complete! Sign in with ItamarOS to unlock more levels."
+            return
+        }
         val completed = level
         coins += 10
         level += 1
