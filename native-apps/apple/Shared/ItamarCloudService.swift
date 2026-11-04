@@ -421,6 +421,14 @@ final class ItamarCloudService: ObservableObject {
         return try await request("/functions/v1/itamar-security",method:"POST",data:payload)
     }
 
+    func changeVerifiedPassword(_ password: String) async throws {
+        guard password.count >= 12 && password.count <= 128 else {
+            throw ItamarCloudError.badResponse("Password must be 12–128 characters.")
+        }
+        _ = try await request("/functions/v1/itamar-security", method:"POST",
+                              data:["action":"password","password":password])
+    }
+
     func verifiedConnectedSessions() async throws -> [[String:Any]] {
         let raw=try await securityRequest(action:"sessions")
         let json=try JSONSerialization.jsonObject(with:raw) as? [String:Any]
