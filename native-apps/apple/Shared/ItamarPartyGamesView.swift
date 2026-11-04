@@ -21,6 +21,14 @@ private struct ItamarPartyState: Decodable {
     let seed: Int
 }
 
+private struct ItamarLobbyMessage:Decodable,Identifiable {
+    let id:Int64
+    let body:String
+    let display_name:String?
+    let username:String?
+    let sender_id:UUID
+}
+
 struct ItamarPartyGamesView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @Environment(\.dismiss) private var dismiss
@@ -31,6 +39,8 @@ struct ItamarPartyGamesView: View {
     @State private var match: ItamarPartyState?
     @State private var joinCode=""
     @State private var inviteUser=""
+    @State private var lobbyMessages:[ItamarLobbyMessage]=[]
+    @State private var lobbyDraft=""
     @State private var status=""
     @State private var busy=false
     @State private var posX:CGFloat=48
@@ -147,7 +157,41 @@ struct ItamarPartyGamesView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if match.game=="cloud_climb" {
-                            cloudClimb
+                            if match.status=="waiting" {
+                                VStack(alignment:.leading,spacing:10) {
+                                    Text("Lobby chat · Before the game").font(.headline)
+                                    ForEach(lobbyMessages) { message in
+                                        VStack(alignment:.leading,spacing:3) {
+                                            Text(message.display_name ?? message.username ?? "Player")
+                                                .font(.caption.bold())
+                                            Text(message.body).font(.subheadline)
+                                        }
+                                        .frame(maxWidth:.infinity,alignment:.leading)
+                                        .padding(10)
+                                        .background(.gray.opacity(0.10),in:RoundedRectangle(cornerRadius:12))
+                                    }
+                                    HStack {
+                                        TextField("Message your teammates",text:$lobbyDraft)
+                                            .textFieldStyle(.roundedBorder)
+                                        Button("Send") {Task {await sendLobbyMessage()}}
+                                            .disabled(busy || lobbyDraft.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
+                                    }
+                                    if match.host_id == cloud.userID {
+                                        Button("Start game · \(playerCount) players") {
+                                            Task {await startCloudClimb()}
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .disabled(busy || playerCount<2)
+                                    } else {
+                                        Text("Waiting for the host to start…")
+                                            .font(.footnote).foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(12)
+                                .background(.blue.opacity(0.08),in:RoundedRectangle(cornerRadius:16))
+                            } else {
+                                cloudClimb
+                            }
                         } else if match.status=="waiting" {
                             Text("Waiting for a second player…")
                         } else if match.game=="connect_four" {
@@ -195,6 +239,7 @@ struct ItamarPartyGamesView: View {
                 try? await Task.sleep(for:.milliseconds(700))
                 if Task.isCancelled {break}
                 await refresh()
+                if match?.game=="cloud_climb" && match?.status=="waiting" {await refreshLobby()}
             }
         }
     }
@@ -807,6 +852,35 @@ struct ItamarPartyGamesView: View {
     private func api(_ tool:String,_ payload:[String:Any]) async throws -> ItamarPartyState {
         let data=try await cloud.request("/rest/v1/rpc/"+tool,method:"POST",data:payload)
         return try JSONDecoder().decode(ItamarPartyState.self,from:data)
+    }
+    private func refreshLobby() async {
+        guard let code=match?.code else {return}
+        do {
+            let data=try await cloud.request("/rest/v1/rpc/itamar_party_lobby_chat",
+                method:"POST",data:["p_code":code])
+            lobbyMessages=Array(try JSONDecoder().decode([ItamarLobbyMessage].self,from:data).reversed())
+        } catch {status=error.localizedDescription}
+    }
+    private func sendLobbyMessage() async {
+        guard let code=match?.code else {return}
+        let message=lobbyDraft.trimmingCharacters(in:.whitespacesAndNewlines)
+        guard !message.isEmpty else{return}
+        busy=true
+        defer {busy=false}
+        do {
+            let data=try await cloud.request("/rest/v1/rpc/itamar_party_lobby_chat",
+                method:"POST",data:["p_code":code,"p_message":String(message.prefix(500))])
+            lobbyMessages=Array(try JSONDecoder().decode([ItamarLobbyMessage].self,from:data).reversed())
+            lobbyDraft=""
+        } catch {status=error.localizedDescription}
+    }
+    private func startCloudClimb() async {
+        guard let code=match?.code else{return}
+        busy=true;defer{busy=false}
+        do {
+            match=try await api("itamar_party_start",["p_code":code])
+            status=""
+        } catch {status=error.localizedDescription}
     }
     private func create() async {
         busy=true;defer{busy=false}
