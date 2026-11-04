@@ -80,7 +80,27 @@ struct NativeSettingsView: View {
                     #endif
                 }
                 #if os(iOS)
-                Section("Account connections") {
+                Section("Privacy & Security") {
+                    NavigationLink("Password & account security") {
+                        List {
+                            Section("Password") {
+                                Text("For your security, the current account password cannot be displayed. Password changes require identity verification.")
+                                    .foregroundStyle(.secondary)
+                                Text("Password reset and email re-verification will be available after server-side security checks are configured.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .navigationTitle("Password & Security")
+                    }
+                    NavigationLink("Connected apps") {
+                        List {
+                            Section("Cloud Climb") {
+                                Text("Manage approved Cloud Climb connections here once server-side device authorization is enabled.")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .navigationTitle("Connected Apps")
+                    }
                     NavigationLink("Connected devices") {
                         List {
                             if !deviceVerificationApproved {
