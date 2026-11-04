@@ -23,17 +23,31 @@ private val tvListings = listOf(
 @Composable
 fun TVStoreScreen(status: String, onOpenListing: (String) -> Unit, onBrowseStore: () -> Unit) {
     var category by remember { mutableStateOf("Apps") }
+    var search by remember { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
         Text("ItamarOS TV Store", style = MaterialTheme.typography.headlineMedium)
         Text("Real TV app and game discovery through the device's official Google Play Store.")
         Text("Google Play checks whether an app is compatible with this TV. Only Play can download and install it. Availability varies by TV and country.")
+        OutlinedTextField(value = search, onValueChange = { search = it },
+            label = { Text("Search apps and games") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true)
+        if (search.trim() == "0000") {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Cloud Climb", style = MaterialTheme.typography.titleLarge)
+                    Text("Secret TV game discovered! Cloud Climb is the game's name, not 0000.")
+                    Text("A TV-compatible APK must be built and installed with your confirmation. This listing does not install an APK automatically.")
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             listOf("Apps", "Games").forEach { label ->
                 FilterChip(selected = category == label, onClick = { category = label },
                     label = { Text(label) })
             }
         }
-        tvListings.filter { it.category == category }.forEach { listing ->
+        tvListings.filter { it.category == category && (search.isBlank() || it.title.contains(search, ignoreCase = true)) }.forEach { listing ->
             FilledTonalButton(onClick = { onOpenListing(listing.packageId) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                 Text("View in Google Play · ${listing.title}")
