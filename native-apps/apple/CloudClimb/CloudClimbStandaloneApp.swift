@@ -26,6 +26,7 @@ struct CloudClimbStandaloneApp: App {
         WindowGroup {
             CloudClimbStandaloneHome()
                 .environmentObject(cloud)
+                .persistentSystemOverlays(.hidden)
                 .environment(\.locale,Locale(identifier:"en"))
         }
     }
@@ -285,7 +286,7 @@ struct CloudClimbStandaloneHome:View {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
                     .environmentObject(cloud)
             }
-            .sheet(isPresented:$offlineDemo) {
+            .fullScreenCover(isPresented:$offlineDemo) {
                 CloudClimbOfflineDemo()
             }
         }
@@ -394,7 +395,7 @@ private struct CloudClimbOfflineDemo:View {
     @State private var jump=false
     @State private var paused=false
     @State private var finished=false
-    @State private var notice="Complete stages to earn game coins and discover blue doors."
+    @State private var notice="Demo: play the first two stages. Sign in to unlock the full game."
     @State private var orbOpen=false
     @State private var lastBossHit=Date.distantPast
     @State private var controllerConnected=false
@@ -648,6 +649,13 @@ private struct CloudClimbOfflineDemo:View {
     }
     private func completeLevel() {
         let cleared=level
+        if level >= 2 {
+            level=2
+            finished=true
+            paused=true
+            notice="Demo complete! Sign in with ItamarOS to continue beyond level 2."
+            return
+        }
         coins+=10;level+=1;bossHP=3
         shopDue=hearts<3 && (level%30==0 ||
             (cleared%10==0 && cleared%30 != 0)) ? level : 0
