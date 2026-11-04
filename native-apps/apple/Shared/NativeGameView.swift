@@ -6,7 +6,6 @@ struct NativeGameView: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     #endif
     @State private var selectedGame: String?
-    @State private var gameSearch=""
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
     @State private var showSecretChat=false
     #if os(iOS)
@@ -77,11 +76,6 @@ struct NativeGameView: View {
                         else { ExtraMobileGames(game: selectedGame) }
                     } else {
                         #if os(iOS)
-                        TextField("Search games (try 0000)",text:$gameSearch)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of:gameSearch) { _,value in
-                                if value=="0000" {secretUnlocked=true}
-                            }
                         if secretUnlocked {
                             Button {
                                 showSecretChat=true
