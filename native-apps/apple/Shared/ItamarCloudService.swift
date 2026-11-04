@@ -394,6 +394,36 @@ final class ItamarCloudService: ObservableObject {
                    userID: result.user?.id ?? previous.userID)
     }
 
+    /// Email OTP gate for the sensitive Connected Devices screen.
+    /// Configure the email OTP template to include {{ .Token }} in Auth settings.
+    func sendConnectedDevicesEmailCode() async throws -> String {
+        let raw = try await request("/auth/v1/user")
+        guard let info = try JSONSerialization.jsonObject(with: raw) as? [String:Any],
+              let email = info["email"] as? String, !email.isEmpty,
+              (info["email_confirmed_at"] as? String) != nil else {
+            throw ItamarCloudError.badResponse("A verified account email is required.")
+        }
+        _ = try await request("/auth/v1/otp", method:"POST",
+            data:["email":email,"create_user":false],authorized:false)
+        return email
+    }
+
+    func verifyConnectedDevicesEmail(code: String, email: String) async throws {
+        guard code.range(of:#"^[0-9]{6}$"#,options:.regularExpression) != nil else {
+            throw ItamarCloudError.badResponse("Enter the 6-digit code.")
+        }
+        let raw = try await request("/auth/v1/verify",method:"POST",
+            data:["email":email,"token":code,"type":"email"],authorized:false)
+        let verified = try JSONDecoder().decode(CloudToken.self,from:raw)
+        guard verified.user?.id == userID else {
+            throw ItamarCloudError.badResponse("The code does not match this account.")
+        }
+        // OTP verification issues a new session. Store it to keep the app signed in.
+        if let id=verified.user?.id {
+            setSession(access:verified.access_token,refresh:verified.refresh_token,userID:id)
+        }
+    }
+
     /// Revokes refresh tokens for other sessions using the Auth server.
     /// Existing short-lived access tokens may remain valid until expiry.
     func signOutOtherDevices() async throws {
