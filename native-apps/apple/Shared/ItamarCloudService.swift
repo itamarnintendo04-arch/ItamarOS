@@ -394,6 +394,22 @@ final class ItamarCloudService: ObservableObject {
                    userID: result.user?.id ?? previous.userID)
     }
 
+    /// Revokes refresh tokens for other sessions using the Auth server.
+    /// Existing short-lived access tokens may remain valid until expiry.
+    func signOutOtherDevices() async throws {
+        guard let access=session?.access, !access.isEmpty,
+              let url=URL(string:ItamarCloudConfig.url + "/auth/v1/logout?scope=others")
+        else { throw ItamarCloudError.unauthenticated }
+        var req=URLRequest(url:url)
+        req.httpMethod="POST"
+        req.timeoutInterval=15
+        req.setValue(ItamarCloudConfig.publicKey,forHTTPHeaderField:"apikey")
+        req.setValue("Bearer " + access,forHTTPHeaderField:"Authorization")
+        let (_,response)=try await URLSession.shared.data(for:req)
+        guard let http=response as? HTTPURLResponse, (200...299).contains(http.statusCode)
+        else { throw ItamarCloudError.badResponse("Could not disconnect other devices.") }
+    }
+
     func signOut() {
         session = nil; userID = nil; profile = nil
         pendingSignupAvatarJPEG = nil
