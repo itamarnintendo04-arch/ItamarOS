@@ -72,6 +72,24 @@ struct NativeSettingsView: View {
                     #endif
                 }
                 #if os(iOS)
+                Section("Account connections") {
+                    NavigationLink("Connected devices") {
+                        List {
+                            Section("This device") {
+                                LabeledContent("Connection", value: cloud.isSignedIn ? "Signed in" : "Not signed in")
+                                LabeledContent("Device", value: UIDevice.current.name)
+                                if cloud.isSignedIn {
+                                    Button("Sign out on this device", role: .destructive) { cloud.signOut() }
+                                }
+                            }
+                            Section("Other devices") {
+                                Text("Other device sessions cannot be listed or revoked from this version yet. A secure server-side session management service is required.")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .navigationTitle("Connected Devices")
+                    }
+                }
                 Section("Messages and family") {
                     Toggle("Sync ItamarConnect chats and contacts on this device",
                            isOn:$connectSync)
