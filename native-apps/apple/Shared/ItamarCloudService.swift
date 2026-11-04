@@ -412,16 +412,19 @@ final class ItamarCloudService: ObservableObject {
         guard code.range(of:#"^[0-9]{6}$"#,options:.regularExpression) != nil else {
             throw ItamarCloudError.badResponse("Enter the 6-digit code.")
         }
-        let raw = try await request("/auth/v1/verify",method:"POST",
-            data:["email":email,"token":code,"type":"email"],authorized:false)
-        let verified = try JSONDecoder().decode(CloudToken.self,from:raw)
-        guard verified.user?.id == userID else {
-            throw ItamarCloudError.badResponse("The code does not match this account.")
-        }
-        // OTP verification issues a new session. Store it to keep the app signed in.
-        if let id=verified.user?.id {
-            setSession(access:verified.access_token,refresh:verified.refresh_token,userID:id)
-        }
+        _ = try await securityRequest(action:"verify",code:code)
+    }
+
+    func securityRequest(action: String, code: String? = nil) async throws -> Data {
+        var payload: [String:Any] = ["action":action]
+        if let code { payload["code"]=code }
+        return try await request("/functions/v1/itamar-security",method:"POST",data:payload)
+    }
+
+    func verifiedConnectedSessions() async throws -> [[String:Any]] {
+        let raw=try await securityRequest(action:"sessions")
+        let json=try JSONSerialization.jsonObject(with:raw) as? [String:Any]
+        return json?["sessions"] as? [[String:Any]] ?? []
     }
 
     /// Revokes refresh tokens for other sessions using the Auth server.
