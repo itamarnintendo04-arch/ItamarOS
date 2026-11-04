@@ -10,7 +10,7 @@ on:
 # Only the newest source state needs a build; avoid dozens of obsolete IPAs.
 concurrency:
   group: itamaros-ios-ipa-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-ios:
