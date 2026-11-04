@@ -92,6 +92,8 @@ struct CloudClimbStandaloneHome:View {
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
     @State private var secretVisible=false
     @State private var secretChatVisible=false
+    @State private var gameSearch=""
+    @State private var showEmptySearch=false
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -99,6 +101,40 @@ struct CloudClimbStandaloneHome:View {
             ScrollView {
                 VStack(spacing:16) {
                     CloudClimbSkyIntro()
+                    HStack(spacing:10) {
+                        Image(systemName:"magnifyingglass").foregroundStyle(.white)
+                        TextField("Search games or enter a secret code",text:$gameSearch)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .foregroundStyle(.white)
+                            .submitLabel(.search)
+                            .onSubmit { performGameSearch() }
+                        Button("Search") { performGameSearch() }
+                            .font(.headline)
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .padding(12)
+                    .background(.indigo.opacity(0.7),in:RoundedRectangle(cornerRadius:16))
+                    if showEmptySearch {
+                        VStack(spacing:10) {
+                            Image(systemName:"moon.stars.fill")
+                                .font(.system(size:66))
+                                .foregroundStyle(.yellow)
+                            Image(systemName:"cloud.fill")
+                                .font(.system(size:80))
+                                .foregroundStyle(.cyan)
+                            Text("It's quiet here…")
+                                .font(.title.bold())
+                            Text("No games found for \"\\(gameSearch)\"")
+                                .font(.subheadline)
+                            Text("Try a different search.")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth:.infinity)
+                        .padding(25)
+                        .background(LinearGradient(colors:[.indigo,.blue.opacity(0.7)],startPoint:.topLeading,endPoint:.bottomTrailing),in:RoundedRectangle(cornerRadius:24))
+                    }
                     if secretUnlocked {
                         Button {
                             secretChatVisible=true
@@ -266,7 +302,12 @@ struct CloudClimbStandaloneHome:View {
                         Text("Secret Game · 0000").font(.title.bold())
                         Text("Discovered! This game is permanently unlocked in this app on this device.")
                             .multilineTextAlignment(.center)
-                        Text("The secret multiplayer game and its command chat are not available in this build yet.")
+                        Button("Open Secret Game Chat") {
+                            secretVisible=false
+                            secretChatVisible=true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Text("Secret chat is unlocked on this device.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     .padding()
@@ -289,6 +330,17 @@ struct CloudClimbStandaloneHome:View {
             .fullScreenCover(isPresented:$offlineDemo) {
                 CloudClimbOfflineDemo()
             }
+        }
+    }
+
+    private func performGameSearch() {
+        let query=gameSearch.trimmingCharacters(in:.whitespacesAndNewlines)
+        if query=="0000" {
+            secretUnlocked=true
+            showEmptySearch=false
+            secretVisible=true
+        } else {
+            showEmptySearch = !query.isEmpty
         }
     }
 
