@@ -68,6 +68,29 @@ struct ItamarPartyGamesView: View {
     @AppStorage("cloudClimb.autoHideControls") private var climbAutoHideControls=true
     @AppStorage("cloudClimb.showTips") private var climbShowTips=true
     @AppStorage("cloudClimb.twilightSky") private var climbTwilightSky=false
+    @AppStorage("cloudclimb.background.mode") private var climbBackgroundMode="world"
+    @AppStorage("cloudclimb.secret.background") private var climbBackgroundChoice="clouds"
+    @State private var activeBackgroundMode=UserDefaults.standard.string(forKey:"cloudclimb.background.mode") ?? "world"
+    @State private var activeBackgroundChoice=UserDefaults.standard.string(forKey:"cloudclimb.secret.background") ?? "clouds"
+    private var climbWorldColors:[Color] {
+        if activeBackgroundMode=="custom" {
+            switch activeBackgroundChoice {
+            case "sunset":return [.orange,.pink]
+            case "stars":return [.black,.indigo]
+            case "forest":return [.green,.mint]
+            case "ocean":return [.cyan,.blue]
+            case "space":return [.indigo,.black]
+            default:return [.blue,.cyan]
+            }
+        }
+        switch (climbWorld-1)%5 {
+        case 1:return [.orange,.pink]
+        case 2:return [.indigo,.black]
+        case 3:return [.green,.mint]
+        case 4:return [.cyan,.blue]
+        default:return [.blue,.cyan]
+        }
+    }
     @State private var climbCloudReady=false
     @State private var climbRevision:Int64=0
     @State private var climbCloudSaving=false
@@ -383,8 +406,7 @@ struct ItamarPartyGamesView: View {
                 let w=size.width,h=size.height
                 ctx.fill(Path(CGRect(origin:.zero,size:size)),
                     with:.linearGradient(Gradient(colors:
-                        climbTwilightSky ? [.purple.opacity(0.95),.indigo.opacity(0.85)] :
-                                          [.blue.opacity(0.9),.cyan.opacity(0.65)]),
+                        climbWorldColors),
                         startPoint:.zero,endPoint:CGPoint(x:w,y:h)))
                 for i in 0..<16 {
                     let x=CGFloat((i*127+31)%390)/400*w
@@ -522,6 +544,19 @@ struct ItamarPartyGamesView: View {
                 }
                 Section("Appearance") {
                     Toggle("Twilight sky theme",isOn:$climbTwilightSky)
+                    Picker("Background mode",selection:$climbBackgroundMode) {
+                        Text("Match each world").tag("world")
+                        Text("Custom background").tag("custom")
+                    }
+                    if climbBackgroundMode=="custom" {
+                        Picker("Background",selection:$climbBackgroundChoice) {
+                            ForEach(["clouds","sunset","stars","forest","ocean","space"],id:\.self) { value in
+                                Text(value.capitalized).tag(value)
+                            }
+                        }
+                    }
+                    Text("Restart Cloud Climb to apply background changes.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Account & Progress") {
                     Text("Sign in with your verified phone number in ItamarOS Connect.")
