@@ -7,9 +7,11 @@ struct SecretGameChatView:View {
     @AppStorage("cloudClimb.showTips") private var tips=true
     @AppStorage("cloudClimb.autoHideControls") private var autoHide=true
     @AppStorage("cloudclimb.secret.accent") private var accent="blue"
+    @AppStorage("cloudclimb.secret.background") private var background="clouds"
     @State private var draft=""
     @State private var history=["Game: Type /help for customization commands."]
-    private let colors=["blue","purple","green","orange","pink"]
+    private let colors=["blue","green","orange","pink","teal"]
+    private let backgrounds=["clouds","sunset","stars","forest","ocean","space"]
     var body:some View {
         VStack(spacing:12) {
             Label("0000 · Secret Game Chat",systemImage:"gamecontroller.fill").font(.headline)
@@ -26,9 +28,11 @@ struct SecretGameChatView:View {
                     .autocorrectionDisabled().textFieldStyle(.roundedBorder).onSubmit(send)
                 Button("Send",action:send).disabled(draft.isEmpty)
             }
-            Text("Theme: \(accent) · Sky: \(twilight ? "twilight" : "day")")
+            Text("Background: \(background) · Theme: \(accent) · Sky: \(twilight ? "twilight" : "day")")
                 .font(.caption).foregroundStyle(.secondary)
-        }.padding().navigationTitle("Secret Chat").onAppear {unlocked=true}
+        }.padding()
+            .background(LinearGradient(colors:background=="sunset" ? [.orange,.pink] : background=="stars" ? [.black,.indigo] : background=="forest" ? [.green,.mint] : background=="ocean" ? [.cyan,.blue] : background=="space" ? [.indigo,.black] : [.cyan,.white],startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
+            .navigationTitle("Secret Chat").onAppear {unlocked=true}
     }
     private func send() {
         let input=draft.trimmingCharacters(in:.whitespacesAndNewlines).lowercased()
@@ -39,7 +43,10 @@ struct SecretGameChatView:View {
         var reply=""
         switch parts.first {
         case "/help":
-            reply="/theme blue|purple|green|orange|pink · /sky day|twilight · /tips on|off · /controls auto|always · /status · /reset · /cancel"
+            reply="/background · /theme · /sky · /tips · /controls · /status · /reset · /cancel. Type a command to see options."
+        case "/background":
+            if parts.count==2 && backgrounds.contains(parts[1]) {background=parts[1];reply="Background saved."}
+            else {reply="Choose: "+backgrounds.joined(separator:", ")}
         case "/theme":
             if parts.count==2 && colors.contains(parts[1]) {accent=parts[1];reply="Theme saved."}
             else {reply="Choose: "+colors.joined(separator:", ")}
@@ -58,8 +65,20 @@ struct SecretGameChatView:View {
         case "/status":
             reply="Theme: \(accent), sky: \(twilight ? "twilight" : "day"), tips: \(tips ? "on" : "off")"
         case "/reset":
-            accent="blue";twilight=false;tips=true;autoHide=true;reply="Preferences reset."
-        case "/cancel":reply="No pending command."
+            accent="blue";background="clouds";twilight=false;tips=true;autoHide=true;reply="Preferences reset."
+        case "/cancel":
+            if parts.count != 2 {reply="Choose: /cancel background, theme, sky, tips, controls, or all"}
+            else {
+                switch parts[1] {
+                case "background":background="clouds";reply="Background restored."
+                case "theme":accent="blue";reply="Theme restored."
+                case "sky":twilight=false;reply="Sky restored."
+                case "tips":tips=true;reply="Tips restored."
+                case "controls":autoHide=true;reply="Controls restored."
+                case "all":background="clouds";accent="blue";twilight=false;tips=true;autoHide=true;reply="All settings restored."
+                default:reply="Type /cancel to see options."
+                }
+            }
         default:reply="Unknown command. Type /help."
         }
         history.append("Game: "+reply)
