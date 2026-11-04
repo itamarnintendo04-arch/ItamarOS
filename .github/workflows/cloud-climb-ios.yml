@@ -9,7 +9,7 @@ on:
       - ".github/workflows/cloud-climb-ios.yml"
 concurrency:
   group: cloud-climb-ios-standalone
-  cancel-in-progress: true
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
