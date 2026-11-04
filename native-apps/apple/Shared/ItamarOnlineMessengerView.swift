@@ -522,11 +522,21 @@ private struct ItamarPeopleSearchView:View {
     @Environment(\.dismiss) private var dismiss
     @State private var query=""
     @State private var results:[ItamarCloudProfile]=[]
+    @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
+    @State private var showSecretChat=false
     @State private var error=""
     @State private var busy=false
 
     var body:some View {
         List {
+            if query=="0000" || secretUnlocked {
+                Button {
+                    secretUnlocked=true
+                    showSecretChat=true
+                } label: {
+                    Label("0000 · Secret game chat",systemImage:"gamecontroller.fill")
+                }
+            }
             if query.trimmingCharacters(in:.whitespacesAndNewlines).count < 2 {
                 ContentUnavailableView("Find a contact",systemImage:"person.crop.circle.badge.magnifyingglass",
                     description:Text("Search by username or display name."))
@@ -575,6 +585,9 @@ private struct ItamarPeopleSearchView:View {
                     catch {self.error=error.localizedDescription}
                 }
             }
+        }
+        .sheet(isPresented:$showSecretChat) {
+            NavigationStack {SecretGameChatView()}
         }
         .navigationTitle("Find people")
         .toolbar { ToolbarItem(placement:.confirmationAction) {
