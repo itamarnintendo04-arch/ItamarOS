@@ -517,7 +517,7 @@ struct ItamarCloudProfileView: View {
     }
 }
 
-private private struct ItamarPeopleSearchView:View {
+private struct ItamarPeopleSearchView:View {
     @EnvironmentObject private var cloud:ItamarCloudService
     @Environment(\.dismiss) private var dismiss
     @State private var query=""
