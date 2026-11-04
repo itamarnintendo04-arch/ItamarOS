@@ -1,0 +1,15 @@
+"Scan" = "סריקה";
+"Scan to connect" = "סריקה להתחברות";
+"Scan a Cloud Climb or ItamarOS login QR. You must review and approve every login." = "סרקו קוד QR להתחברות ל־Cloud Climb או ל־ItamarOS. יש לבדוק ולאשר כל התחברות.";
+"Sign in required" = "נדרשת התחברות";
+"Sign in to your ItamarOS account before approving another device." = "יש להתחבר לחשבון ItamarOS לפני אישור מכשיר נוסף.";
+"Point your camera at the QR code" = "כוונו את המצלמה אל קוד ה־QR";
+"Camera access required" = "נדרשת גישה למצלמה";
+"Camera not started" = "המצלמה לא הופעלה";
+"Allow camera access to scan a login QR." = "אפשרו גישה למצלמה כדי לסרוק קוד QR להתחברות.";
+"Enable camera" = "הפעלת מצלמה";
+"Or paste a login link" = "או הדביקו קישור התחברות";
+"Continue" = "המשך";
+"Sign in first" = "יש להתחבר תחילה";
+"Invalid QR link" = "קישור QR לא תקין";
+"This QR is not a supported ItamarOS login request" = "קוד QR זה אינו בקשת התחברות נתמכת של ItamarOS";
