@@ -130,8 +130,8 @@ struct ItamarPartyGamesView: View {
                         Text("\(playerCount) / \(match.game=="cloud_climb" ? 4 : 2) players")
                             .foregroundStyle(.secondary)
                         if match.status == "waiting" {
-                            ShareLink(item:URL(string:"https://itamaros-store-api.onrender.com/games/join?game=\(match.game)&code=\(match.code)")!) {
-                                Label("Share invitation link",systemImage:"square.and.arrow.up")
+                            ShareLink(item:"Cloud Climb invite — room code: \(match.code). Open Cloud Climb or ItamarOS, choose Online → Join room, and enter this code.") {
+                                Label("Share game invitation",systemImage:"square.and.arrow.up")
                             }
                             ShareLink(item:"Join my \(match.game == "cloud_climb" ? "Cloud Climb" : "ItamarOS") room with code \(match.code)") {
                                 Label("Share room code",systemImage:"number")
