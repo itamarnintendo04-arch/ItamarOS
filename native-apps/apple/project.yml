@@ -24,6 +24,12 @@ targets:
       path: CloudClimb/Info.plist
       properties:
         CFBundleDisplayName: Cloud Climb
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         CFBundleURLTypes:
           - CFBundleURLName: org.itamaros.cloudclimb
             CFBundleTypeRole: Viewer
