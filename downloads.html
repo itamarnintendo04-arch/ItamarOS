@@ -36,6 +36,13 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <section class="card"><span class="badge">Current project status</span><h2>Experimental browser preview</h2><p>The available web emulator is not a bootable operating system. The setup page is a demonstration and does not change partitions or install an OS.</p><a class="btn" href="/">Open web emulator</a><a class="btn alt" href="/setup.html">View setup demonstration</a></section>
 <section class="card" aria-live="polite"><span class="badge">Native operating system</span><h2>ItamarOS 1.1 · PC system</h2><p>The bootable edition is being prepared. Its installer reads the processor, manufacturer, model, RAM, boot mode and drives from the computer itself. <strong>A verified installation ISO is not yet published.</strong></p><div id="nativeasset"><p>Checking GitHub for a real ISO release…</p></div><a class="btn alt" href="https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/native" target="_blank" rel="noopener noreferrer">View source/build instructions</a></section>
 
+<section class="card" id="latest-ios-build" aria-live="polite">
+<span class="badge">iPhone / iPad · latest development build</span>
+<h2>Latest ItamarOS unsigned IPA</h2>
+<p id="latest-ios-status">Checking GitHub Actions for the latest ItamarOS build…</p>
+<a class="btn alt" id="latest-ios-link" href="https://github.com/itamarnintendo04-arch/ItamarOS/actions/workflows/ios-unsigned.yml" target="_blank" rel="noopener noreferrer">View iOS builds</a>
+<p>Only successful builds with an unexpired IPA artifact are marked downloadable. An unsigned IPA still requires authorized signing before installation.</p>
+</section>
 <section class="card" id="cloud-climb">
 <span class="badge">Cloud Climb · Standalone Developer Preview</span>
 <img src="/assets/branding/cloud-climb-cover.svg" width="1200" height="420" loading="lazy" alt="Cloud Climb game artwork: jumping hero, floating islands, coins and stars" style="display:block;width:100%;height:auto;margin:18px 0 8px;border-radius:16px;box-shadow:0 12px 28px #020a2270">
@@ -211,7 +218,7 @@ function label(element,text){element.replaceChildren();const p=document.createEl
   if(!ipa)throw Error('Public unsigned IPA is missing');
   const info=document.createElement('p');
   info.textContent='Public unsigned IPA · '+(ipa.size/1048576).toFixed(1)+' MiB. Requires Apple-issued personal developer signing; downloading does not install it.';
-  const download=document.createElement('a');download.href=ipa.browser_download_url;download.className='btn alt';download.textContent='Download unsigned iPhone IPA 1.4';download.rel='noopener noreferrer';
+  const download=document.createElement('a');download.href=ipa.browser_download_url;download.className='btn alt';download.textContent='Download unsigned iPhone IPA 1.6';download.rel='noopener noreferrer';
   status.replaceChildren(info,download);
   if(source){
    const note=document.createElement('p');note.textContent='If AltStore Classic is already configured with your Apple Account and a connected AltServer, you can open the ItamarOS source using the control below. Signing, provisioning, and device confirmation occur in AltStore, not on this website.';
@@ -300,6 +307,39 @@ function reveal(){
 input.addEventListener('input',reveal);
 choose.addEventListener('change',()=>{if(!box.hidden)void update()});
 if(location.hash==='#cloud-climb'){input.value='0000';reveal()}
+})();
+</script>
+<script>
+(async()=>{
+ const status=document.getElementById('latest-ios-status');
+ const anchor=document.getElementById('latest-ios-link');
+ const base='https://api.github.com/repos/itamarnintendo04-arch/ItamarOS';
+ try{
+  const response=await fetch(base+'/actions/runs?per_page=40',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+  if(!response.ok)throw Error('GitHub API unavailable');
+  const runs=(await response.json()).workflow_runs||[];
+  const ios=runs.filter(r=>r.name==='Build ItamarOS iOS unsigned IPA');
+  for(const run of ios.filter(r=>r.status==='completed'&&r.conclusion==='success')){
+   const result=await fetch(base+'/actions/runs/'+run.id+'/artifacts',{cache:'no-store'});
+   if(!result.ok)continue;
+   const artifacts=(await result.json()).artifacts||[];
+   if(!artifacts.some(a=>!a.expired&&/ipa/i.test(a.name)))continue;
+   status.textContent='Unsigned IPA artifact available from a successful build. Open the build and download its ZIP under Artifacts.';
+   anchor.href=run.html_url;
+   anchor.textContent='Open successful IPA build';
+   return;
+  }
+  const latest=ios[0];
+  if(latest){
+   anchor.href=latest.html_url;
+   anchor.textContent='Check latest iOS build';
+   status.textContent=latest.status!=='completed'
+     ?'Latest iOS build is '+latest.status+'. No IPA confirmed yet.'
+     :'Latest iOS build: '+(latest.conclusion||'unknown')+'. No successful unexpired IPA found in recent builds.';
+  }else status.textContent='No recent iOS build found. Open GitHub Actions.';
+ }catch{
+  status.textContent='Unable to verify an IPA right now. Check GitHub Actions; no download is claimed.';
+ }
 })();
 </script>
 </body></html>
