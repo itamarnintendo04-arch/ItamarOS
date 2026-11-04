@@ -529,14 +529,6 @@ private struct ItamarPeopleSearchView:View {
 
     var body:some View {
         List {
-            if query=="0000" || secretUnlocked {
-                Button {
-                    secretUnlocked=true
-                    showSecretChat=true
-                } label: {
-                    Label("0000 · Secret game chat",systemImage:"gamecontroller.fill")
-                }
-            }
             if query.trimmingCharacters(in:.whitespacesAndNewlines).count < 2 {
                 ContentUnavailableView("Find a contact",systemImage:"person.crop.circle.badge.magnifyingglass",
                     description:Text("Search by username or display name."))
