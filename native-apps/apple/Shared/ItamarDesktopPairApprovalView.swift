@@ -193,10 +193,10 @@ struct ItamarScanTabView:View {
         }
     }
     private func parse(_ value:String) {
-        guard cloud.isSignedIn else {notice="Sign in first";return}
+        guard cloud.isSignedIn else {notice=NSLocalizedString("Sign in first",comment:"Scanner sign-in error");return}
         guard let url=URL(string:value.trimmingCharacters(in:.whitespacesAndNewlines)),
               let components=URLComponents(url:url,resolvingAgainstBaseURL:false) else {
-            notice="Invalid QR link";return
+            notice=NSLocalizedString("Invalid QR link",comment:"Scanner invalid link");return
         }
         let host=url.host?.lowercased() ?? ""
         let isClimb=host=="cloud-climb"
@@ -205,7 +205,7 @@ struct ItamarScanTabView:View {
               let request=components.queryItems?.first(where:{$0.name=="request"})?.value,
               (24...40).contains(request.count),
               request.allSatisfy({$0.isASCII && ($0.isLetter || $0.isNumber || $0=="_" || $0=="-")})
-        else {notice="This QR is not a supported ItamarOS login request";return}
+        else {notice=NSLocalizedString("This QR is not a supported ItamarOS login request",comment:"Scanner unsupported code");return}
         notice=""
         cameraAllowed=false
         route=ItamarDesktopPairRoute(request:request,isCloudClimb:isClimb)
