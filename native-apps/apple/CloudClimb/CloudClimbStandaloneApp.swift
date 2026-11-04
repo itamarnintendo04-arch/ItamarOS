@@ -91,6 +91,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var gameSearch=""
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
     @State private var secretVisible=false
+    @State private var secretChatVisible=false
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -110,7 +111,7 @@ struct CloudClimbStandaloneHome:View {
                     .background(.white.opacity(0.9),in:RoundedRectangle(cornerRadius:14))
                     if secretUnlocked {
                         Button {
-                            secretVisible=true
+                            secretChatVisible=true
                         } label: {
                             Label("Secret game · 0000 (Unlocked)",systemImage:"lock.open.fill")
                                 .font(.headline)
@@ -264,6 +265,9 @@ struct CloudClimbStandaloneHome:View {
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
             .toolbar(.hidden,for:.navigationBar)
+            .sheet(isPresented:$secretChatVisible) {
+                NavigationStack {SecretGameChatView()}
+            }
             .sheet(isPresented:$secretVisible) {
                 NavigationStack {
                     VStack(spacing:20) {
