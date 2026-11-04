@@ -15,6 +15,9 @@ targets:
     sources:
       - path: Shared
         excludes:
+          - Localizations/**
+        excludes:
+          - Localizations/**
           - ItamarOSApp.swift
       - path: CloudClimb/CloudClimbStandaloneApp.swift
       - path: CloudClimb/Assets.xcassets
@@ -54,6 +57,8 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared
+        excludes:
+          - Localizations/**
       - path: iOS/Assets.xcassets
     info:
       path: iOS/Info.plist
@@ -85,6 +90,9 @@ targets:
     sources:
       - path: Shared
         excludes:
+          - Localizations/**
+        excludes:
+          - Localizations/**
           - NativeGameView.swift
           - ExtraMobileGames.swift
           - GameArtworkView.swift
@@ -102,6 +110,8 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: Shared
+        excludes:
+          - Localizations/**
       - path: macOS/Assets.xcassets
     settings:
       base:
@@ -115,6 +125,8 @@ targets:
     deploymentTarget: "2.0"
     sources:
       - path: Shared
+        excludes:
+          - Localizations/**
       - path: visionOS/Assets.xcassets
     settings:
       base:
