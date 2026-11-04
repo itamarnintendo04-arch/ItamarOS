@@ -58,6 +58,7 @@ targets:
     info:
       path: iOS/Info.plist
       properties:
+        NSCameraUsageDescription: "Scan QR codes to securely connect your ItamarOS account to another device."
         NSFaceIDUsageDescription: "Confirm it is you before approving sign-in on another ItamarOS device."
         NSContactsUsageDescription: "Contacts are used only when you explicitly choose names for private local message drafts. They are never uploaded."
         NSMicrophoneUsageDescription: "Record a voice message only when you explicitly tap Record in ItamarOS Connect."
