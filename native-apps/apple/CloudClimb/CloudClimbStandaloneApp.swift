@@ -88,6 +88,9 @@ struct CloudClimbStandaloneHome:View {
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
     @State private var selectedMenu:String?
+    @State private var gameSearch=""
+    @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
+    @State private var secretVisible=false
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -95,6 +98,28 @@ struct CloudClimbStandaloneHome:View {
             ScrollView {
                 VStack(spacing:16) {
                     CloudClimbSkyIntro()
+                    HStack {
+                        Image(systemName:"magnifyingglass")
+                        TextField("Search games",text:$gameSearch)
+                            .textInputAutocapitalization(.never)
+                            .onChange(of:gameSearch) { _,value in
+                                if value == "0000" { secretUnlocked=true }
+                            }
+                    }
+                    .padding(12)
+                    .background(.white.opacity(0.9),in:RoundedRectangle(cornerRadius:14))
+                    if secretUnlocked {
+                        Button {
+                            secretVisible=true
+                        } label: {
+                            Label("Secret game · 0000 (Unlocked)",systemImage:"lock.open.fill")
+                                .font(.headline)
+                                .frame(maxWidth:.infinity)
+                                .padding(13)
+                                .foregroundStyle(.white)
+                                .background(.purple,in:RoundedRectangle(cornerRadius:14))
+                        }
+                    }
                     HStack {
                         Label(cloud.profile?.username ?? "Player",systemImage:"person.crop.circle.fill")
                         Spacer()
@@ -239,6 +264,23 @@ struct CloudClimbStandaloneHome:View {
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
             .toolbar(.hidden,for:.navigationBar)
+            .sheet(isPresented:$secretVisible) {
+                NavigationStack {
+                    VStack(spacing:20) {
+                        Image(systemName:"gamecontroller.fill")
+                            .font(.system(size:65)).foregroundStyle(.purple)
+                        Text("Secret Game · 0000").font(.title.bold())
+                        Text("Discovered! This game is permanently unlocked in this app on this device.")
+                            .multilineTextAlignment(.center)
+                        Text("The secret multiplayer game and its command chat are not available in this build yet.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .toolbar { ToolbarItem(placement:.confirmationAction) {
+                        Button("Done") {secretVisible=false}
+                    }}
+                }
+            }
             .alert("Cloud Climb",isPresented:Binding(
                 get:{selectedMenu != nil},set:{if !$0 {selectedMenu=nil}}
             )) {
