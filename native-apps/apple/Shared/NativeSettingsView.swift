@@ -5,6 +5,9 @@ import UserNotifications
 #endif
 
 struct NativeSettingsView: View {
+    @State private var newSecurityPassword=""
+    @State private var securityPasswordStatus=""
+    @State private var securityPasswordBusy=false
     @State private var connectedSessionRows: [[String:Any]]=[]
     @State private var deviceVerificationCode=""
     @State private var deviceVerificationEmail=""
@@ -135,10 +138,29 @@ struct NativeSettingsView: View {
                         Text("Verified for 5 minutes").font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Password & account security") {
                         List {
-                            Section("Password") {
-                                Text("For your security, the current account password cannot be displayed. Password changes require identity verification.")
-                                    .foregroundStyle(.secondary)
-                                Text("Password reset and email re-verification will be available after server-side security checks are configured.")
+                            Section("Change password") {
+                                SecureField("New password (12+ characters)", text:$newSecurityPassword)
+                                    .textContentType(.newPassword)
+                                Button("Change password") {
+                                    Task {
+                                        securityPasswordBusy=true
+                                        defer { securityPasswordBusy=false }
+                                        do {
+                                            try await cloud.changeVerifiedPassword(newSecurityPassword)
+                                            newSecurityPassword=""
+                                            securityPasswordStatus="Password changed. Verify your email again to manage security."
+                                            deviceVerificationExpiresAt = .distantPast
+                                            verifiedAccountID=nil
+                                        } catch {
+                                            securityPasswordStatus=error.localizedDescription
+                                        }
+                                    }
+                                }
+                                .disabled(securityPasswordBusy || !securityUnlocked || newSecurityPassword.count < 12)
+                                if !securityPasswordStatus.isEmpty {
+                                    Text(securityPasswordStatus).font(.caption)
+                                }
+                                Text("Your existing password cannot be displayed.")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
