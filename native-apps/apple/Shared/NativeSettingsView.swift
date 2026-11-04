@@ -90,8 +90,9 @@ struct NativeSettingsView: View {
                 #if os(iOS)
                 Section("Privacy & Security") {
                     if !securityUnlocked {
-                                Section("Email verification required") {
-                                    Text("Verify your account email before viewing or managing connected devices.")
+                                Group {
+                                    Text("Email verification required").font(.headline)
+                                    Text("Verify your account email to open Privacy & Security for five minutes.")
                                     if !deviceVerificationEmail.isEmpty {
                                         Text("Code destination: " + deviceVerificationEmail).font(.caption)
                                     }
@@ -181,6 +182,7 @@ struct NativeSettingsView: View {
                             Button("Disconnect all other devices", role:.destructive) {
                                 Task {
                                     do {
+                                        guard securityUnlocked else { throw ItamarCloudError.unauthenticated }
                                         try await cloud.signOutOtherDevices()
                                         disconnectOtherDevicesStatus="Other sign-in sessions were revoked."
                                     } catch {
