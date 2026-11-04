@@ -129,21 +129,24 @@ struct ItamarPartyGamesView: View {
                             .textSelection(.enabled)
                         Text("\(playerCount) / \(match.game=="cloud_climb" ? 4 : 2) players")
                             .foregroundStyle(.secondary)
-                        if match.game != "cloud_climb", match.status == "waiting" {
-                            ShareLink(item:"Join my ItamarOS game with code \(match.code)") {
-                                Label("Share room code",systemImage:"square.and.arrow.up")
+                        if match.status == "waiting" {
+                            ShareLink(item:URL(string:"https://itamaros-store-api.onrender.com/games/join?game=\(match.game)&code=\(match.code)")!) {
+                                Label("Share invitation link",systemImage:"square.and.arrow.up")
+                            }
+                            ShareLink(item:"Join my \(match.game == "cloud_climb" ? "Cloud Climb" : "ItamarOS") room with code \(match.code)") {
+                                Label("Share room code",systemImage:"number")
                             }
                             HStack {
-                                TextField("Invite @username",text:$inviteUser)
+                                TextField("Invite contact @username",text:$inviteUser)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
-                                Button("Chat invite"){Task{await sendInvite()}}
+                                Button("Send invite"){Task{await sendInvite()}}
                                     .disabled(inviteUser.isEmpty || busy)
                             }
+                            Text("Friends can use the room code in any compatible ItamarOS or Cloud Climb edition.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                         if match.game=="cloud_climb" {
-                            Text("Code-only: invites and automatic sharing are disabled.")
-                                .font(.footnote).foregroundStyle(.secondary)
                             cloudClimb
                         } else if match.status=="waiting" {
                             Text("Waiting for a second player…")
