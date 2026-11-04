@@ -21,6 +21,10 @@ struct MainScreen: View {
             }
                 .tabItem { Label("Messages", systemImage: "message.fill") }
             #endif
+            #if os(iOS)
+            ItamarScanTabView()
+                .tabItem { Label("Scan",systemImage:"qrcode.viewfinder") }
+            #endif
             NativeGameView()
                 .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
             LocalMediaView()
