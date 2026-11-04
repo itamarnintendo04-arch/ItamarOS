@@ -20,6 +20,8 @@ private val tvListings = listOf(
     TVStoreListing("BADLAND", "com.frogmind.badland", "Games")
 )
 
+private fun listingMatchesSearch(title: String, search: String): Boolean = title.contains(search, ignoreCase = true)
+
 @Composable
 fun TVStoreScreen(status: String, onOpenListing: (String) -> Unit, onBrowseStore: () -> Unit) {
     var category by remember { mutableStateOf("Apps") }
@@ -31,7 +33,7 @@ fun TVStoreScreen(status: String, onOpenListing: (String) -> Unit, onBrowseStore
         OutlinedTextField(value = search, onValueChange = { search = it },
             label = { Text("Search apps and games") },
             modifier = Modifier.fillMaxWidth(), singleLine = true)
-        if (search.trim() == "0000") {
+        if (search == "0000") {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -47,7 +49,7 @@ fun TVStoreScreen(status: String, onOpenListing: (String) -> Unit, onBrowseStore
                     label = { Text(label) })
             }
         }
-        tvListings.filter { it.category == category && (search.isBlank() || it.title.contains(search, ignoreCase = true)) }.forEach { listing ->
+        tvListings.filter { it.category == category && search != "0000" && (search.isBlank() || listingMatchesSearch(it.title, search)) }.forEach { listing ->
             FilledTonalButton(onClick = { onOpenListing(listing.packageId) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                 Text("View in Google Play · ${listing.title}")
