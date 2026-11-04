@@ -125,7 +125,7 @@ struct CloudClimbStandaloneHome:View {
                                 .foregroundStyle(.cyan)
                             Text("It's quiet here…")
                                 .font(.title.bold())
-                            Text("No games found for \"\\(gameSearch)\"")
+                            Text("No games found for \"\(gameSearch)\"")
                                 .font(.subheadline)
                             Text("Try a different search.")
                                 .font(.caption)
