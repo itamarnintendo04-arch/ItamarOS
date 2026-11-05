@@ -47,3 +47,5 @@ jobs:
           path: output/ItamarOS-iOS-1.7.0-unsigned.ipa
           if-no-files-found: error
           retention-days: 90
+
+# Rebuild requested after Cloud Climb audio settings update (2026-11-05).
