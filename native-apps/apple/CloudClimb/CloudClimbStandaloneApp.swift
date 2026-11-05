@@ -462,7 +462,8 @@ private struct CloudClimbOfflineDemo:View {
     @State private var lastMenuButton=false
     @AppStorage("itamaros.settings.sounds") private var sounds=true
     private func sound(_ id:SystemSoundID) { if sounds { AudioServicesPlaySystemSound(id) } }
-    private func syncMusic() { CloudClimbMusic.shared.start(enabled:sounds && !paused && !finished) }
+    @AppStorage("itamaros.settings.music") private var music=true
+    private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused) }
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
 
     private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
@@ -635,7 +636,7 @@ private struct CloudClimbOfflineDemo:View {
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
             .toolbar(.hidden,for:.navigationBar)
-            .onChange(of:sounds) { _,_ in syncMusic() }
+            .onChange(of:music) { _,_ in syncMusic() }
             .onChange(of:paused) { _,_ in syncMusic() }
             .onChange(of:finished) { _,_ in syncMusic() }
             .onDisappear { CloudClimbMusic.shared.stop() }
