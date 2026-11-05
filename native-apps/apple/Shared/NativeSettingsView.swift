@@ -22,6 +22,8 @@ struct NativeSettingsView: View {
     @AppStorage("itamaros.settings.accent") private var accent = "blue"
     @AppStorage("itamaros.settings.sounds") private var sounds = true
     @AppStorage("itamaros.settings.music") private var music = true
+    @AppStorage("itamaros.settings.effectsVolume") private var effectsVolume = 1.0
+    @AppStorage("itamaros.settings.musicVolume") private var musicVolume = 1.0
     @AppStorage("itamaros.settings.largeText") private var largeText = false
     @AppStorage("itamaros.settings.language") private var selectedLanguage = "system"
     @AppStorage("itamaros.updates.autoCheck") private var autoCheckUpdates = true
@@ -57,7 +59,9 @@ struct NativeSettingsView: View {
                     }
                     Toggle("Larger text in games", isOn: $largeText)
                     Toggle("Sound effects", isOn: $sounds)
+                    if sounds { HStack { Text("Effects volume"); Slider(value:$effectsVolume,in:0...1); Text("\\(Int(effectsVolume*100))%").monospacedDigit().frame(width:48) } }
                     Toggle("Background music", isOn: $music)
+                    if music { HStack { Text("Music volume"); Slider(value:$musicVolume,in:0...1); Text("\\(Int(musicVolume*100))%").monospacedDigit().frame(width:48) } }
                 }
                 Section("App language") {
                     Picker("Language", selection: $selectedLanguage) {
