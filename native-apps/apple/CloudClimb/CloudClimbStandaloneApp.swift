@@ -533,9 +533,9 @@ private struct CloudClimbOfflineDemo:View {
                             .font(.headline).foregroundStyle(.yellow)
                     }
                     HStack {
-                        Button(paused ? "Resume" : "Pause") {paused.toggle()}
+                        Button(paused ? "Resume" : "Pause") {paused.toggle();sound(1104)}
                             .disabled(shopDue>0 || finished)
-                        Button("Exit to Menu") {dismiss()}
+                        Button("Exit to Menu") {sound(1104);dismiss()}
                     }.buttonStyle(.bordered)
                     if finished {
                         Text("No hearts left · Try Again").foregroundStyle(.white)
@@ -591,9 +591,10 @@ private struct CloudClimbOfflineDemo:View {
                                 at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
                         .frame(maxWidth:.infinity)
-                        .frame(minHeight:260)
+                        .frame(maxWidth:.infinity)
                         .aspectRatio(16/9,contentMode:.fit)
-                        .clipShape(RoundedRectangle(cornerRadius:16))
+                        .background(Color.indigo)
+                        .clipped()
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
                             Button("🚪 Enter Blue Door \(door)") {enterDoor(door)}
@@ -625,13 +626,14 @@ private struct CloudClimbOfflineDemo:View {
                     .buttonStyle(.borderedProminent)
                     Text("Offline preview · Game coins have no real-money value. Signed-in online progress uses the shared ItamarOS database.")
                         .font(.caption2).foregroundStyle(.white.opacity(0.85))
-                    Button("Back to Menu") {dismiss()}
+                    Button("Back to Menu") {sound(1104);dismiss()}
                         .buttonStyle(.bordered)
-                }.padding(18)
+                }.padding(.horizontal,0).padding(.vertical,8)
             }
             .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
+            .toolbar(.hidden,for:.navigationBar)
             .onAppear {
                 if entry=="shop" {orbOpen=true}
                 if entry=="characters" {charactersOpen=true}
