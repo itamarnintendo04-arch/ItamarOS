@@ -21,6 +21,7 @@ struct NativeSettingsView: View {
     @State private var disconnectOtherDevicesStatus=""
     @AppStorage("itamaros.settings.accent") private var accent = "blue"
     @AppStorage("itamaros.settings.sounds") private var sounds = true
+    @AppStorage("itamaros.settings.music") private var music = true
     @AppStorage("itamaros.settings.largeText") private var largeText = false
     @AppStorage("itamaros.settings.language") private var selectedLanguage = "system"
     @AppStorage("itamaros.updates.autoCheck") private var autoCheckUpdates = true
@@ -55,7 +56,8 @@ struct NativeSettingsView: View {
                         Text("Purple").tag("purple")
                     }
                     Toggle("Larger text in games", isOn: $largeText)
-                    Toggle("Game sounds preference", isOn: $sounds)
+                    Toggle("Sound effects", isOn: $sounds)
+                    Toggle("Background music", isOn: $music)
                 }
                 Section("App language") {
                     Picker("Language", selection: $selectedLanguage) {
