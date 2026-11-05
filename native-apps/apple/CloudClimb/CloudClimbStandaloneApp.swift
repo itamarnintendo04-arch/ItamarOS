@@ -88,6 +88,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var showOnline=false
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
+    @State private var demoEntry="play"
     @State private var selectedMenu:String?
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
     @State private var secretVisible=false
@@ -159,14 +160,14 @@ struct CloudClimbStandaloneHome:View {
                     .background(.blue.opacity(0.55),in:RoundedRectangle(cornerRadius:17))
                     CloudClimbMenuButton(title:"PLAY",symbol:"play.fill",
                         colors:[.green,Color(red:0,green:0.6,blue:0.1)]) {
-                        if cloud.isSignedIn {showOnline=true} else {offlineDemo=true}
+                        if cloud.isSignedIn {showOnline=true} else {demoEntry="play";offlineDemo=true}
                     }
                     CloudClimbMenuButton(title:"LEVELS",symbol:"square.grid.2x2.fill",
-                        colors:[.cyan,.blue]) { selectedMenu="Levels" }
+                        colors:[.cyan,.blue]) { demoEntry="worlds";offlineDemo=true }
                     CloudClimbMenuButton(title:"CUSTOMIZE",symbol:"tshirt.fill",
-                        colors:[.purple,.indigo]) { selectedMenu="Customize" }
+                        colors:[.purple,.indigo]) { demoEntry="characters";offlineDemo=true }
                     CloudClimbMenuButton(title:"SHOP",symbol:"cart.fill",
-                        colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { selectedMenu="Shop" }
+                        colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { demoEntry="shop";offlineDemo=true }
                     HStack(spacing:8) {
                         ForEach(["🏆 Achievements","🥇 Leaderboard","🎁 Daily Reward",
                                  "🎯 Challenges"],id: \.self) { title in
@@ -230,7 +231,7 @@ struct CloudClimbStandaloneHome:View {
                         }
                         .buttonStyle(.plain)
                         .disabled(working || pair != nil)
-                        Button {offlineDemo=true} label: {
+                        Button {demoEntry="play";offlineDemo=true} label: {
                             Label("Play Offline Demo",systemImage:"gamecontroller.fill")
                                 .font(.system(size:18,weight:.bold,design:.rounded))
                                 .frame(maxWidth:.infinity)
@@ -328,7 +329,7 @@ struct CloudClimbStandaloneHome:View {
                     .environmentObject(cloud)
             }
             .fullScreenCover(isPresented:$offlineDemo) {
-                CloudClimbOfflineDemo()
+                CloudClimbOfflineDemo(entry:demoEntry)
                     .ignoresSafeArea(edges:.all)
                     .persistentSystemOverlays(.hidden)
             }
@@ -428,6 +429,7 @@ struct CloudClimbStandaloneHome:View {
 /// Offline playable preview. Save data stays on this device only.
 /// Signed-in online play uses the same shared Cloud Climb game as ItamarOS.
 private struct CloudClimbOfflineDemo:View {
+    let entry:String
     @Environment(\.dismiss) private var dismiss
     @AppStorage("cloudclimb.offline.level") private var level=1
     @AppStorage("cloudclimb.offline.coins") private var coins=0
@@ -451,6 +453,8 @@ private struct CloudClimbOfflineDemo:View {
     @State private var finished=false
     @State private var notice="Demo: play the first two stages. Sign in to unlock the full game."
     @State private var orbOpen=false
+    @State private var charactersOpen=false
+    @State private var worldsOpen=false
     @State private var lastBossHit=Date.distantPast
     @State private var controllerConnected=false
     @State private var lastMenuButton=false
@@ -622,6 +626,50 @@ private struct CloudClimbOfflineDemo:View {
             .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
+            .onAppear {
+                if entry=="shop" {orbOpen=true}
+                if entry=="characters" {charactersOpen=true}
+                if entry=="worlds" {worldsOpen=true}
+            }
+            .sheet(isPresented:$charactersOpen) {
+                NavigationStack {
+                    ScrollView {
+                        CloudClimbHeroPicker(owned:characters,selected:$equippedHero)
+                            .padding()
+                    }
+                    .background(Color.indigo)
+                    .navigationTitle("Characters")
+                    .toolbar {ToolbarItem(placement:.confirmationAction) {
+                        Button("Done"){charactersOpen=false}
+                    }}
+                }
+            }
+            .sheet(isPresented:$worldsOpen) {
+                NavigationStack {
+                    List(1...11,id:\.self) { index in
+                        let available=worlds.contains(index)||(index==11 && secret)
+                        Button {
+                            if available {world=index;resetPosition();worldsOpen=false}
+                            else if index<=10 && keys>0 {
+                                worldStorage=Array(worlds.union([index])).sorted().map(String.init).joined(separator:",")
+                                world=index;resetPosition();worldsOpen=false
+                            }
+                        } label: {
+                            HStack {
+                                Text(index==11 ? "🌈 Secret World" : "☁️ World \\(index)")
+                                Spacer()
+                                Text(available ? "OPEN" : index<=10 && keys>0 ? "UNLOCK · 1 KEY" : "LOCKED")
+                                    .font(.caption)
+                            }
+                        }
+                        .disabled(!available && (index==11 || keys==0))
+                    }
+                    .navigationTitle("Worlds")
+                    .toolbar {ToolbarItem(placement:.confirmationAction) {
+                        Button("Done"){worldsOpen=false}
+                    }}
+                }
+            }
             .sheet(isPresented:$orbOpen) {
                 NavigationStack {
                     VStack(spacing:16) {
