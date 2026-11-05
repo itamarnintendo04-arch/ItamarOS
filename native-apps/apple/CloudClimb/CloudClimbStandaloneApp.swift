@@ -329,6 +329,8 @@ struct CloudClimbStandaloneHome:View {
             }
             .fullScreenCover(isPresented:$offlineDemo) {
                 CloudClimbOfflineDemo()
+                    .ignoresSafeArea(edges:.all)
+                    .persistentSystemOverlays(.hidden)
             }
         }
     }
@@ -489,7 +491,7 @@ private struct CloudClimbOfflineDemo:View {
         NavigationStack {
             ScrollView {
                 VStack(spacing:14) {
-                    Text("☁️ CLOUD CLIMB")
+                    Text("🎮 OFFLINE DEMO · CLOUD CLIMB")
                         .font(.system(.title,design:.rounded).bold())
                         .foregroundStyle(.white)
                     HStack {
@@ -580,7 +582,7 @@ private struct CloudClimbOfflineDemo:View {
                                 .font(.system(size:11,weight:.bold)),
                                 at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
-                        .aspectRatio(4/5,contentMode:.fit)
+                        .aspectRatio(16/9,contentMode:.fit)
                         .clipShape(RoundedRectangle(cornerRadius:16))
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
