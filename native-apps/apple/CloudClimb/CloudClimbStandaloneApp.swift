@@ -349,7 +349,7 @@ struct CloudClimbStandaloneHome:View {
                     .environmentObject(cloud)
             }
             .fullScreenCover(isPresented:$offlineDemo) {
-                CloudClimbOfflineDemo(entry:demoEntry)
+                CloudClimbOfflineDemo(entry:demoEntry, fullAccess:cloud.isSignedIn)
                     .ignoresSafeArea(edges:.all)
                     .persistentSystemOverlays(.hidden)
             }
@@ -450,6 +450,7 @@ struct CloudClimbStandaloneHome:View {
 /// Signed-in online play uses the same shared Cloud Climb game as ItamarOS.
 private struct CloudClimbOfflineDemo:View {
     let entry:String
+    let fullAccess:Bool
     @Environment(\.dismiss) private var dismiss
     @AppStorage("cloudclimb.offline.level") private var level=1
     @AppStorage("cloudclimb.offline.coins") private var coins=0
@@ -483,15 +484,16 @@ private struct CloudClimbOfflineDemo:View {
     @AppStorage("itamaros.settings.musicVolume") private var musicVolume=1.0
     private func sound(_ id:SystemSoundID) { CloudClimbMusic.shared.effect(enabled:sounds,volume:effectsVolume) }
     @AppStorage("itamaros.settings.music") private var music=true
-    private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused,volume:musicVolume) }
+    private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused,volume:musicVolume,world:world) }
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
 
     private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
     private var colored:Set<Int> {Set(coloredStorage.split(separator:",").compactMap{Int($0)})}
     private var characters:Set<String> {Set(characterStorage.split(separator:",").map(String.init))}
-    private var worlds:Set<Int> {Set([1]).union(worldStorage.split(separator:",").compactMap{Int($0)})}
+    private var worlds:Set<Int> {Set(1...highestUnlockedWorld)}
     private var keys:Int {max(0,(level-1)/100-(worlds.count-1))}
     private var boss:Bool {level%30==0}
+    private var highestUnlockedWorld:Int { min(10,max(1,(level-1)/30+1)) }
     private var secret:Bool {colored.count==10}
     private var stages:[CGRect] {
         var value=UInt64(UInt32(truncatingIfNeeded:level &* 2039 &+ world &* 1009))
@@ -535,17 +537,13 @@ private struct CloudClimbOfflineDemo:View {
                     ScrollView(.horizontal,showsIndicators:false) {
                         HStack(spacing:8) {
                             ForEach(1...11,id:\.self) { selected in
-                                let open=worlds.contains(selected)||(selected==11 && secret)
+                                let open=worlds.contains(selected)||(selected==11 && secret && fullAccess)
                                 Button(selected==11 ? "SECRET" :
                                        open ? "World \(selected)" : "🔒 \(selected)") {
                                     if open {
                                         world=selected;resetPosition()
-                                    } else if selected<=10 && keys>0 {
-                                        worldStorage=Array(worlds.union([selected]))
-                                            .sorted().map(String.init).joined(separator:",")
-                                        notice="World \(selected) unlocked with a key!"
                                     }
-                                }.disabled(!open && keys<1)
+                                }.disabled(!open)
                                     .buttonStyle(.bordered)
                             }
                         }
@@ -646,7 +644,7 @@ private struct CloudClimbOfflineDemo:View {
                     }
                     .frame(maxWidth:.infinity)
                     .buttonStyle(.borderedProminent)
-                    Text("Offline preview · Game coins have no real-money value. Signed-in online progress uses the shared ItamarOS database.")
+                    Text(fullAccess ? "Signed in · Levels unlock in order. This build currently stores stage progress on this device." : "Offline demo · Sign in to continue past stage 2. Progress is stored on this device.")
                         .font(.caption2).foregroundStyle(.white.opacity(0.85))
                     Button("Back to Menu") {sound(1104);dismiss()}
                         .buttonStyle(.bordered)
@@ -659,6 +657,7 @@ private struct CloudClimbOfflineDemo:View {
             .onChange(of:music) { _,_ in syncMusic() }
             .onChange(of:musicVolume) { _,_ in syncMusic() }
             .onChange(of:paused) { _,_ in syncMusic() }
+            .onChange(of:world) { _,_ in syncMusic() }
             .onChange(of:finished) { _,_ in syncMusic() }
             .onDisappear { CloudClimbMusic.shared.stop() }
             .onAppear {
@@ -683,22 +682,19 @@ private struct CloudClimbOfflineDemo:View {
             .sheet(isPresented:$worldsOpen) {
                 NavigationStack {
                     List(1...11,id:\.self) { index in
-                        let available=worlds.contains(index)||(index==11 && secret)
+                        let available=worlds.contains(index)||(index==11 && secret && fullAccess)
                         Button {
                             if available {world=index;resetPosition();worldsOpen=false}
-                            else if index<=10 && keys>0 {
-                                worldStorage=Array(worlds.union([index])).sorted().map(String.init).joined(separator:",")
-                                world=index;resetPosition();worldsOpen=false
-                            }
+
                         } label: {
                             HStack {
                                 Text(index==11 ? "🌈 Secret World" : "☁️ World \(index)")
                                 Spacer()
-                                Text(available ? "OPEN" : index<=10 && keys>0 ? "UNLOCK · 1 KEY" : "LOCKED")
+                                Text(available ? "OPEN" : "LOCKED")
                                     .font(.caption)
                             }
                         }
-                        .disabled(!available && (index==11 || keys==0))
+                        .disabled(!available)
                     }
                     .navigationTitle("Worlds")
                     .toolbar {ToolbarItem(placement:.confirmationAction) {
@@ -788,7 +784,7 @@ private struct CloudClimbOfflineDemo:View {
     }
     private func completeLevel() {
         let cleared=level
-        if level >= 2 {
+        if !fullAccess && level >= 2 {
             level=2
             finished=true
             paused=true
@@ -796,6 +792,8 @@ private struct CloudClimbOfflineDemo:View {
             return
         }
         coins+=10;level+=1;bossHP=3
+        if cleared%30==0 && world<10 { world+=1; notice="New world unlocked!" }
+        syncMusic()
         shopDue=hearts<3 && (level%30==0 ||
             (cleared%10==0 && cleared%30 != 0)) ? level : 0
         var rewardMessage="Level \(cleared) complete! +10 coins."
