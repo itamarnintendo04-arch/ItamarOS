@@ -37,6 +37,14 @@ struct NativeSettingsView: View {
     }
     #endif
 
+    private var languageDisplay: String {
+        let labels = ["system":"System default","en":"English","he":"עברית","ar":"العربية",
+                      "es":"Español","fr":"Français","de":"Deutsch","pt":"Português",
+                      "ru":"Русский","ja":"日本語","zh-Hans":"简体中文","it":"Italiano",
+                      "hi":"हिन्दी","tr":"Türkçe","ko":"한국어"]
+        return labels[selectedLanguage] ?? selectedLanguage
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -67,7 +75,9 @@ struct NativeSettingsView: View {
                         Text("Türkçe").tag("tr")
                         Text("한국어").tag("ko")
                     }
-                    Text("Starts in your device language. Translations are being expanded; untranslated labels remain in English.")
+                    Text(selectedLanguage == "he"
+                         ? "השפה נשמרה. מסכים מתורגמים יוצגו בעברית; חלק מהטקסטים עדיין באנגלית."
+                         : "Selected: \\(languageDisplay). Available translations change immediately; untranslated labels remain in English.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Device") {
@@ -80,7 +90,7 @@ struct NativeSettingsView: View {
                     #else
                     LabeledContent("Platform", value: "iPhone / iPad · iOS / iPadOS")
                     #endif
-                    LabeledContent("Language", value: Locale.current.identifier)
+                    LabeledContent("App language", value: languageDisplay)
                     LabeledContent("Time zone", value: TimeZone.current.identifier)
                     LabeledContent("App version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
                 }
