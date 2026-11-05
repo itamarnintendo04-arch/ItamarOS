@@ -2,6 +2,7 @@
 import SwiftUI
 import CoreImage.CIFilterBuiltins
 import GameController
+import AudioToolbox
 
 private struct CloudClimbPairStart: Decodable {
     let requestId:String
@@ -22,12 +23,13 @@ private struct CloudClimbPairResult: Decodable {
 @main
 struct CloudClimbStandaloneApp: App {
     @StateObject private var cloud=ItamarCloudService()
+    @AppStorage("itamaros.settings.language") private var language="system"
     var body:some Scene {
         WindowGroup {
             CloudClimbStandaloneHome()
                 .environmentObject(cloud)
                 .persistentSystemOverlays(.hidden)
-                .environment(\.locale,Locale(identifier:"en"))
+                .environment(\.locale,language == "system" ? Locale.autoupdatingCurrent : Locale(identifier:language))
         }
     }
 }
@@ -95,6 +97,8 @@ struct CloudClimbStandaloneHome:View {
     @State private var secretChatVisible=false
     @State private var gameSearch=""
     @State private var showEmptySearch=false
+    @AppStorage("itamaros.settings.sounds") private var sounds=true
+    private func menuSound() { if sounds { AudioServicesPlaySystemSound(1104) } }
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -160,18 +164,18 @@ struct CloudClimbStandaloneHome:View {
                     .background(.blue.opacity(0.55),in:RoundedRectangle(cornerRadius:17))
                     CloudClimbMenuButton(title:"PLAY",symbol:"play.fill",
                         colors:[.green,Color(red:0,green:0.6,blue:0.1)]) {
-                        if cloud.isSignedIn {showOnline=true} else {demoEntry="play";offlineDemo=true}
+                        menuSound();demoEntry="play";offlineDemo=true
                     }
                     CloudClimbMenuButton(title:"LEVELS",symbol:"square.grid.2x2.fill",
-                        colors:[.cyan,.blue]) { demoEntry="worlds";offlineDemo=true }
+                        colors:[.cyan,.blue]) { menuSound();demoEntry="worlds";offlineDemo=true }
                     CloudClimbMenuButton(title:"CUSTOMIZE",symbol:"tshirt.fill",
-                        colors:[.purple,.indigo]) { demoEntry="characters";offlineDemo=true }
+                        colors:[.purple,.indigo]) { menuSound();demoEntry="characters";offlineDemo=true }
                     CloudClimbMenuButton(title:"SHOP",symbol:"cart.fill",
-                        colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { demoEntry="shop";offlineDemo=true }
+                        colors:[.orange,Color(red:0.9,green:0.35,blue:0)]) { menuSound();demoEntry="shop";offlineDemo=true }
                     HStack(spacing:8) {
                         ForEach(["🏆 Achievements","🥇 Leaderboard","🎁 Daily Reward",
                                  "🎯 Challenges"],id: \.self) { title in
-                            Button(title) {selectedMenu=title}
+                            Button(title) {menuSound();selectedMenu=title}
                                 .font(.system(size:11,weight:.bold,design:.rounded))
                                 .frame(maxWidth:.infinity,minHeight:47)
                                 .foregroundStyle(.white)
