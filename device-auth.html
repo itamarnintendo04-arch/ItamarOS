@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ItamarOS · Device account</title><meta name="robots" content="noindex,nofollow"><style>
+:root{font-family:system-ui,sans-serif;color:#edf5ff;background:#07152d}*{box-sizing:border-box}body{min-height:100dvh;margin:0;display:grid;place-items:center;background:radial-gradient(circle at 55% 0%,#2456a0,#07152d 72%);padding:18px}
+main{width:min(440px,100%);background:#142c50;border:1px solid #5d80b4;border-radius:20px;padding:30px;box-shadow:0 24px 75px #0007}
+h1{margin:12px 0}p{line-height:1.5;color:#c8d9f3}label{display:block;margin-top:13px}input{width:100%;padding:13px;margin-top:6px;border-radius:9px;border:1px solid #829ec7;background:white;color:#11233b}button{cursor:pointer;width:100%;border:0;border-radius:10px;padding:13px;margin-top:15px;background:#8db5ff;color:#092147;font-weight:700}button:disabled{opacity:.6}button.secondary{background:white}nav{display:flex;gap:8px}nav button{flex:1}nav button[aria-selected=false]{background:#254a7c;color:white}#status{min-height:24px}small{color:#aabedc}
+</style></head><body><main>
+<img src="/assets/branding/itamaros-mark-512.png" width="64" height="64" alt="ItamarOS logo">
+<h1>ItamarOS Account</h1><p>Sign in or create an account for your ItamarOS device. This page is separate from the website demo.</p>
+<nav><button type="button" id="signin-tab" aria-selected="true">Sign In</button><button type="button" id="signup-tab" aria-selected="false">Create Account</button></nav>
+<form id="account-form"><label id="username-wrap" hidden>Username<input id="username" autocomplete="nickname" minlength="3" maxlength="24" pattern="[A-Za-z0-9_.]{3,24}"></label>
+<label>Email<input id="email" type="email" autocomplete="email" required></label><label>Password<input id="password" type="password" minlength="8" autocomplete="current-password" required></label>
+<button type="submit" id="submit">Sign In</button></form>
+<button type="button" class="secondary" id="google">Continue with Google</button>
+<p id="status" role="status" aria-live="polite"></p><small>Use a trusted device. Your password is never sent back to an app through a link.</small>
+</main><script src="/apps/device-auth.js?v=1"></script></body></html>
