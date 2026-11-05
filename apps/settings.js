@@ -24,12 +24,19 @@ const CATEGORIES=[
  {id:'backup',icon:'📁',name:'Backup & Restore'},
  {id:'about',icon:'ℹ️',name:'About'}
 ];
+const TRANSLATIONS={
+ he:{'System & Device':'מערכת ומכשיר','Personalization':'התאמה אישית','Display':'תצוגה','Sound':'צליל','Network & Internet':'רשת ואינטרנט','Bluetooth & Devices':'Bluetooth ומכשירים','Storage & Files':'אחסון וקבצים','Apps & Taskbar':'אפליקציות ושורת המשימות','Accounts':'חשבונות','Privacy & Security':'פרטיות ואבטחה','Accessibility':'נגישות','Time & Language':'שעה ושפה','Power & Battery':'חשמל וסוללה','Connect & Sync':'חיבור וסנכרון','Casting & Displays':'שיקוף ומסכים','Plugins & Developer':'תוספים ומפתחים','Software Updates':'עדכוני תוכנה','Backup & Restore':'גיבוי ושחזור','About':'אודות','Settings':'הגדרות','Preferred language':'שפה מועדפת'},
+ es:{'Settings':'Configuración','Time & Language':'Hora e idioma','Preferred language':'Idioma preferido'},
+ fr:{'Settings':'Paramètres','Time & Language':'Heure et langue','Preferred language':'Langue préférée'},
+ de:{'Settings':'Einstellungen','Time & Language':'Zeit und Sprache','Preferred language':'Bevorzugte Sprache'}
+};
+const tr=value=>TRANSLATIONS[prefs.language]?.[value]||value;
 const $=id=>document.getElementById(id);
 function load(){try{const value=JSON.parse(localStorage.getItem(KEY));if(!value||typeof value!=='object')return {...DEFAULT};return {...DEFAULT,...value}}catch{return {...DEFAULT}}}
 let prefs=load(),current='system';
 function save(){try{localStorage.setItem(KEY,JSON.stringify(prefs))}catch{}}
 function apply(){
- document.body.dataset.theme=prefs.theme;
+ document.documentElement.lang=prefs.language;\n document.documentElement.dir=prefs.language==='he'?'rtl':'ltr';\n document.body.dataset.theme=prefs.theme;
  document.body.dataset.contrast=prefs.contrast?'high':'standard';
  document.body.dataset.wallpaper=prefs.wallpaper;
  document.documentElement.style.setProperty('--it-accent',/^#[0-9a-fA-F]{6}$/.test(prefs.accent)?prefs.accent:DEFAULT.accent);
@@ -55,9 +62,9 @@ function range(label,key,min,max,unit='%'){
  r.append(title,inp,span);return r
 }
 function selector(label,key,options){
- const r=node('label',undefined,'it-settings-select');r.append(node('span',label));
+ const r=node('label',undefined,'it-settings-select');r.append(node('span',tr(label)));
  const select=node('select');for(const [value,name] of options){const o=node('option',name);o.value=value;select.append(o)}
- select.value=prefs[key];select.addEventListener('change',()=>{prefs[key]=select.value;save();apply();if(key==='clock24'||key==='language')window.refreshClock?.()});r.append(select);return r
+ select.value=prefs[key];select.addEventListener('change',()=>{prefs[key]=select.value;save();apply();if(key==='language')mount();if(key==='clock24'||key==='language')window.refreshClock?.()});r.append(select);return r
 }
 function buttonRow(...buttons){const r=node('div',undefined,'it-settings-actions');r.append(...buttons);return r}
 function renderCategory(){
@@ -143,7 +150,7 @@ function renderCategory(){
   area.append(p);break
  }
  case 'time':{
-  const p=wrap('Time & Language','Your device controls the underlying clock and time zone.');
+  const p=wrap(tr('Time & Language'),'Your device controls the underlying clock and time zone.');
   p.append(row('Local time',new Date().toLocaleString()));
   p.append(row('Time zone',Intl.DateTimeFormat().resolvedOptions().timeZone||'Unknown'));
   p.append(checkbox('Use 24-hour clock','clock24'),selector('Preferred language','language',[['en','English'],['he','עברית'],['es','Español'],['fr','Français'],['de','Deutsch']]));
@@ -218,16 +225,16 @@ function renderCategory(){
 }
 function showCategory(id){if(!CATEGORIES.some(c=>c.id===id))return;current=id;
  for(const btn of document.querySelectorAll('[data-settings-tab]')){const yes=btn.dataset.settingsTab===id;btn.classList.toggle('active',yes);btn.setAttribute('aria-selected',String(yes))}
- const heading=$('it-settings-title');if(heading)heading.textContent=CATEGORIES.find(x=>x.id===id).name;
+ const heading=$('it-settings-title');if(heading)heading.textContent=tr(CATEGORIES.find(x=>x.id===id).name);
  renderCategory()
 }
 function mount(){
  const content=$('content');if(!content)return;content.replaceChildren();
  const root=node('section',undefined,'it-settings');
  const side=node('nav',undefined,'it-settings-sidebar');side.setAttribute('aria-label','Settings categories');
- const brand=node('h2','⚙️ Settings');side.append(brand);
+ const brand=node('h2','⚙️ '+tr('Settings'));side.append(brand);
  const tabs=node('div',undefined,'it-settings-tabs');
- for(const item of CATEGORIES){const b=createButton(item.icon+'  '+item.name,()=>showCategory(item.id));b.dataset.settingsTab=item.id;tabs.append(b)}side.append(tabs);
+ for(const item of CATEGORIES){const b=createButton(item.icon+'  '+tr(item.name),()=>showCategory(item.id));b.dataset.settingsTab=item.id;tabs.append(b)}side.append(tabs);
  const pane=node('section',undefined,'it-settings-main');pane.append(node('h2','System','it-settings-title'));pane.lastChild.id='it-settings-title';
  const body=node('div');body.id='it-settings-body';pane.append(body);root.append(side,pane);content.append(root);showCategory(current)
 }
