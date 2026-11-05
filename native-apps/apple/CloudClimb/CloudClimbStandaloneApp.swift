@@ -460,6 +460,8 @@ private struct CloudClimbOfflineDemo:View {
     @State private var lastBossHit=Date.distantPast
     @State private var controllerConnected=false
     @State private var lastMenuButton=false
+    @AppStorage("itamaros.settings.sounds") private var sounds=true
+    private func sound(_ id:SystemSoundID) { if sounds { AudioServicesPlaySystemSound(id) } }
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
 
     private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
@@ -588,6 +590,8 @@ private struct CloudClimbOfflineDemo:View {
                                 .font(.system(size:11,weight:.bold)),
                                 at:CGPoint(x:x*sx,y:(y-36)*sy))
                         }
+                        .frame(maxWidth:.infinity)
+                        .frame(minHeight:260)
                         .aspectRatio(16/9,contentMode:.fit)
                         .clipShape(RoundedRectangle(cornerRadius:16))
                         .onReceive(clock) {_ in tick()}
@@ -604,7 +608,7 @@ private struct CloudClimbOfflineDemo:View {
                             HStack(spacing:15) {
                                 control("◀",left:true)
                                 control("▶",left:false)
-                                Button("Jump") {jump=true}
+                                Button("Jump") {jump=true;sound(1104)}
                                     .buttonStyle(.borderedProminent)
                             }
                         } else {
@@ -717,7 +721,7 @@ private struct CloudClimbOfflineDemo:View {
         let input=(left ? -1.0:0.0)+(right ? 1.0:0.0)+Double(axis)
         x=min(388,max(12,x+CGFloat(max(-1,min(1,input)))*3.2))
         if (jump || pad?.buttonA.isPressed == true) && grounded {
-            velocity = -9;grounded=false
+            velocity = -9;grounded=false;sound(1104)
         }
         jump=false
         let previousBottom=y+3
@@ -735,10 +739,11 @@ private struct CloudClimbOfflineDemo:View {
         if y>495 {
             hearts=max(0,hearts-1)
             if hearts==0 {finished=true;notice="No hearts remaining."}
+            sound(1053)
             resetPosition()
             return
         }
-        if grounded && y<110 && !boss {completeLevel()}
+        if grounded && y<110 && !boss {sound(1025);completeLevel()}
     }
     private func resetPosition() {
         x=48;y=430;velocity=0;grounded=true;left=false;right=false;jump=false
