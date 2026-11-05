@@ -16,8 +16,6 @@ targets:
       - path: Shared
         excludes:
           - Localizations/**
-        excludes:
-          - Localizations/**
           - ItamarOSApp.swift
       - path: CloudClimb/CloudClimbStandaloneApp.swift
       - path: CloudClimb/Assets.xcassets
