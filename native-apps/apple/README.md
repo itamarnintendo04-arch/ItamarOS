@@ -72,3 +72,8 @@ The user explicitly chooses their own IPA, matching Apple-issued `.p12` developm
 When the web signer offers a signed IPA for download, a native WebKit `WKDownloadDelegate` saves it to app cache and shows a native **Save or share** control. Downloads are **not** application installation. Valid device provisioning is required, and the Apple Sign in identity button does not grant a signing certificate.
 
 This view requires a working HTTPS connection and browser WebAssembly/Worker support. It may not work for every file on every device due to memory and WebKit constraints. It has not been manually tested on a provisioned physical iPhone; the CI workflow compiles source only. Existing `IPAImportView` remains a separate local IPA inspector/share workflow.
+
+
+## iOS IPA build status and installation
+
+The GitHub Actions workflows `ios-unsigned-ipa.yml` and `cloud-climb-ios.yml` build unsigned device IPA archives for ItamarOS and the standalone Cloud Climb app respectively. Each IPA must be signed using a legitimate Apple-issued signing identity and provisioning profile before installation. Supabase OAuth redirect allowlisting does not itself implement Google sign-in in the native app; app-side OAuth callback handling and validation remain separate work.
