@@ -7,11 +7,13 @@ import AVFoundation
 final class CloudClimbMusic {
     static let shared = CloudClimbMusic()
     private var player: AVAudioPlayer?
+    private var activeWorld = 0
     private var effectPlayer: AVAudioPlayer?
     private init() {}
 
-    func start(enabled: Bool, paused: Bool = false, volume: Double = 1) {
+    func start(enabled: Bool, paused: Bool = false, volume: Double = 1, world: Int = 1) {
         guard enabled else { stop(); return }
+        if activeWorld != world { stop() }
         if let player { player.setVolume(Float(max(0,min(1,volume))) * (paused ? 0.10 : 0.32), fadeDuration: 0.25); if !player.isPlaying { player.play() }; return }
         let sampleRate = 22050
         let bpm = 112.0
@@ -19,6 +21,8 @@ final class CloudClimbMusic {
         let melody: [Double] = [523.25,659.25,783.99,659.25,587.33,698.46,880,698.46,
                                 523.25,659.25,783.99,1046.5,880,783.99,659.25,587.33]
         let bass: [Double] = [130.81,174.61,196.0,146.83]
+        let worldScale: [Double] = [1,0.89,1.12,0.75,1.33,1.06,0.84,1.19,0.94,1.5,1.26]
+        let pitch = worldScale[min(10,max(1,world))-1]
         let duration = beat * Double(melody.count)
         let frames = Int(duration * Double(sampleRate))
         var pcm = Data(capacity: frames * 2)
@@ -27,9 +31,9 @@ final class CloudClimbMusic {
             let step = min(melody.count - 1, Int(time / beat))
             let local = time.truncatingRemainder(dividingBy: beat)
             let envelope = min(1, local * 35) * min(1, (beat-local) * 8)
-            let lead = sin(2 * .pi * melody[step] * time) * envelope * 0.15
-            let chord = sin(2 * .pi * bass[(step / 4) % bass.count] * time) * 0.075
-            let sparkle = sin(2 * .pi * melody[step] * 2 * time) * envelope * 0.022
+            let lead = sin(2 * .pi * melody[step] * pitch * time) * envelope * 0.15
+            let chord = sin(2 * .pi * bass[(step / 4) % bass.count] * pitch * time) * 0.075
+            let sparkle = sin(2 * .pi * melody[step] * pitch * 2 * time) * envelope * 0.022
             let value = Int16(max(-32767,min(32767,Int((lead + chord + sparkle) * 32767))))
             let bits = UInt16(bitPattern: value)
             pcm.append(UInt8(truncatingIfNeeded: bits))
@@ -57,6 +61,7 @@ final class CloudClimbMusic {
             audio.prepareToPlay()
             audio.play()
             player = audio
+            activeWorld = world
         } catch {
             print("Cloud Climb music unavailable: \\(error.localizedDescription)")
         }
@@ -102,6 +107,7 @@ final class CloudClimbMusic {
     func stop() {
         player?.stop()
         player = nil
+        activeWorld = 0
     }
 }
 #endif
