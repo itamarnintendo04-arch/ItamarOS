@@ -51,3 +51,5 @@ jobs:
           path: output/CloudClimb-iOS-0.1.0-UNSIGNED.ipa
           if-no-files-found: error
           retention-days: 90
+
+# Rebuild requested after Cloud Climb audio settings update (2026-11-05).
