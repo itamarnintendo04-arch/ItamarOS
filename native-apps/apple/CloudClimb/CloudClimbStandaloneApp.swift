@@ -656,7 +656,7 @@ private struct CloudClimbOfflineDemo:View {
                             }
                         } label: {
                             HStack {
-                                Text(index==11 ? "🌈 Secret World" : "☁️ World \\(index)")
+                                Text(index==11 ? "🌈 Secret World" : "☁️ World \(index)")
                                 Spacer()
                                 Text(available ? "OPEN" : index<=10 && keys>0 ? "UNLOCK · 1 KEY" : "LOCKED")
                                     .font(.caption)
