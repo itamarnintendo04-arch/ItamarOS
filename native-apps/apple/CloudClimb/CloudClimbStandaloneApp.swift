@@ -264,11 +264,9 @@ struct CloudClimbStandaloneHome:View {
                                 }
                                 .accessibilityLabel("QR code to approve Cloud Climb login in ItamarOS")
                             }
-                            Text("Compare code: "+String(pair.requestId.prefix(6)).uppercased())
-                                .font(.headline.monospaced())
-                            Text(qrVisible
+                             Text(qrVisible
                                 ? "Scan the QR with a trusted ItamarOS phone, then verify and approve."
-                                : "Confirm this code in ItamarOS on this phone, then return to Cloud Climb. No QR is needed.")
+                                : "Approve in ItamarOS. Cloud Climb will reopen automatically after approval.")
                                 .font(.caption).foregroundStyle(.secondary)
                             Button("Cancel") {activeRequest=nil;self.pair=nil;qrVisible=false}
                         }
