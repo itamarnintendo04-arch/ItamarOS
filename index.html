@@ -204,18 +204,18 @@ body.itamar-auth-required{overflow:hidden}
 #itamar-login-form h2{margin:8px 0 10px}#itamar-login-form p{color:#c5d8f5;line-height:1.5}
 #itamar-login-form label{display:block;margin:16px 0 6px}#itamar-login-form input{display:block;width:100%;border-radius:9px;padding:13px;border:1px solid #819ac0;background:#f8fbff;color:#102341}
 #itamar-login-form button{width:100%;margin-top:22px;border:0;border-radius:10px;padding:14px;background:#8db5ff;color:#071b39;font-weight:700}
-#itamar-login-status{min-height:24px}#itamar-logout{position:fixed;right:16px;bottom:72px;z-index:40;padding:9px 14px;border:1px solid #9bb6dc;border-radius:10px;background:#183b68;color:white}
+#itamar-google-login{width:100%;margin-top:12px;padding:13px;border:1px solid #90a9d0;border-radius:10px;background:#fff;color:#19304f;font-weight:700;cursor:pointer}#itamar-google-login:disabled{opacity:.65;cursor:wait}#itamar-login-divider{text-align:center;margin-top:16px;color:#bdd0ec}#itamar-login-status{min-height:24px}#itamar-logout{position:fixed;right:16px;bottom:72px;z-index:40;padding:9px 14px;border:1px solid #9bb6dc;border-radius:10px;background:#183b68;color:white}
 </style>
 <div id="itamar-login-gate" role="dialog" aria-modal="true" aria-label="ItamarOS sign in">
 <form id="itamar-login-form">
 <img src="/assets/branding/itamaros-mark-512.png" alt="ItamarOS" width="64" height="64">
-<h2>Sign in to ItamarOS</h2><p>Enter your ItamarOS account email and password to access the browser emulator.</p>
+<h2>Sign in to ItamarOS</h2><p>Sign in with an existing ItamarOS account. New account registration is unavailable on this website.</p>
 <label for="itamar-login-email">Email</label><input id="itamar-login-email" type="email" autocomplete="username" required>
 <label for="itamar-login-password">Password</label><input id="itamar-login-password" type="password" autocomplete="current-password" required>
-<button type="submit">Sign in</button><p id="itamar-login-status" role="status" aria-live="polite"></p>
+<button type="submit">Sign in with email</button><div id="itamar-login-divider">or</div><button id="itamar-google-login" type="button">Continue with Google</button><p id="itamar-login-status" role="status" aria-live="polite"></p>
 </form></div>
 <button id="itamar-logout" type="button" hidden>Sign out</button>
-<script src="/apps/web-login.js?v=1.0.0"></script>
+<script src="/apps/web-login.js?v=2.0.0"></script>
 <script defer src="/apps/player.js?v=1.6.0"></script><script defer src="/apps/game-art.js?v=1.6.0"></script><script defer src="/apps/game-audio.js?v=1.6.0"></script><script defer src="/apps/games.js?v=1.6.0"></script><script defer src="/apps/more-games.js?v=1.6.0"></script><script defer src="/apps/tv-streaming.js?v=1.1.0"></script><script defer src="/apps/updates.js?v=1.1.0"></script><script defer src="/apps/settings.js?v=1.1.0"></script><script defer src="/apps/taskbar.js?v=1.1.0"></script><script defer src="/apps/windows-start.js?v=1.7.1"></script><script defer src="/apps/power.js?v=1.7.2"></script><script>
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}
 </script></html>
