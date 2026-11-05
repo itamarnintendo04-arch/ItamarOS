@@ -7,6 +7,16 @@ function external(url){
   shell.openExternal(u.href);return true
  }catch{return false}
 }
+function isAuthenticationNavigation(url){
+ try{
+  const u=new URL(url);
+  return u.protocol==='https:'&&(
+   u.hostname==='accounts.google.com'||
+   u.hostname==='slqjkysinhfkqjoigfuz.supabase.co'||
+   u.origin===new URL(HOME).origin
+  );
+ }catch{return false}
+}
 function makeWindow(){
  const win=new BrowserWindow({
   width:1280,height:800,minWidth:720,minHeight:540,backgroundColor:'#0b1b35',
@@ -19,9 +29,12 @@ function makeWindow(){
   }
  });
  win.once('ready-to-show',()=>win.show());
- win.webContents.setWindowOpenHandler(({url})=>{external(url);return {action:'deny'}});
+ win.webContents.setWindowOpenHandler(({url})=>{
+  if(isAuthenticationNavigation(url))return {action:'allow'};
+  external(url);return {action:'deny'}
+ });
  win.webContents.on('will-navigate',(event,url)=>{
-  try{const u=new URL(url);if(u.origin!==new URL(HOME).origin){event.preventDefault();external(url)}}
+  try{const u=new URL(url);if(!isAuthenticationNavigation(url)){event.preventDefault();external(url)}}
   catch{event.preventDefault()}
  });
  win.webContents.on('will-attach-webview',e=>e.preventDefault());
