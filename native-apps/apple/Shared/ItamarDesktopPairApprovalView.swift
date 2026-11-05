@@ -25,11 +25,11 @@ struct ItamarDesktopPairApprovalView: View {
                     Text(isCloudClimb
                         ? "Connect Cloud Climb using your existing ItamarOS account without scanning a QR code."
                         : "Use your existing ItamarOS Connect account to sign in on your computer without another SMS.")
-                    Text(isCloudClimb
-                        ? "Compare this code with the one displayed in Cloud Climb:"
-                        : "Compare this code with the one displayed on your computer:")
-                    Text(String(request.prefix(6)).uppercased())
-                        .font(.system(.title,design:.monospaced)).bold()
+                    if !isCloudClimb {
+                        Text("Compare this code with the one displayed on your computer:")
+                        Text(String(request.prefix(6)).uppercased())
+                            .font(.system(.title,design:.monospaced)).bold()
+                    }
                     Text(isCloudClimb
                         ? "Only approve a Cloud Climb login you started. Face ID or Touch ID is required; the linked app receives temporary account access."
                         : "Only approve a computer you are using. Biometric confirmation is required. Only approve a device you recognize; a pending desktop login can access your account.")
@@ -62,8 +62,11 @@ struct ItamarDesktopPairApprovalView: View {
                                     }
                                     try await cloud.approveDesktopPairing(request:request)
                                     result = isCloudClimb
-                                        ? "Approved. Return to Cloud Climb to finish sign-in."
+                                        ? "Approved. Returning to Cloud Climb…"
                                         : "Approved. Return to your computer."
+                                    if isCloudClimb, let url=URL(string:"cloudclimb://login-return") {
+                                        openURL(url)
+                                    }
                                 } catch { result = error.localizedDescription }
                                 busy = false
                             }
