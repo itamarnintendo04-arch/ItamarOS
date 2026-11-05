@@ -88,6 +88,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var info="Link the account already signed in on your ItamarOS phone."
     @State private var working=false
     @State private var showOnline=false
+    @State private var showAudioSettings=false
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
     @State private var demoEntry="play"
@@ -98,6 +99,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var gameSearch=""
     @State private var showEmptySearch=false
     @AppStorage("itamaros.settings.sounds") private var sounds=true
+    @AppStorage("itamaros.settings.music") private var music=true
     @AppStorage("itamaros.settings.effectsVolume") private var effectsVolume=1.0
     @AppStorage("itamaros.settings.musicVolume") private var musicVolume=1.0
     private func menuSound() { CloudClimbMusic.shared.effect(enabled:sounds,volume:effectsVolume) }
@@ -158,7 +160,7 @@ struct CloudClimbStandaloneHome:View {
                         Label(cloud.profile?.username ?? "Player",systemImage:"person.crop.circle.fill")
                         Spacer()
                         Label("0",systemImage:"circle.fill").foregroundStyle(.yellow)
-                        Image(systemName:"gearshape.fill")
+                        Button { showAudioSettings=true } label: { Image(systemName:"gearshape.fill") }
                     }
                     .font(.system(size:15,weight:.bold,design:.rounded))
                     .foregroundStyle(.white)
@@ -327,6 +329,20 @@ struct CloudClimbStandaloneHome:View {
                 Button("OK") {selectedMenu=nil}
             } message: {
                 Text("\(selectedMenu ?? "Feature") is being prepared. Play the offline demo now.")
+            }
+            .sheet(isPresented:$showAudioSettings) {
+                NavigationStack {
+                    Form {
+                        Section("Audio") {
+                            Toggle("Sound effects",isOn:$sounds)
+                            if sounds { Slider(value:$effectsVolume,in:0...1) { Text("Effects volume") } }
+                            Toggle("Background music",isOn:$music)
+                            if music { Slider(value:$musicVolume,in:0...1) { Text("Music volume") } }
+                        }
+                    }
+                    .navigationTitle("Game Settings")
+                    .toolbar { ToolbarItem(placement:.confirmationAction) { Button("Done") { showAudioSettings=false } } }
+                }
             }
             .sheet(isPresented:$showOnline) {
                 ItamarPartyGamesView(defaultGame:"cloud_climb")
