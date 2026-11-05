@@ -9,9 +9,9 @@ final class CloudClimbMusic {
     private var player: AVAudioPlayer?
     private init() {}
 
-    func start(enabled: Bool) {
+    func start(enabled: Bool, paused: Bool = false) {
         guard enabled else { stop(); return }
-        if let player { if !player.isPlaying { player.play() }; return }
+        if let player { player.setVolume(paused ? 0.10 : 0.32, fadeDuration: 0.25); if !player.isPlaying { player.play() }; return }
         let sampleRate = 22050
         let bpm = 112.0
         let beat = 60.0 / bpm
@@ -52,7 +52,7 @@ final class CloudClimbMusic {
         do {
             let audio = try AVAudioPlayer(data:wav)
             audio.numberOfLoops = -1
-            audio.volume = 0.32
+            audio.volume = paused ? 0.10 : 0.32
             audio.prepareToPlay()
             audio.play()
             player = audio
