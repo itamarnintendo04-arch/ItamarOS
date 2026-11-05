@@ -98,7 +98,9 @@ struct CloudClimbStandaloneHome:View {
     @State private var gameSearch=""
     @State private var showEmptySearch=false
     @AppStorage("itamaros.settings.sounds") private var sounds=true
-    private func menuSound() { if sounds { AudioServicesPlaySystemSound(1104) } }
+    @AppStorage("itamaros.settings.effectsVolume") private var effectsVolume=1.0
+    @AppStorage("itamaros.settings.musicVolume") private var musicVolume=1.0
+    private func menuSound() { CloudClimbMusic.shared.effect(enabled:sounds,volume:effectsVolume) }
     private let broker="https://itamaros-store-api.onrender.com/api/connect/pair"
 
     var body:some View {
@@ -461,9 +463,11 @@ private struct CloudClimbOfflineDemo:View {
     @State private var controllerConnected=false
     @State private var lastMenuButton=false
     @AppStorage("itamaros.settings.sounds") private var sounds=true
-    private func sound(_ id:SystemSoundID) { if sounds { AudioServicesPlaySystemSound(id) } }
+    @AppStorage("itamaros.settings.effectsVolume") private var effectsVolume=1.0
+    @AppStorage("itamaros.settings.musicVolume") private var musicVolume=1.0
+    private func sound(_ id:SystemSoundID) { CloudClimbMusic.shared.effect(enabled:sounds,volume:effectsVolume) }
     @AppStorage("itamaros.settings.music") private var music=true
-    private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused) }
+    private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused,volume:musicVolume) }
     private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
 
     private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
@@ -637,6 +641,7 @@ private struct CloudClimbOfflineDemo:View {
             .navigationTitle("Cloud Climb")
             .toolbar(.hidden,for:.navigationBar)
             .onChange(of:music) { _,_ in syncMusic() }
+            .onChange(of:musicVolume) { _,_ in syncMusic() }
             .onChange(of:paused) { _,_ in syncMusic() }
             .onChange(of:finished) { _,_ in syncMusic() }
             .onDisappear { CloudClimbMusic.shared.stop() }
