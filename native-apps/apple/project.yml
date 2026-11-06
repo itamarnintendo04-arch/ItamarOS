@@ -18,6 +18,7 @@ targets:
           - Localizations/**
           - ItamarOSApp.swift
       - path: ItamarOSGames/ItamarOSGamesApp.swift
+      - path: ItamarOSGames/OpenWorldAdventureView.swift
       - path: CloudClimb/Fonts
       - path: iOS/Assets.xcassets
     info:
