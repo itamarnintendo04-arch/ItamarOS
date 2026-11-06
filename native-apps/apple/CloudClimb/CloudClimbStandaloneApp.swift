@@ -323,12 +323,34 @@ struct CloudClimbStandaloneHome:View {
                     }}
                 }
             }
-            .alert("Cloud Climb",isPresented:Binding(
+            .sheet(isPresented:Binding(
                 get:{selectedMenu != nil},set:{if !$0 {selectedMenu=nil}}
             )) {
-                Button("OK") {selectedMenu=nil}
-            } message: {
-                Text("\(selectedMenu ?? "Feature") is being prepared. Play the offline demo now.")
+                NavigationStack {
+                    ZStack {
+                        LinearGradient(colors:[.indigo,.cyan,.blue],
+                            startPoint:.topLeading,endPoint:.bottomTrailing)
+                            .ignoresSafeArea()
+                        VStack(spacing:24) {
+                            Image(systemName:"star.circle.fill")
+                                .font(.system(size:76)).foregroundStyle(.yellow)
+                            Text(selectedMenu ?? "Cloud Climb")
+                                .font(.custom("ItamarOSGames",size:30))
+                                .foregroundStyle(.white)
+                            Text("This feature is coming soon.")
+                                .foregroundStyle(.white.opacity(0.85))
+                            Button("Back to Game Menu") {selectedMenu=nil}
+                                .buttonStyle(.borderedProminent)
+                        }.padding(30)
+                    }
+                    .navigationTitle(selectedMenu ?? "Cloud Climb")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement:.confirmationAction) {
+                            Button("Done") {selectedMenu=nil}
+                        }
+                    }
+                }
             }
             .sheet(isPresented:$showAudioSettings) {
                 NavigationStack {
