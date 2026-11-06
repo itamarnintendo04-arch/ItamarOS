@@ -20,6 +20,8 @@ private struct GamesLibraryView: View {
     @State private var error = ""
     @State private var selectedTab = 0
     @State private var showQR = false
+    @AppStorage("games.played.cloudclimb") private var playedCloud = false
+    @AppStorage("games.played.skybound") private var playedSky = false
     private let gameURL = URL(string:"cloudclimb://")!
 
     var body: some View {
@@ -96,30 +98,38 @@ private struct GamesLibraryView: View {
 
     private var library: some View {
         List {
-            Section("Original ItamarOS Games") {
-                NavigationLink {
-                    OpenWorldAdventureView()
-                } label: {
-                    Label("Skybound Isles · 3D Open World",systemImage:"globe.europe.africa.fill")
+            Section("Your played games") {
+                if !playedCloud && !playedSky {
+                    Text("Games you play will appear here.").foregroundStyle(.secondary)
+                }
+                if playedCloud {
+                    Button("Play Cloud Climb") { UIApplication.shared.open(gameURL) }
+                }
+                if playedSky {
+                    NavigationLink("Play Skybound Isles") { OpenWorldAdventureView() }
                 }
             }
-            Section("Connected games") {
-                HStack(spacing:14) {
-                    Image(systemName:"cloud.fill")
-                        .font(.largeTitle).foregroundStyle(.cyan)
-                    VStack(alignment:.leading) {
-                        Text("Cloud Climb").font(.headline)
-                        Text("Available on this device if installed")
-                            .font(.caption).foregroundStyle(.secondary)
+            Section("Recommended for you") {
+                if !playedCloud {
+                    Button("Cloud Climb · 2D platformer") {
+                        playedCloud=true
+                        UIApplication.shared.open(gameURL)
                     }
-                    Spacer()
-                    Link("Play",destination:gameURL)
-                        .buttonStyle(.borderedProminent)
+                }
+                if !playedSky {
+                    NavigationLink {
+                        OpenWorldAdventureView().onAppear { playedSky=true }
+                    } label: {
+                        Label("Skybound Isles · 3D exploration",systemImage:"globe")
+                    }
+                }
+                if playedCloud && playedSky {
+                    Text("More games coming soon.").foregroundStyle(.secondary)
                 }
             }
             Section {
-                Text("Additional games will appear here when account-linked game data is supported.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                Text("Recommendations currently use play history on this device. Account-wide recommendations require game activity sync.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
     }
