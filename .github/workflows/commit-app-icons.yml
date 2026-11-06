@@ -1,6 +1,11 @@
 name: Create and commit real iOS app icons
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'native-apps/apple/generate_app_icons.py'
+      - '.github/workflows/commit-app-icons.yml'
 permissions:
   contents: write
 jobs:
@@ -19,7 +24,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add native-apps/apple/ItamarOSGames/Assets.xcassets/GamesIcon.appiconset/ native-apps/apple/SkyboundIsles/Assets.xcassets/SkyboundIcon.appiconset/ native-apps/apple/VoiceRecorder/Assets.xcassets/VoiceRecorderIcon.appiconset/ native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset/
+          git add native-apps/apple/ItamarCut/Assets.xcassets/ItamarCutIcon.appiconset/ native-apps/apple/ItamarOSGames/Assets.xcassets/GamesIcon.appiconset/ native-apps/apple/SkyboundIsles/Assets.xcassets/SkyboundIcon.appiconset/ native-apps/apple/VoiceRecorder/Assets.xcassets/VoiceRecorderIcon.appiconset/ native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset/
           if git diff --cached --quiet; then
             echo "Icons already committed"
           else
