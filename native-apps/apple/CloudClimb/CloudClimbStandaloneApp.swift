@@ -521,8 +521,8 @@ private struct CloudClimbOfflineDemo:View {
 
     var body:some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing:14) {
+            ScrollView(showsIndicators:false) {
+                VStack(spacing:10) {
                     Text("🎮 OFFLINE DEMO · CLOUD CLIMB")
                         .font(.system(.title,design:.rounded).bold())
                         .foregroundStyle(.white)
@@ -582,7 +582,7 @@ private struct CloudClimbOfflineDemo:View {
                         Canvas {ctx,size in
                             let sx=size.width/400,sy=size.height/500
                             ctx.fill(Path(CGRect(origin:.zero,size:size)),
-                                with:.linearGradient(Gradient(colors:[.indigo,.cyan.opacity(0.9)]),
+                                with:.linearGradient(Gradient(colors:CloudClimbWorldVisuals.palette(world)),
                                     startPoint:.zero,
                                     endPoint:CGPoint(x:size.width,y:size.height)))
                             for (index,p) in stages.enumerated() {
@@ -612,8 +612,8 @@ private struct CloudClimbOfflineDemo:View {
                         }
                         .frame(maxWidth:.infinity)
                         .frame(maxWidth:.infinity)
-                        .aspectRatio(16/9,contentMode:.fit)
-                        .background(Color.indigo)
+                        .frame(height: max(320, UIScreen.main.bounds.height * 0.76))
+                        .background(CloudClimbWorldVisuals.palette(world).first ?? .indigo)
                         .clipped()
                         .onReceive(clock) {_ in tick()}
                         if let door=nearbyDoor {
@@ -653,6 +653,9 @@ private struct CloudClimbOfflineDemo:View {
             .background(LinearGradient(colors:[Color(red:0.1,green:0.2,blue:0.48),.teal],
                 startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea())
             .navigationTitle("Cloud Climb")
+            .persistentSystemOverlays(.hidden)
+            .statusBarHidden()
+            .ignoresSafeArea(edges:[.bottom])
             .toolbar(.hidden,for:.navigationBar)
             .onChange(of:music) { _,_ in syncMusic() }
             .onChange(of:musicVolume) { _,_ in syncMusic() }
