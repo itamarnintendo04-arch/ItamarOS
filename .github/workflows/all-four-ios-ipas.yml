@@ -1,4 +1,4 @@
-name: Build all six iOS unsigned IPAs (latest icons)
+name: Build six iOS unsigned IPAs - icon refresh
 on:
   workflow_dispatch:
   push:
