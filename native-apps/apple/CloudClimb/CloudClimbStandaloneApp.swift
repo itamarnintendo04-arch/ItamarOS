@@ -26,7 +26,7 @@ struct CloudClimbStandaloneApp: App {
     @AppStorage("itamaros.settings.language") private var language="system"
     var body:some Scene {
         WindowGroup {
-            CloudClimbStandaloneHome()
+            ItamarGamesLaunchView(content: CloudClimbStandaloneHome())
                 .environmentObject(cloud)
                 .persistentSystemOverlays(.hidden)
                 .environment(\.locale,language == "system" ? Locale.autoupdatingCurrent : Locale(identifier:language))
