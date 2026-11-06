@@ -586,9 +586,22 @@ private struct CloudClimbOfflineDemo:View {
                                     startPoint:.zero,
                                     endPoint:CGPoint(x:size.width,y:size.height)))
                             for (index,p) in stages.enumerated() {
-                                ctx.fill(Path(roundedRect:CGRect(x:p.minX*sx,y:p.minY*sy,
-                                    width:p.width*sx,height:p.height*sy),cornerRadius:6),
-                                    with:.color(index==0 ? .mint:.white))
+                                let platform = CGRect(x:p.minX*sx,y:p.minY*sy,
+                                    width:p.width*sx,height:max(8,p.height*sy))
+                                ctx.fill(Path(roundedRect:platform,cornerRadius:5),
+                                    with:.color(CloudClimbWorldVisuals.platform(world,index:index)))
+                                let edge = CGRect(x:platform.minX,y:platform.minY,
+                                    width:platform.width,height:max(3,platform.height*0.28))
+                                ctx.fill(Path(roundedRect:edge,cornerRadius:3),
+                                    with:.color(.white.opacity(0.65)))
+                            }
+                            for star in 0..<12 {
+                                let px = CGFloat((star*83+world*47)%397)*sx
+                                let py = CGFloat((star*131+world*29)%410)*sy
+                                ctx.draw(Text(star%3==0 ? "✦" : "•")
+                                    .font(.system(size:star%3==0 ? 15 : 9))
+                                    .foregroundColor(.white.opacity(0.4)),
+                                    at:CGPoint(x:px,y:py))
                             }
                             for door in remainingDoors {
                                 let p=stages[door]
