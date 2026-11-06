@@ -1,0 +1,43 @@
+name: Build ItamarOS Games unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "native-apps/apple/**"
+      - ".github/workflows/itamaros-games-ios.yml"
+permissions:
+  contents: read
+jobs:
+  games-ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate original game font
+        run: |
+          python3 -m pip install --break-system-packages fonttools
+          python3 native-apps/apple/CloudClimb/generate_font.py
+      - name: Generate project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Build ItamarOS Games
+        working-directory: native-apps/apple
+        run: |
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ItamarOSGamesiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/GamesBuild" CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          APP="$RUNNER_TEMP/GamesBuild/Build/Products/Release-iphoneos/ItamarOSGamesiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/games-ipa/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/games-ipa/Payload/"
+          cd "$RUNNER_TEMP/games-ipa"
+          zip -qry "$GITHUB_WORKSPACE/output/ItamarOS-Games-UNSIGNED.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Games-UNSIGNED-IPA
+          path: output/ItamarOS-Games-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 90
