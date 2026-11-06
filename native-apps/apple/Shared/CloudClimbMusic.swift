@@ -16,13 +16,15 @@ final class CloudClimbMusic {
         if activeWorld != world { stop() }
         if let player { player.setVolume(Float(max(0,min(1,volume))) * (paused ? 0.10 : 0.32), fadeDuration: 0.25); if !player.isPlaying { player.play() }; return }
         let sampleRate = 22050
-        let bpm = 112.0
+        let bpm = [112.0,136,96,128,104,118,144,88,152,108,122][min(10,max(1,world))-1]
         let beat = 60.0 / bpm
         let melody: [Double] = [523.25,659.25,783.99,659.25,587.33,698.46,880,698.46,
                                 523.25,659.25,783.99,1046.5,880,783.99,659.25,587.33]
         let bass: [Double] = [130.81,174.61,196.0,146.83]
         let worldScale: [Double] = [1,0.89,1.12,0.75,1.33,1.06,0.84,1.19,0.94,1.5,1.26]
         let pitch = worldScale[min(10,max(1,world))-1]
+        let themes = [[0,2,4,2,1,3,5,3],[0,4,2,5,4,2,7,5],[0,1,3,1,0,2,4,2],[0,3,5,3,2,4,7,4],[0,2,1,4,3,5,4,2],[0,4,5,7,5,4,2,0],[0,2,5,7,4,2,7,5],[0,1,4,3,1,0,2,4],[0,5,4,7,5,2,4,0],[0,4,7,5,4,2,5,7],[0,2,4,7,9,7,5,4]]
+        let theme = themes[min(10,max(1,world))-1]
         let duration = beat * Double(melody.count)
         let frames = Int(duration * Double(sampleRate))
         var pcm = Data(capacity: frames * 2)
@@ -31,9 +33,9 @@ final class CloudClimbMusic {
             let step = min(melody.count - 1, Int(time / beat))
             let local = time.truncatingRemainder(dividingBy: beat)
             let envelope = min(1, local * 35) * min(1, (beat-local) * 8)
-            let lead = sin(2 * .pi * melody[step] * pitch * time) * envelope * 0.15
+            let lead = sin(2 * .pi * melody[theme[step % 8] % melody.count] * pitch * time) * envelope * 0.15
             let chord = sin(2 * .pi * bass[(step / 4) % bass.count] * pitch * time) * 0.075
-            let sparkle = sin(2 * .pi * melody[step] * pitch * 2 * time) * envelope * 0.022
+            let sparkle = sin(2 * .pi * melody[theme[step % 8] % melody.count] * pitch * 2 * time) * envelope * 0.022
             let value = Int16(max(-32767,min(32767,Int((lead + chord + sparkle) * 32767))))
             let bits = UInt16(bitPattern: value)
             pcm.append(UInt8(truncatingIfNeeded: bits))
