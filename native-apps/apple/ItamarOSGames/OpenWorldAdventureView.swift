@@ -1,0 +1,136 @@
+import SwiftUI
+import SceneKit
+
+/// Original small open-world 3D prototype for ItamarOS Games.
+/// Procedural models, terrain, trees, ruins and collectibles; no third-party assets.
+struct OpenWorldAdventureView: View {
+    @StateObject private var world = OpenWorldAdventureModel()
+    var body: some View {
+        ZStack(alignment:.top) {
+            SceneView(scene:world.scene,pointOfView:world.camera,
+                      options:[.rendersContinuously])
+                .ignoresSafeArea()
+            VStack {
+                HStack {
+                    Label("SKYBOUND ISLES",systemImage:"globe.europe.africa.fill")
+                    Spacer()
+                    Label("\(world.collected)/12",systemImage:"sparkle")
+                }
+                .font(.headline).foregroundStyle(.white)
+                .padding(12)
+                .background(.black.opacity(0.55),in:RoundedRectangle(cornerRadius:14))
+                Spacer()
+                HStack {
+                    directionButton("arrow.left",dx:-1,dz:0)
+                    directionButton("arrow.up",dx:0,dz:-1)
+                    directionButton("arrow.down",dx:0,dz:1)
+                    directionButton("arrow.right",dx:1,dz:0)
+                }
+                .padding(.bottom,25)
+            }
+            .padding(.horizontal,14)
+        }
+        .navigationTitle("Skybound Isles")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    private func directionButton(_ icon:String,dx:Float,dz:Float)->some View {
+        Button { world.move(dx:dx,dz:dz) } label: {
+            Image(systemName:icon)
+                .font(.title2.bold())
+                .frame(maxWidth:.infinity,minHeight:56)
+                .foregroundStyle(.white)
+                .background(.indigo.opacity(0.8),in:RoundedRectangle(cornerRadius:12))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+@MainActor
+final class OpenWorldAdventureModel: ObservableObject {
+    let scene = SCNScene()
+    let camera = SCNNode()
+    private let player = SCNNode()
+    private var crystals:[SCNNode] = []
+    @Published private(set) var collected = 0
+
+    init() {
+        scene.background.contents = UIColor(red:0.42,green:0.75,blue:0.98,alpha:1)
+        scene.rootNode.addChildNode(camera)
+        camera.camera = SCNCamera()
+        camera.camera?.fieldOfView = 70
+        let sun = SCNNode()
+        sun.light = SCNLight()
+        sun.light?.type = .directional
+        sun.light?.intensity = 1100
+        sun.eulerAngles = SCNVector3(-0.8,0.6,0)
+        scene.rootNode.addChildNode(sun)
+        scene.lightingEnvironment.contents = UIColor.white
+
+        let ground = SCNNode(geometry:SCNBox(width:90,height:1,length:90,chamferRadius:1))
+        ground.position = SCNVector3(0,-0.5,0)
+        ground.geometry?.firstMaterial?.diffuse.contents = UIColor.systemGreen
+        scene.rootNode.addChildNode(ground)
+
+        let body = SCNNode(geometry:SCNCapsule(capRadius:0.42,height:1.6))
+        body.geometry?.firstMaterial?.diffuse.contents = UIColor.systemOrange
+        body.position.y = 1
+        player.addChildNode(body)
+        let face = SCNNode(geometry:SCNSphere(radius:0.22))
+        face.geometry?.firstMaterial?.diffuse.contents = UIColor.white
+        face.position = SCNVector3(0,1.5,-0.34)
+        player.addChildNode(face)
+        scene.rootNode.addChildNode(player)
+
+        for i in 0..<75 {
+            let x=Float((i*37+11)%83)-41
+            let z=Float((i*53+17)%83)-41
+            if abs(x)<4 && abs(z)<4 {continue}
+            let trunk = SCNNode(geometry:SCNCylinder(radius:0.24,height:2.6))
+            trunk.geometry?.firstMaterial?.diffuse.contents = UIColor.brown
+            trunk.position=SCNVector3(x,1.3,z)
+            scene.rootNode.addChildNode(trunk)
+            let canopy=SCNNode(geometry:SCNCone(topRadius:0,bottomRadius:1.5,height:3.8))
+            canopy.geometry?.firstMaterial?.diffuse.contents =
+                i%3==0 ? UIColor.systemTeal : UIColor.systemGreen
+            canopy.position=SCNVector3(x,3.6,z)
+            scene.rootNode.addChildNode(canopy)
+        }
+        for i in 0..<12 {
+            let x=Float((i*17+13)%69)-34
+            let z=Float((i*29+9)%69)-34
+            let gem=SCNNode(geometry:SCNPyramid(width:0.9,height:1.4,length:0.9))
+            gem.geometry?.firstMaterial?.diffuse.contents = UIColor.systemCyan
+            gem.geometry?.firstMaterial?.emission.contents = UIColor.systemBlue
+            gem.position=SCNVector3(x,1,z)
+            gem.runAction(.repeatForever(.rotateBy(x:0,y:CGFloat.pi*2,z:0,duration:3)))
+            scene.rootNode.addChildNode(gem)
+            crystals.append(gem)
+        }
+        for i in 0..<9 {
+            let stone=SCNNode(geometry:SCNBox(width:2,height:Float(i%3+2),length:2,chamferRadius:0.15))
+            stone.geometry?.firstMaterial?.diffuse.contents = UIColor.systemGray
+            stone.position=SCNVector3(Float(i*9-36),Float(i%3+2)/2,Float(i*7-28))
+            scene.rootNode.addChildNode(stone)
+        }
+        updateCamera()
+    }
+
+    func move(dx:Float,dz:Float) {
+        player.position.x=max(-43,min(43,player.position.x+dx*1.5))
+        player.position.z=max(-43,min(43,player.position.z+dz*1.5))
+        if dx != 0 || dz != 0 {player.eulerAngles.y=atan2f(-dx,-dz)}
+        for gem in crystals where gem.parent != nil {
+            let x=gem.position.x-player.position.x
+            let z=gem.position.z-player.position.z
+            if x*x+z*z<3 {
+                gem.removeFromParentNode()
+                collected += 1
+            }
+        }
+        updateCamera()
+    }
+    private func updateCamera() {
+        camera.position=SCNVector3(player.position.x,7,player.position.z+12)
+        camera.look(at:SCNVector3(player.position.x,1,player.position.z-5))
+    }
+}
