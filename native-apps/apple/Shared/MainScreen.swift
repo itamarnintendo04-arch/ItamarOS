@@ -25,8 +25,13 @@ struct MainScreen: View {
             ItamarScanTabView()
                 .tabItem { Label("Scan",systemImage:"qrcode.viewfinder") }
             #endif
+            #if os(iOS)
+            Link("Open ItamarOS Games",destination:URL(string:"itamarosgames://")!)
+                .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
+            #else
             NativeGameView()
                 .tabItem { Label("Games", systemImage: "gamecontroller.fill") }
+            #endif
             LocalMediaView()
                 .tabItem { Label("Player", systemImage: "play.rectangle.fill") }
             #if os(iOS)
