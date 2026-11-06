@@ -26,6 +26,10 @@ jobs:
           ICON_DIR="native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset"
           mkdir -p "$ICON_DIR"
           rsvg-convert --format=png --width=1024 --height=1024 assets/branding/cloud-climb-icon.svg > "$ICON_DIR/Icon.png"
+      - name: Generate original ItamarOS Games font
+        run: |
+          python3 -m pip install --break-system-packages fonttools
+          python3 native-apps/apple/CloudClimb/generate_font.py
       - name: Generate Xcode project
         working-directory: native-apps/apple
         run: xcodegen generate
