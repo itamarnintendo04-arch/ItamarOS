@@ -41,6 +41,30 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ItamarOS Games
         TARGETED_DEVICE_FAMILY: "1,2"
+  SkyboundIslesiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Shared
+        excludes:
+          - Localizations/**
+          - ItamarOSApp.swift
+      - path: ItamarOSGames/OpenWorldAdventureView.swift
+      - path: SkyboundIsles/SkyboundIslesApp.swift
+      - path: iOS/Assets.xcassets
+    info:
+      path: SkyboundIsles/Info.plist
+      properties:
+        CFBundleDisplayName: Skybound Isles
+        ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
+        ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.skybound
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Skybound Isles
+        TARGETED_DEVICE_FAMILY: "1,2"
   CloudClimbiOS:
     type: application
     platform: iOS
