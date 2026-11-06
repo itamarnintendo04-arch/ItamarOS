@@ -451,6 +451,15 @@ final class ItamarCloudService: ObservableObject {
         else { throw ItamarCloudError.badResponse("Could not disconnect other devices.") }
     }
 
+    /// Server must implement this authenticated RPC, schedule deletion after 30 days,
+    /// and cancel the pending deletion on a successful subsequent login.
+    /// Never claim deletion was scheduled unless the server confirms it.
+    func requestAccountDeletion() async throws {
+        _ = try await request("/rest/v1/rpc/itamar_request_account_deletion",
+                              method: "POST", data: [:])
+        signOut()
+    }
+
     func signOut() {
         session = nil; userID = nil; profile = nil
         pendingSignupAvatarJPEG = nil
