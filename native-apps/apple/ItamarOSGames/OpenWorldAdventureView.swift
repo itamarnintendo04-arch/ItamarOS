@@ -21,8 +21,7 @@ struct OpenWorldAdventureView: View {
 
     private var gameContent: some View {
         ZStack(alignment:.top) {
-            SceneView(scene:world.scene,pointOfView:world.camera,
-                      options:[.rendersContinuously])
+            Skybound60FPSScene(scene:world.scene,camera:world.camera)
                 .ignoresSafeArea()
                 .simultaneousGesture(DragGesture(minimumDistance:5)
                     .onChanged { value in
@@ -181,3 +180,24 @@ final class OpenWorldAdventureModel: ObservableObject {
         camera.look(at:SCNVector3(player.position.x,1.2,player.position.z))
     }
 }
+
+#if os(iOS)
+private struct Skybound60FPSScene: UIViewRepresentable {
+    let scene: SCNScene
+    let camera: SCNNode
+    func makeUIView(context:Context)->SCNView {
+        let view=SCNView(frame:.zero)
+        view.scene=scene
+        view.pointOfView=camera
+        view.isPlaying=true
+        view.rendersContinuously=true
+        view.preferredFramesPerSecond=60
+        view.antialiasingMode = .multisampling4X
+        return view
+    }
+    func updateUIView(_ view:SCNView,context:Context) {
+        if view.scene !== scene {view.scene=scene}
+        view.pointOfView=camera
+    }
+}
+#endif
