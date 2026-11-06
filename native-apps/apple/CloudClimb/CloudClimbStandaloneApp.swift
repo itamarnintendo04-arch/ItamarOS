@@ -46,9 +46,9 @@ private struct CloudClimbSkyIntro: View {
             Image(systemName:"cloud.fill").font(.system(size:90))
                 .foregroundStyle(.white.opacity(0.9)).offset(x:120,y:-30)
             VStack(spacing:3) {
-                Text("☁️ CLOUD").font(.system(size:38,weight:.black,design:.rounded))
+                Text("☁️ CLOUD").font(.custom("ItamarOSGames",size:38))
                     .foregroundStyle(.white).shadow(color:.blue,radius:4,x:3,y:5)
-                Text("CLIMB 🚩").font(.system(size:38,weight:.black,design:.rounded))
+                Text("CLIMB 🚩").font(.custom("ItamarOSGames",size:38))
                     .foregroundStyle(.yellow).shadow(color:.orange,radius:4,x:3,y:5)
                 Text("☁️   🏃🏻‍♂️   🪙  🪙   🏝️")
                     .font(.system(size:35)).padding(.top,8)
