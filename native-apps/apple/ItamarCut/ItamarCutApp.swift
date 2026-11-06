@@ -83,7 +83,7 @@ final class ItamarCutProject: ObservableObject {
             let target=FileManager.default.temporaryDirectory.appendingPathComponent("ItamarCut-\(UUID().uuidString).mov")
             guard let session=AVAssetExportSession(asset:composition,presetName:AVAssetExportPresetHighestQuality) else {throw ExportError.noExporter}
             session.outputURL=target
-            session.outputFileType=.mov
+            session.outputFileType = .mov
             await session.export()
             if let err=session.error {throw err}
             guard session.status == .completed else {throw ExportError.failed}
