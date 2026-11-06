@@ -8,6 +8,7 @@ struct OpenWorldAdventureView: View {
     @StateObject private var world = OpenWorldAdventureModel()
     @EnvironmentObject private var cloud: ItamarCloudService
     @State private var controllerTimer: Timer?
+    @State private var lastDrag: CGSize = .zero
     var body: some View {
         Group {
             if cloud.isSignedIn {
@@ -23,6 +24,12 @@ struct OpenWorldAdventureView: View {
             SceneView(scene:world.scene,pointOfView:world.camera,
                       options:[.rendersContinuously])
                 .ignoresSafeArea()
+                .simultaneousGesture(DragGesture(minimumDistance:5)
+                    .onChanged { value in
+                        world.rotateCamera(horizontal:Float(value.translation.width-lastDrag.width)*0.006,vertical:Float(value.translation.height-lastDrag.height)*0.004)
+                        lastDrag=value.translation
+                    }
+                    .onEnded { _ in lastDrag = .zero })
             VStack {
                 HStack {
                     Label("SKYBOUND ISLES",systemImage:"globe.europe.africa.fill")
@@ -47,6 +54,9 @@ struct OpenWorldAdventureView: View {
             controllerTimer?.invalidate()
             controllerTimer = Timer.scheduledTimer(withTimeInterval:1.0/30.0,repeats:true) { _ in
                 guard let pad=GCController.controllers().first?.extendedGamepad else { return }
+                let rx=pad.rightThumbstick.xAxis.value
+                let ry=pad.rightThumbstick.yAxis.value
+                if abs(rx)>0.12 || abs(ry)>0.12 {world.rotateCamera(horizontal:rx*0.045,vertical:-ry*0.035)}
                 let dx=pad.leftThumbstick.xAxis.value
                 let dz = -pad.leftThumbstick.yAxis.value
                 if abs(dx)>0.15 || abs(dz)>0.15 {
@@ -79,6 +89,8 @@ final class OpenWorldAdventureModel: ObservableObject {
     let camera = SCNNode()
     private let player = SCNNode()
     private var crystals:[SCNNode] = []
+    private var cameraYaw:Float=0
+    private var cameraPitch:Float=0.32
     @Published private(set) var collected = 0
 
     init() {
@@ -157,8 +169,15 @@ final class OpenWorldAdventureModel: ObservableObject {
         }
         updateCamera()
     }
+    func rotateCamera(horizontal:Float,vertical:Float) {
+        cameraYaw += horizontal
+        cameraPitch=max(-0.2,min(1.05,cameraPitch+vertical))
+        updateCamera()
+    }
     private func updateCamera() {
-        camera.position=SCNVector3(player.position.x,7,player.position.z+12)
-        camera.look(at:SCNVector3(player.position.x,1,player.position.z-5))
+        let d:Float=12
+        let h=d*cos(cameraPitch)
+        camera.position=SCNVector3(player.position.x+sin(cameraYaw)*h,1.4+sin(cameraPitch)*d,player.position.z+cos(cameraYaw)*h)
+        camera.look(at:SCNVector3(player.position.x,1.2,player.position.z))
     }
 }
