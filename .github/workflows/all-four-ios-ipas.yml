@@ -5,17 +5,18 @@ on:
     branches: [main]
     paths:
       - "native-apps/apple/**"
-      - ".github/workflows/all-five-ios-ipas.yml"
+      - ".github/workflows/all-four-ios-ipas.yml"
 permissions:
   contents: read
 jobs:
   five-ipas:
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
-        run: brew install xcodegen librsvg
+        run: |
+          brew install xcodegen librsvg
           python3 -m pip install --break-system-packages pillow
       - name: Generate Cloud Climb artwork and font
         run: |
