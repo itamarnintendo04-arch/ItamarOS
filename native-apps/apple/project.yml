@@ -8,6 +8,24 @@ settings:
     CURRENT_PROJECT_VERSION: "9"
     SWIFT_VERSION: "5.9"
 targets:
+  ItamarCutiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ItamarCut/ItamarCutApp.swift
+      - path: ItamarCut/Assets.xcassets
+    info:
+      path: ItamarCut/Info.plist
+      properties:
+        CFBundleDisplayName: ItamarCut
+        NSPhotoLibraryUsageDescription: "Choose videos to edit in ItamarCut."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.cut
+        ASSETCATALOG_COMPILER_APPICON_NAME: ItamarCutIcon
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
   VoiceRecorderiOS:
     type: application
     platform: iOS
