@@ -17,6 +17,22 @@ enum CloudClimbWorldVisuals {
         default: return [.purple,.black]
         }
     }
+    static func platform(_ world:Int,index:Int) -> Color {
+        if index == 0 { return .mint }
+        switch world {
+        case 1: return .white
+        case 2: return .pink
+        case 3: return .cyan
+        case 4: return .orange
+        case 5: return .teal
+        case 6: return .green
+        case 7: return .purple
+        case 8: return .white
+        case 9: return .blue
+        case 10: return .yellow
+        default: return .indigo
+        }
+    }
     static func name(_ world:Int) -> String {
         let names = ["Sky Islands","Candy Kingdom","Crystal Caves",
                      "Volcano Valley","Ocean Depths","Enchanted Forest",
