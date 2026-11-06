@@ -91,6 +91,7 @@ struct CloudClimbStandaloneHome:View {
     @State private var showAudioSettings=false
     @State private var activeRequest:UUID?
     @State private var offlineDemo=false
+    @State private var demoChosen=false
     @State private var demoEntry="play"
     @State private var selectedMenu:String?
     @AppStorage("cloudclimb.secret0000.unlocked") private var secretUnlocked=false
@@ -297,6 +298,48 @@ struct CloudClimbStandaloneHome:View {
                     Color(red:0.23,green:0.65,blue:0.86)],
                     startPoint:.topLeading,endPoint:.bottomTrailing).ignoresSafeArea()
             )
+            .overlay {
+                if !cloud.isSignedIn && !demoChosen {
+                    VStack(spacing:16) {
+                        Spacer(minLength:0)
+                        CloudClimbSkyIntro()
+                            .frame(maxWidth:480)
+                        Text("Cloud Climb By ItamarOS")
+                            .font(.custom("ItamarOSGames",size:24))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                        Text("Sign in to unlock the full game, or play the demo.")
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                        Button {
+                            Task { await startPair(openInApp:true) }
+                        } label: {
+                            Label(working ? "Connecting..." : "Sign in with ItamarOS",
+                                  systemImage:"person.crop.circle")
+                                .frame(maxWidth:.infinity)
+                                .padding(12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(working)
+                        Button("Continue in Demo") { demoChosen=true }
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                        if pair != nil {
+                            Text(info)
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                        }
+                        Spacer(minLength:0)
+                    }
+                    .padding(.horizontal,24)
+                    .frame(maxWidth:.infinity,maxHeight:.infinity)
+                    .background(LinearGradient(colors:[.indigo,.blue,.cyan],
+                        startPoint:.topLeading,endPoint:.bottomTrailing)
+                        .ignoresSafeArea())
+                }
+            }
             .toolbar(.hidden,for:.navigationBar)
             .sheet(isPresented:$secretChatVisible) {
                 NavigationStack {SecretGameChatView()}
