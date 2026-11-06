@@ -98,6 +98,11 @@ private struct GamesLibraryView: View {
 
     private var library: some View {
         List {
+            Section("Play instantly · No installation") {
+                NavigationLink("Mini Games · Snake, 2048, Rock Paper Scissors & more") {
+                    NativeGameView()
+                }
+            }
             Section("Your played games") {
                 if !playedCloud && !playedSky {
                     Text("Games you play will appear here.").foregroundStyle(.secondary)
