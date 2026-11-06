@@ -5,6 +5,9 @@ import UserNotifications
 #endif
 
 struct NativeSettingsView: View {
+    @State private var showDeleteAccountConfirmation=false
+    @State private var deletionBusy=false
+    @State private var deletionError=""
     @State private var newSecurityPassword=""
     @State private var securityPasswordStatus=""
     @State private var securityPasswordBusy=false
@@ -290,6 +293,24 @@ struct NativeSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                #if os(iOS)
+                Section("Account") {
+                    Button("Sign Out") { cloud.signOut() }
+                        .disabled(!cloud.isSignedIn)
+                }
+                Section("Danger Zone") {
+                    Button("Delete Account", role: .destructive) {
+                        showDeleteAccountConfirmation=true
+                    }
+                    .disabled(!cloud.isSignedIn || deletionBusy)
+                    Text("Account deletion is requested from the server. If confirmed, the account is scheduled for deletion after 30 days. Signing in again during those 30 days must cancel the deletion.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if deletionBusy { ProgressView("Submitting deletion request…") }
+                    if !deletionError.isEmpty {
+                        Text(deletionError).font(.caption).foregroundStyle(.red)
+                    }
+                }
+                #endif
                 Section("System Settings & Privacy") {
                     Text("Wi-Fi, Bluetooth, privacy permissions, display hardware and system updates are controlled by Apple Settings, not this app.")
                     Text("This is an original native SwiftUI app. It has no embedded WebView and does not install another operating system.")
@@ -297,6 +318,26 @@ struct NativeSettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            #if os(iOS)
+            .confirmationDialog("Delete your ItamarOS account?",
+                isPresented:$showDeleteAccountConfirmation,titleVisibility:.visible) {
+                Button("Request Account Deletion",role:.destructive) {
+                    Task {
+                        deletionBusy=true
+                        do {
+                            try await cloud.requestAccountDeletion()
+                            deletionError=""
+                        } catch {
+                            deletionError="Deletion was not scheduled: " + error.localizedDescription
+                        }
+                        deletionBusy=false
+                    }
+                }
+                Button("Cancel",role:.cancel) {}
+            } message: {
+                Text("Your account will be scheduled for deletion 30 days after the server accepts the request. Signing in during that period cancels the deletion. This cannot work until the server supports the 30-day cancellation policy.")
+            }
+            #endif
             #if os(iOS)
             .task {
                 while !Task.isCancelled {
