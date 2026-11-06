@@ -485,7 +485,7 @@ private struct CloudClimbOfflineDemo:View {
     private func sound(_ id:SystemSoundID) { CloudClimbMusic.shared.effect(enabled:sounds,volume:effectsVolume) }
     @AppStorage("itamaros.settings.music") private var music=true
     private func syncMusic() { CloudClimbMusic.shared.start(enabled:music && !finished,paused:paused,volume:musicVolume,world:world) }
-    private let clock=Timer.publish(every:1.0/30.0,on:.main,in:.common).autoconnect()
+    private let clock=Timer.publish(every:1.0/60.0,on:.main,in:.common).autoconnect()
 
     private var blue:Set<String> {Set(blueStorage.split(separator:",").map(String.init))}
     private var colored:Set<Int> {Set(coloredStorage.split(separator:",").compactMap{Int($0)})}
@@ -748,13 +748,13 @@ private struct CloudClimbOfflineDemo:View {
         if pad?.buttonX.isPressed ?? false {hitBoss()}
         let axis=CGFloat(pad?.leftThumbstick.xAxis.value ?? 0)
         let input=(left ? -1.0:0.0)+(right ? 1.0:0.0)+Double(axis)
-        x=min(388,max(12,x+CGFloat(max(-1,min(1,input)))*3.2))
+        x=min(388,max(12,x+CGFloat(max(-1,min(1,input)))*4.2))
         if (jump || pad?.buttonA.isPressed == true) && grounded {
-            velocity = -9;grounded=false;sound(1104)
+            velocity = -7.5;grounded=false;sound(1104)
         }
         jump=false
         let previousBottom=y+3
-        velocity=min(10,velocity+0.38)
+        velocity=min(9,velocity+0.27)
         y+=velocity
         if velocity>=0 {
             grounded=false
