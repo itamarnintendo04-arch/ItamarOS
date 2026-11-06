@@ -96,6 +96,13 @@ private struct GamesLibraryView: View {
 
     private var library: some View {
         List {
+            Section("Original ItamarOS Games") {
+                NavigationLink {
+                    OpenWorldAdventureView()
+                } label: {
+                    Label("Skybound Isles · 3D Open World",systemImage:"globe.europe.africa.fill")
+                }
+            }
             Section("Connected games") {
                 HStack(spacing:14) {
                     Image(systemName:"cloud.fill")
