@@ -1,11 +1,24 @@
 import SwiftUI
 import SceneKit
+import GameController
 
 /// Original small open-world 3D prototype for ItamarOS Games.
 /// Procedural models, terrain, trees, ruins and collectibles; no third-party assets.
 struct OpenWorldAdventureView: View {
     @StateObject private var world = OpenWorldAdventureModel()
+    @EnvironmentObject private var cloud: ItamarCloudService
+    @State private var controllerTimer: Timer?
     var body: some View {
+        Group {
+            if cloud.isSignedIn {
+                gameContent
+            } else {
+                ContentUnavailableView("Sign in required",systemImage:"lock.shield",description:Text("Sign in to your ItamarOS account to play Skybound Isles."))
+            }
+        }
+    }
+
+    private var gameContent: some View {
         ZStack(alignment:.top) {
             SceneView(scene:world.scene,pointOfView:world.camera,
                       options:[.rendersContinuously])
@@ -29,6 +42,21 @@ struct OpenWorldAdventureView: View {
                 .padding(.bottom,25)
             }
             .padding(.horizontal,14)
+        }
+        .onAppear {
+            controllerTimer?.invalidate()
+            controllerTimer = Timer.scheduledTimer(withTimeInterval:1.0/30.0,repeats:true) { _ in
+                guard let pad=GCController.controllers().first?.extendedGamepad else { return }
+                let dx=pad.leftThumbstick.xAxis.value
+                let dz = -pad.leftThumbstick.yAxis.value
+                if abs(dx)>0.15 || abs(dz)>0.15 {
+                    world.move(dx:dx*0.12,dz:dz*0.12)
+                }
+            }
+        }
+        .onDisappear {
+            controllerTimer?.invalidate()
+            controllerTimer=nil
         }
         .navigationTitle("Skybound Isles")
         .navigationBarTitleDisplayMode(.inline)
