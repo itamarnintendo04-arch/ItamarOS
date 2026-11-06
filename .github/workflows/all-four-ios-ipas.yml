@@ -1,4 +1,4 @@
-name: Build all five iOS unsigned IPAs
+name: Build all five iOS unsigned IPAs (latest icons)
 on:
   workflow_dispatch:
   push:
@@ -6,6 +6,9 @@ on:
     paths:
       - "native-apps/apple/**"
       - ".github/workflows/all-four-ios-ipas.yml"
+concurrency:
+  group: five-ios-ipas
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
