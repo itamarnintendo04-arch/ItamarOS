@@ -137,7 +137,7 @@ final class OpenWorldAdventureModel: ObservableObject {
         for i in 0..<12 {
             let x=Float((i*17+13)%69)-34
             let z=Float((i*29+9)%69)-34
-            let gem=SCNNode(geometry:SCNPyramid(width:0.9,height:1.4,length:0.9))
+            let gem=SCNNode(geometry:SCNCone(topRadius:0,bottomRadius:0.65,height:1.4))
             gem.geometry?.firstMaterial?.diffuse.contents = UIColor.systemCyan
             gem.geometry?.firstMaterial?.emission.contents = UIColor.systemBlue
             gem.position=SCNVector3(x,1,z)
@@ -146,7 +146,7 @@ final class OpenWorldAdventureModel: ObservableObject {
             crystals.append(gem)
         }
         for i in 0..<9 {
-            let stone=SCNNode(geometry:SCNBox(width:2,height:Float(i%3+2),length:2,chamferRadius:0.15))
+            let stone=SCNNode(geometry:SCNBox(width:2,height:CGFloat(i%3+2),length:2,chamferRadius:0.15))
             stone.geometry?.firstMaterial?.diffuse.contents = UIColor.systemGray
             stone.position=SCNVector3(Float(i*9-36),Float(i%3+2)/2,Float(i*7-28))
             scene.rootNode.addChildNode(stone)
