@@ -8,6 +8,25 @@ settings:
     CURRENT_PROJECT_VERSION: "9"
     SWIFT_VERSION: "5.9"
 targets:
+  VoiceRecorderiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: VoiceRecorder/VoiceRecorderApp.swift
+      - path: VoiceRecorder/Assets.xcassets
+    info:
+      path: VoiceRecorder/Info.plist
+      properties:
+        CFBundleDisplayName: Voice Recorder
+        NSMicrophoneUsageDescription: "Record audio when you tap Start recording."
+        UIFileSharingEnabled: YES
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.voicerecorder
+        ASSETCATALOG_COMPILER_APPICON_NAME: VoiceRecorderIcon
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
   ItamarOSGamesiOS:
     type: application
     platform: iOS
