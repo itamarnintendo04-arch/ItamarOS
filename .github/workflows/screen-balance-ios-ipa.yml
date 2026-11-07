@@ -1,0 +1,41 @@
+name: Build ItamarOS Screen Balance IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "native-apps/apple/ScreenBalance/**"
+      - "native-apps/apple/project.yml"
+      - ".github/workflows/screen-balance-ios-ipa.yml"
+permissions:
+  contents: read
+jobs:
+  screen-balance:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Build Screen Balance only
+        working-directory: native-apps/apple
+        run: |
+          set -euo pipefail
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ScreenBalanceiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ScreenBalanceBuild" CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/ScreenBalanceBuild/Build/Products/Release-iphoneos/ScreenBalanceiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ScreenBalanceIPA/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/ScreenBalanceIPA/Payload/"
+          (cd "$RUNNER_TEMP/ScreenBalanceIPA" && zip -qry "$GITHUB_WORKSPACE/output/ItamarOS-Screen-Balance-UNSIGNED.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Screen-Balance-UNSIGNED-IPA
+          path: output/ItamarOS-Screen-Balance-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 90
