@@ -106,6 +106,10 @@ struct ItamarOSApp: App {
     var body: some Scene {
         WindowGroup {
             home.tint(Color(red: 0.13, green: 0.61, blue: 0.94))
+                #if os(iOS)
+                .statusBarHidden()
+                .persistentSystemOverlays(.hidden)
+                #endif
                 .task { releases.startAutomaticChecks() }
                 .environment(\.locale, language == "system" ? Locale.autoupdatingCurrent : Locale(identifier: language))
         }
