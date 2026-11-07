@@ -2,6 +2,15 @@
 import Foundation
 import SwiftUI
 import Security
+import AuthenticationServices
+import CryptoKit
+
+private final class GoogleAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .flatMap(\\.windows).first(where: \\.isKeyWindow) ?? UIWindow()
+    }
+}
 
 enum ItamarCloudConfig {
     static let url = (Bundle.main.object(forInfoDictionaryKey: "ITAMAR_SUPABASE_URL") as? String ?? "")
@@ -268,6 +277,56 @@ final class ItamarCloudService: ObservableObject {
             let reason=(try? JSONSerialization.jsonObject(with:data) as? [String:Any])?["error"] as? String
             throw ItamarCloudError.badResponse(reason ?? "Cannot approve this desktop")
         }
+    }
+
+    // Google OAuth uses an external browser session and PKCE; no client secret is embedded.
+    private var googleSession: ASWebAuthenticationSession?
+    private var googlePresenter: GoogleAuthPresenter?
+
+    func signInWithGoogle(callbackScheme: String) async throws {
+        guard ItamarCloudConfig.enabled else { throw ItamarCloudError.unavailable }
+        let verifier = (0..<48).map { _ in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~".randomElement()! }.map(String.init).joined()
+        let challenge = Data(SHA256.hash(data: Data(verifier.utf8)))
+            .base64EncodedString().replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let redirect = callbackScheme + "://auth/callback"
+        var parts = URLComponents(string: ItamarCloudConfig.url + "/auth/v1/authorize")!
+        parts.queryItems = [
+            URLQueryItem(name: "provider", value: "google"),
+            URLQueryItem(name: "redirect_to", value: redirect),
+            URLQueryItem(name: "code_challenge", value: challenge),
+            URLQueryItem(name: "code_challenge_method", value: "s256")
+        ]
+        guard let authorizeURL = parts.url else { throw ItamarCloudError.badResponse("Invalid Google sign-in URL") }
+        let callback: URL = try await withCheckedThrowingContinuation { continuation in
+            let session = ASWebAuthenticationSession(url: authorizeURL, callbackURLScheme: callbackScheme) { url, error in
+                if let error { continuation.resume(throwing: error) }
+                else if let url { continuation.resume(returning: url) }
+                else { continuation.resume(throwing: ItamarCloudError.badResponse("Google sign-in cancelled")) }
+            }
+            let presenter = GoogleAuthPresenter()
+            self.googlePresenter = presenter
+            self.googleSession = session
+            session.presentationContextProvider = presenter
+            session.prefersEphemeralWebBrowserSession = false
+            if !session.start() {
+                continuation.resume(throwing: ItamarCloudError.badResponse("Could not open Google sign-in"))
+            }
+        }
+        defer { googleSession = nil; googlePresenter = nil }
+        guard callback.scheme == callbackScheme, callback.host == "auth",
+              let code = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "code" })?.value else {
+            throw ItamarCloudError.badResponse("Google did not return a valid authorization code")
+        }
+        let raw = try await request("/auth/v1/token", method: "POST",
+            data: ["auth_code": code, "code_verifier": verifier],
+            authorized: false, query: [URLQueryItem(name: "grant_type", value: "pkce")])
+        let result = try JSONDecoder().decode(CloudToken.self, from: raw)
+        guard let uid = result.user?.id else { throw ItamarCloudError.badResponse("Google sign-in failed") }
+        setSession(access: result.access_token, refresh: result.refresh_token, userID: uid)
+        try await reload()
     }
 
     func signIn(email: String, password: String) async throws {
