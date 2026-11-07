@@ -1,4 +1,4 @@
-name: Build six iOS IPAs with mini-game sound effects
+name: Build six unsigned iOS IPAs - landscape games
 on:
   workflow_dispatch:
   push:
