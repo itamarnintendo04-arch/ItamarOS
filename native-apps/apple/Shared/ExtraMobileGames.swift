@@ -18,6 +18,11 @@ struct ExtraMobileGames: View {
         case "Connect Four": ConnectFourView()
         default: Text("Choose a game.")
         }
+        #if os(iOS)
+        .simultaneousGesture(TapGesture().onEnded {
+            GameSoundEffects.shared.play(.tap)
+        })
+        #endif
     }
 }
 
