@@ -37,7 +37,7 @@ struct SmoothSnakeView: View {
             #endif
             HStack {
                 Button(finished ? "Try again" : running ? "Pause" : "Start") {
-                    if finished { reset() } else { running.toggle();previousTick=Date() }
+                    if finished { reset(); running=true; previousTick=Date() } else { running.toggle();previousTick=Date() }
                 }
                 Button("Restart") { reset() }
             }
@@ -66,13 +66,14 @@ struct SmoothSnakeView: View {
             let berry=point(food)
             for offset:CGFloat in [-5,5] {
                 context.fill(Path(ellipseIn:CGRect(x:berry.x+(offset-8)*scale,y:berry.y-6*scale,
-                    width:16*scale,height:16*scale)),with:.color(.pink))
+                    width:16*scale,height:16*scale)),with:.color(Color(red:0.87,green:0.07,blue:0.13)))
             }
             var stem=Path()
             stem.move(to:berry)
             stem.addLine(to:CGPoint(x:berry.x+2*scale,y:berry.y-14*scale))
-            context.stroke(stem,with:.color(.brown),
+            context.stroke(stem,with:.color(.green),
                            style:StrokeStyle(lineWidth:3*scale,lineCap:.round))
+            context.fill(Path(ellipseIn:CGRect(x:berry.x+2*scale,y:berry.y-18*scale,width:13*scale,height:6*scale)),with:.color(.green))
             if segments.count>1 {
                 var snakePath=Path()
                 snakePath.move(to:point(segments[segments.count-1]))
@@ -149,7 +150,11 @@ struct SmoothSnakeView: View {
                 segments.dropFirst(min(8,segments.count)).contains(where: {
                     length($0,newHead)<11.2
                 }) {
-                finished=true;running=false;return
+                finished=true;running=false
+                #if os(iOS)
+                GameSoundEffects.shared.play(.damage)
+                #endif
+                return
             }
             segments[0]=newHead
             for i in 1..<segments.count {
@@ -162,7 +167,10 @@ struct SmoothSnakeView: View {
                 }
             }
             if length(newHead,food)<19 {
-                if let end=segments.last { segments.append(end) }
+                if let end=segments.last { for _ in 0..<4 { segments.append(end) } }
+                #if os(iOS)
+                GameSoundEffects.shared.play(.coin)
+                #endif
                 score+=1;best=max(best,score)
                 if let next=makeFood() {food=next}
                 else {finished=true;running=false;return}
