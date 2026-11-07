@@ -241,6 +241,18 @@ struct CloudClimbStandaloneHome:View {
                         }
                         .buttonStyle(.plain)
                         .disabled(working || pair != nil)
+                        Button("Continue with Google") {
+                            Task {
+                                working = true
+                                defer { working = false }
+                                do {
+                                    try await cloud.signInWithGoogle(callbackScheme: "cloudclimb")
+                                    info = "Google account connected successfully."
+                                } catch { info = error.localizedDescription }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(working)
                         Button {demoEntry="play";offlineDemo=true} label: {
                             Label("Play Offline Demo",systemImage:"gamecontroller.fill")
                                 .font(.system(size:18,weight:.bold,design:.rounded))
