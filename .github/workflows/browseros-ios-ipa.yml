@@ -1,0 +1,41 @@
+name: Build BrowserOS unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "native-apps/apple/BrowserOS/**"
+      - "native-apps/apple/project.yml"
+      - ".github/workflows/browseros-ios-ipa.yml"
+permissions:
+  contents: read
+jobs:
+  browseros:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Build BrowserOS only
+        working-directory: native-apps/apple
+        run: |
+          set -euo pipefail
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme BrowserOSiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/BrowserOSBuild" CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/BrowserOSBuild/Build/Products/Release-iphoneos/BrowserOSiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/BrowserOSIPA/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/BrowserOSIPA/Payload/"
+          (cd "$RUNNER_TEMP/BrowserOSIPA" && zip -qry "$GITHUB_WORKSPACE/output/BrowserOS-By-ItamarOS-UNSIGNED.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BrowserOS-By-ItamarOS-UNSIGNED-IPA
+          path: output/BrowserOS-By-ItamarOS-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 90
