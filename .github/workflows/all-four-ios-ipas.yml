@@ -1,4 +1,4 @@
-name: Build all six iOS unsigned IPAs - rebuild
+name: Build six iOS IPAs with mini-game sound effects
 on:
   workflow_dispatch:
   push:
