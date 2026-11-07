@@ -55,6 +55,7 @@ targets:
           - Localizations/**
           - ItamarOSApp.swift
       - path: ItamarOSGames/ItamarOSGamesApp.swift
+      - path: ItamarOSGames/Assets.xcassets
       - path: GameAudio/GameMusic.swift
       - path: ItamarOSGames/OpenWorldAdventureView.swift
       - path: CloudClimb/Fonts
@@ -78,6 +79,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.games
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ItamarOS Games
+        ASSETCATALOG_COMPILER_APPICON_NAME: GamesIcon
         TARGETED_DEVICE_FAMILY: "1,2"
   SkyboundIslesiOS:
     type: application
@@ -90,6 +92,7 @@ targets:
           - ItamarOSApp.swift
       - path: ItamarOSGames/OpenWorldAdventureView.swift
       - path: SkyboundIsles/SkyboundIslesApp.swift
+      - path: SkyboundIsles/Assets.xcassets
       - path: GameAudio/GameMusic.swift
       - path: iOS/Assets.xcassets
     info:
@@ -103,6 +106,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.skybound
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Skybound Isles
+        ASSETCATALOG_COMPILER_APPICON_NAME: SkyboundIcon
         TARGETED_DEVICE_FAMILY: "1,2"
   CloudClimbiOS:
     type: application
