@@ -6,6 +6,7 @@ struct ExtraMobileGames: View {
     let game: String
 
     @ViewBuilder var body: some View {
+        Group {
         switch game {
         case "2048": Game2048View()
         case "Snake": SmoothSnakeView()
@@ -17,6 +18,7 @@ struct ExtraMobileGames: View {
         case "Pattern Memory": PatternMemoryView()
         case "Connect Four": ConnectFourView()
         default: Text("Choose a game.")
+        }
         }
         #if os(iOS)
         .simultaneousGesture(TapGesture().onEnded {
