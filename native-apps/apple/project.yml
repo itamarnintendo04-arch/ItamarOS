@@ -55,6 +55,7 @@ targets:
           - Localizations/**
           - ItamarOSApp.swift
       - path: ItamarOSGames/ItamarOSGamesApp.swift
+      - path: GameAudio/GameMusic.swift
       - path: ItamarOSGames/OpenWorldAdventureView.swift
       - path: CloudClimb/Fonts
       - path: iOS/Assets.xcassets
@@ -89,6 +90,7 @@ targets:
           - ItamarOSApp.swift
       - path: ItamarOSGames/OpenWorldAdventureView.swift
       - path: SkyboundIsles/SkyboundIslesApp.swift
+      - path: GameAudio/GameMusic.swift
       - path: iOS/Assets.xcassets
     info:
       path: SkyboundIsles/Info.plist
@@ -112,6 +114,7 @@ targets:
           - Localizations/**
           - ItamarOSApp.swift
       - path: CloudClimb/CloudClimbStandaloneApp.swift
+      - path: GameAudio/GameMusic.swift
       - path: CloudClimb/Assets.xcassets
       - path: CloudClimb/Fonts
       - path: iOS/Assets.xcassets
