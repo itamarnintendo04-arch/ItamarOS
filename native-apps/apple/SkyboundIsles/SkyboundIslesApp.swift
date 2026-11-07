@@ -23,9 +23,28 @@ private struct SkyboundSignInView: View {
     @State private var password = ""
     @State private var busy = false
     @State private var errorMessage = ""
+    @State private var musicOn = false
     var body: some View {
         Form {
-            Section("Skybound Isles") {
+            Section {
+                HStack {
+                    Image(systemName:"mountain.2.fill").font(.system(size:42)).foregroundStyle(.mint)
+                    VStack(alignment:.leading) {
+                        Text("Skybound Isles").font(.largeTitle.bold())
+                        Text("Explore floating worlds").foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth:.infinity)
+                Toggle("Original game soundtrack",isOn:$musicOn)
+                    .onChange(of:musicOn) { _,value in
+                        if value { GameMusic.shared.start(style:.adventure) } else { GameMusic.shared.stop() }
+                    }
+            }
+            Section("Connect ItamarOS") {
+                Button("Open ItamarOS") {
+                    if let url=URL(string:"itamaros://") { UIApplication.shared.open(url) }
+                }
+                Section("Skybound Isles") {
                 Text("Sign in with your ItamarOS account to explore.")
                 TextField("Email",text:$email)
                     .textContentType(.emailAddress)
@@ -48,6 +67,7 @@ private struct SkyboundSignInView: View {
                 if !errorMessage.isEmpty {
                     Text(errorMessage).foregroundStyle(.red)
                 }
+            }
             }
         }
         .navigationTitle("Skybound Isles")
