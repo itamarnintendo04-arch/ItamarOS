@@ -72,20 +72,29 @@ for(let x=cols-1;x>=1;x--){
  if(up){for(let y=rows-2;y>=0;y--)cycle.push({x,y})}
  else{for(let y=0;y<rows-1;y++)cycle.push({x,y})}
 }
-let safe=!!window.__arcadeSnakeSafePath,wallWrap=safe||!!window.__arcadeSnakeWallWrap,step=70;
+let safe=!!window.__arcadeSnakeSafePath,wallWrap=safe||!!window.__arcadeSnakeWallWrap,fruitShuffle=!!window.__arcadeSnakeFruitShuffle,step=70;
+const fruits=['🍒','🍎','🍌','🍇','🍓','🍊','🍉','🍍','🥝','🍑','🍐','🥭'];
+let fruitIcon=window.__arcadeSnakeLastFruit||'🍒';
+function pickNextFruit(){let next;do{next=fruits[Math.floor(Math.random()*fruits.length)]}while(next===fruitIcon);fruitIcon=next;window.__arcadeSnakeLastFruit=fruitIcon;}
 const changeColor=()=>{let newHue;do{newHue=Math.floor(rand(0,360))}while(Math.abs(newHue-hue)<35||Math.abs(newHue-hue)>325);hue=newHue};
 let body=safe?[cycle[step],cycle[step-1],cycle[step-2]].map(p=>({...p})):[{x:8,y:10},{x:7,y:10},{x:6,y:10}];
 let dir=safe?{x:cycle[step].x-cycle[step-1].x,y:cycle[step].y-cycle[step-1].y}:{x:1,y:0};
-let next=dir,acc=0,hue=140,rainbow=false,started=safe;
+let next=dir,acc=0,hue=140,rainbow=!!window.__arcadeSnakeRainbow,started=safe;
+if(fruitShuffle)pickNextFruit();
 window.arcadeSnake={
- enableRainbow(){rainbow=true;console.log('🍒🌈 Rainbow Snake ON')},
- disableRainbow(){rainbow=false;console.log('Rainbow Snake OFF')},
+ enableRainbow(){rainbow=true;window.__arcadeSnakeRainbow=true;console.log('🍒🌈 Rainbow Snake ON')},
+ disableRainbow(){rainbow=false;window.__arcadeSnakeRainbow=false;console.log('Rainbow Snake OFF')},
  enableSafePath(){if(safe)return console.log('✅ Safe path already enabled');window.__arcadeSnakeSafePath=true;restart();console.log('🛡️ Safe path ON: automatic route with wall portals and color changes')},
  disableSafePath(){window.__arcadeSnakeSafePath=false;restart();console.log('🛡️ Safe path OFF: manual controls restored')},
  enableWallWrap(){window.__arcadeSnakeWallWrap=true;wallWrap=true;console.log('🌀 Wall portals ON! Cross any wall to appear opposite and change color')},
  disableWallWrap(){window.__arcadeSnakeWallWrap=false;wallWrap=safe;console.log(safe?'🛡️ Safe route needs wall portals; disable safe path first':'Wall portals OFF')},
  isWallWrapEnabled(){return wallWrap},
  isSafePathEnabled(){return safe},
+ enableFruitShuffle(){fruitShuffle=true;window.__arcadeSnakeFruitShuffle=true;pickNextFruit();console.log('🍉 Fruit shuffle ON — every collected fruit changes to a different fruit')},
+ disableFruitShuffle(){fruitShuffle=false;window.__arcadeSnakeFruitShuffle=false;fruitIcon='🍒';console.log('🍒 Classic cherries restored')},
+ enableAllMods(){window.__arcadeSnakeRainbow=true;window.__arcadeSnakeWallWrap=true;window.__arcadeSnakeFruitShuffle=true;window.__arcadeSnakeSafePath=true;restart();console.log('🌈🍉🛡️ All Snake mods enabled: rainbow, fruit shuffle, safe route, wall portals!')},
+ disableAllMods(){window.__arcadeSnakeRainbow=false;window.__arcadeSnakeWallWrap=false;window.__arcadeSnakeFruitShuffle=false;window.__arcadeSnakeSafePath=false;restart();console.log('🐍 All mods disabled — classic Snake mode')},
+ getMods(){return {rainbow,fruitShuffle,wallWrap,safePath:safe}},
  setColor(color){if(Number.isFinite(Number(color)))hue=((Number(color)%360)+360)%360},
  getColor(){return `hsl(${hue},70%,49%)`},
  controls:'Arrow keys / WASD / swipe; console: enableSafePath() or enableWallWrap()'
@@ -139,6 +148,7 @@ return{
    if(rainbow)changeColor();
    if(body.length===cols*rows){over=true;food=null;showMessage('Perfect run!','You filled the entire board without crashing!');return}
    food=spawn();
+   if(fruitShuffle)pickNextFruit();
   }else body.pop();
  },
  draw(){
@@ -151,13 +161,13 @@ return{
    c.stroke();
    text('🛡 SAFE ROUTE · WALL PORTALS',480,20,16,'#b3ffce');
   }
-  if(food)cherry(ox+(food.x+.5)*cell,oy+(food.y+.5)*cell,12);
+  if(food){if(fruitShuffle)text(fruitIcon,ox+(food.x+.5)*cell,oy+(food.y+.5)*cell+9,23);else cherry(ox+(food.x+.5)*cell,oy+(food.y+.5)*cell,12)}
   body.slice().reverse().forEach((b,i)=>{
    const head=i===body.length-1,x=ox+b.x*cell+12,y=oy+b.y*cell+12;
    round(x-12,y-12,24,24,9,`hsl(${hue},70%,${head?63:49}%)`);
    if(head){circle(x+dir.x*5+dir.y*5-5,y+dir.y*5+dir.x*5,2.5,'#102b31');circle(x+dir.x*5-dir.y*5+5,y+dir.y*5-dir.x*5,2.5,'#102b31')}
   });
-  text('🍒',65,80,40);
+  text(fruitShuffle?fruitIcon:'🍒',65,80,40);
   if(!started)text('Press an arrow key or swipe to start',480,520,20,'#b5f2d4');
  }
 }
