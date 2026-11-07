@@ -16,6 +16,7 @@ struct SmoothSnakeView: View {
     @State private var previousTick=Date()
     private let timer=Timer.publish(every:1.0/60.0,on:.main,in:.common).autoconnect()
     private var speed:CGFloat { min(230,76+CGFloat(score)*11) }
+    private let cell:CGFloat = 20
 
     var body: some View {
         VStack(spacing:12) {
@@ -23,7 +24,7 @@ struct SmoothSnakeView: View {
             Text("Score: \(score) · Best: \(best) · Speed: \(Int(speed)) px/s")
             steerableCanvas
             #if !os(tvOS)
-            Text("Drag to steer freely. Every cherry makes the snake faster.")
+            Text("Swipe to turn 90° at grid corners. Movement stays smooth.")
                 .font(.caption).foregroundStyle(.secondary)
             #else
             Text("Use your Apple TV remote to steer. Every cherry makes the snake faster.")
@@ -114,7 +115,7 @@ struct SmoothSnakeView: View {
                 let dy=event.translation.height-lastDrag.height
                 let len=hypot(dx,dy)
                 if len>2 {
-                    let next=CGVector(dx:dx/len,dy:dy/len)
+                    let next:CGVector = abs(dx)>abs(dy) ? CGVector(dx:dx>0 ? 1 : -1,dy:0) : CGVector(dx:0,dy:dy>0 ? 1 : -1)
                     if next.dx*direction.dx+next.dy*direction.dy > -0.8 { target=next }
                     lastDrag=event.translation
                 }
@@ -133,51 +134,58 @@ struct SmoothSnakeView: View {
     }
 
     private func tick(_ dt:CGFloat) {
-        guard let oldHead=segments.first else {return}
-        let t=min(1,dt*10)
-        var vx=direction.dx*(1-t)+target.dx*t
-        var vy=direction.dy*(1-t)+target.dy*t
-        let total=max(0.01,hypot(vx,vy))
-        vx/=total;vy/=total
-        direction=CGVector(dx:vx,dy:vy)
-        let distance=speed*dt
-        let steps=max(1,Int(ceil(distance/5)))
+        guard !segments.isEmpty else { return }
+        // Advance in tiny pixel steps. Turns happen at 20px grid centers,
+        // while the head and the trailing body animate continuously.
+        let distance = speed * dt
+        let steps = max(1, Int(ceil(distance / 2)))
         for _ in 0..<steps {
-            guard let start=segments.first else {return}
-            let newHead=CGPoint(x:start.x+vx*distance/CGFloat(steps),
-                                y:start.y+vy*distance/CGFloat(steps))
-            if newHead.x<8 || newHead.y<8 || newHead.x>392 || newHead.y>392 ||
+            guard let start = segments.first else { return }
+            let stride = distance / CGFloat(steps)
+            let wantsTurn = direction.dx * target.dx + direction.dy * target.dy == 0
+            let nextX = (start.x / cell).rounded() * cell
+            let nextY = (start.y / cell).rounded() * cell
+            let onCenter = abs(start.x-nextX) < stride + 0.15 &&
+                           abs(start.y-nextY) < stride + 0.15
+            if wantsTurn && onCenter {
+                segments[0] = CGPoint(x:nextX,y:nextY)
+                direction = target
+            }
+            let current = segments[0]
+            let newHead = CGPoint(x:current.x+direction.dx*stride,
+                                  y:current.y+direction.dy*stride)
+            if newHead.x < 8 || newHead.y < 8 || newHead.x > 392 || newHead.y > 392 ||
                 segments.dropFirst(min(8,segments.count)).contains(where: {
-                    length($0,newHead)<11.2
+                    length($0,newHead) < 11.2
                 }) {
-                finished=true;running=false
+                finished = true; running = false
                 #if os(iOS)
                 GameSoundEffects.shared.play(.damage)
                 #endif
                 return
             }
-            segments[0]=newHead
+            segments[0] = newHead
             for i in 1..<segments.count {
-                let before=segments[i-1],point=segments[i]
+                let before=segments[i-1], point=segments[i]
                 let dist=length(before,point)
-                if dist>11 {
+                if dist > 11 {
                     let amount=(dist-11)/dist
                     segments[i]=CGPoint(x:point.x+(before.x-point.x)*amount,
                                         y:point.y+(before.y-point.y)*amount)
                 }
             }
-            if length(newHead,food)<19 {
+            if length(newHead,food) < 19 {
                 if let end=segments.last { for _ in 0..<4 { segments.append(end) } }
                 #if os(iOS)
                 GameSoundEffects.shared.play(.coin)
                 #endif
-                score+=1;best=max(best,score)
-                if let next=makeFood() {food=next}
-                else {finished=true;running=false;return}
+                score += 1; best=max(best,score)
+                if let next=makeFood() { food=next }
+                else { finished=true;running=false;return }
             }
         }
-        _ = oldHead
     }
+
     private func makeFood()->CGPoint? {
         for _ in 0..<250 {
             let p=CGPoint(x:CGFloat.random(in:18...382),
