@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 struct BrowserOSApp: App {
     var body: some Scene {
         WindowGroup {
-            BrowserHome()
+            BrowserAccountGate()
                 .tint(Color(red: 0.25, green: 0.83, blue: 0.95))
         }
     }
@@ -211,6 +211,7 @@ struct BrowserHome: View {
     @FocusState private var addressFocused: Bool
     @State private var showSettings = false
     @State private var showShare = false
+    @EnvironmentObject private var account: BrowserAccount
     private let bg = Color(red: 0.035, green: 0.065, blue: 0.12)
     private let surface = Color(red: 0.095, green: 0.14, blue: 0.23)
 
@@ -359,6 +360,7 @@ struct BrowserHome: View {
                 Button("History", systemImage: "clock") { browser.showHistory = true }
                 Button("Share page", systemImage: "square.and.arrow.up") { showShare = true }
                 Button("Settings", systemImage: "gearshape") { showSettings = true }
+                Button("Sign out of ItamarOS", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { account.signOut() }
             } label: { Image(systemName: "ellipsis.circle").font(.title2).frame(width: 40, height: 42) }
         }
         .padding(.horizontal, 25).padding(.vertical, 9)
