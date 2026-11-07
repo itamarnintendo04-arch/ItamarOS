@@ -7,6 +7,7 @@ struct ItamarAccountGate: View {
     @EnvironmentObject private var cloud: ItamarCloudService
     @State private var checking = true
     @State private var error = ""
+    @State private var googleBusy = false
 
     var body: some View {
         Group {
@@ -15,7 +16,21 @@ struct ItamarAccountGate: View {
                     systemImage: "wifi.exclamationmark",
                     description: Text("This build needs a configured ItamarOS account server before you can use the app."))
             } else if !cloud.isSignedIn {
-                NavigationStack { ItamarCloudLoginView() }
+                VStack(spacing: 0) {
+                    NavigationStack { ItamarCloudLoginView() }
+                    Button(googleBusy ? "Connecting to Google…" : "Continue with Google") {
+                        Task {
+                            googleBusy = true
+                            defer { googleBusy = false }
+                            do { try await cloud.signInWithGoogle(callbackScheme: "itamaros") }
+                            catch { self.error = error.localizedDescription }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(googleBusy)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 18)
+                }
             } else if !cloud.deviceSyncEnabled {
                 VStack(spacing: 18) {
                     ContentUnavailableView("Account sync is off",
