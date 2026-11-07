@@ -71,7 +71,17 @@ private struct GamesLibraryView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(busy || email.isEmpty || password.isEmpty)
-                            Button("Sign in with QR") {showQR=true}
+Button("Continue with Google") {
+                    Task {
+                        busy = true
+                        defer { busy = false }
+                        do { try await cloud.signInWithGoogle(callbackScheme: "itamarosgames") }
+                        catch { self.error = error.localizedDescription }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(busy)
+                                            Button("Sign in with QR") {showQR=true}
                                 .buttonStyle(.bordered)
                             Button("Open ItamarOS") {
                                 GameSoundEffects.shared.play(.tap)
