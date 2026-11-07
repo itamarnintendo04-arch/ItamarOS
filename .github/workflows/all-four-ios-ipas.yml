@@ -31,6 +31,8 @@ jobs:
           rsvg-convert --format=png --width=1024 --height=1024 assets/branding/cloud-climb-icon.svg > "$ICON_DIR/Icon.png"
       - name: Generate unique app icons
         run: python3 native-apps/apple/generate_app_icons.py
+      - name: Generate Screen Balance app icon
+        run: python3 native-apps/apple/ScreenBalance/generate_icon.py
       - name: Generate Xcode project
         working-directory: native-apps/apple
         run: xcodegen generate
