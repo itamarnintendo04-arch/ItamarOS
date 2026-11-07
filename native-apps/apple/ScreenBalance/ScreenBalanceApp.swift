@@ -3,7 +3,7 @@ import FamilyControls
 
 @main
 struct ScreenBalanceApp: App {
-    var body: some Scene { WindowGroup { ScreenBalanceHome() } }
+    var body: some Scene { WindowGroup { ScreenBalanceHome().statusBarHidden().persistentSystemOverlays(.hidden) } }
 }
 
 private enum BalanceTheme {
