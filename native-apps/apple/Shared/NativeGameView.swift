@@ -146,11 +146,13 @@ struct NativeGameView: View {
                     Text("Your best scores are saved locally on this device.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: 650)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             }
-            .navigationTitle("Games")
+            .navigationTitle(selectedGame ?? "Games")
+            #if os(iOS)
+            .toolbar(selectedGame == nil ? .visible : .hidden, for: .navigationBar)
+            #endif
         }
     }
 
@@ -193,6 +195,7 @@ struct NativeGameView: View {
                     Button(board[index].isEmpty ? "·" : board[index]) { play(at: index) }
                         .font(.system(size: 26, weight: .heavy))
                         .frame(minHeight: 62)
+                        .contentShape(Rectangle())
                         .frame(maxWidth: .infinity)
                         .buttonStyle(.bordered)
                         .disabled(!board[index].isEmpty || !winner.isEmpty ||
