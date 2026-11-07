@@ -8,6 +8,21 @@ settings:
     CURRENT_PROJECT_VERSION: "9"
     SWIFT_VERSION: "5.9"
 targets:
+  BrowserOSiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: BrowserOS/BrowserOSApp.swift
+    info:
+      path: BrowserOS/Info.plist
+      properties:
+        CFBundleDisplayName: BrowserOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.browseros
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
   ScreenBalanceiOS:
     type: application
     platform: iOS
