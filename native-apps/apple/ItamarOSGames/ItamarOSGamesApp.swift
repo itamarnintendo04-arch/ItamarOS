@@ -20,6 +20,7 @@ private struct GamesLibraryView: View {
     @State private var error = ""
     @State private var selectedTab = 0
     @State private var showQR = false
+    @State private var musicOn = false
     @AppStorage("games.played.cloudclimb") private var playedCloud = false
     @AppStorage("games.played.skybound") private var playedSky = false
     private let gameURL = URL(string:"cloudclimb://")!
@@ -98,6 +99,12 @@ private struct GamesLibraryView: View {
 
     private var library: some View {
         List {
+            Section("Soundtrack") {
+                Toggle("Original menu music",isOn:$musicOn)
+                    .onChange(of:musicOn) { _,enabled in
+                        if enabled { GameMusic.shared.start(style:.clouds) } else { GameMusic.shared.stop() }
+                    }
+            }
             Section("Play instantly · No installation") {
                 NavigationLink("Mini Games · Snake, 2048, Rock Paper Scissors & more") {
                     NativeGameView()
