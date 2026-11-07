@@ -8,6 +8,8 @@ struct ItamarOSGamesApp: App {
             ItamarGamesLaunchView(content: GamesLibraryView())
                 .environmentObject(cloud)
                 .tint(.cyan)
+                .statusBarHidden()
+                .persistentSystemOverlays(.hidden)
         }
     }
 }
