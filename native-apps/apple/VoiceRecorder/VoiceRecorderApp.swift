@@ -4,7 +4,7 @@ import AVFoundation
 @main
 struct ItamarVoiceRecorderApp: App {
     var body: some Scene {
-        WindowGroup { VoiceRecorderHome() }
+        WindowGroup { VoiceRecorderHome().statusBarHidden().persistentSystemOverlays(.hidden) }
     }
 }
 
