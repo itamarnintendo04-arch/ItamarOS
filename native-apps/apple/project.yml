@@ -8,6 +8,21 @@ settings:
     CURRENT_PROJECT_VERSION: "9"
     SWIFT_VERSION: "5.9"
 targets:
+  ScreenBalanceiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ScreenBalance/ScreenBalanceApp.swift
+    info:
+      path: ScreenBalance/Info.plist
+      properties:
+        CFBundleDisplayName: ItamarOS Screen Balance
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.screenbalance
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
   ItamarCutiOS:
     type: application
     platform: iOS
