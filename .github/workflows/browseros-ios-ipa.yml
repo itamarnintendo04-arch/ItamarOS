@@ -1,4 +1,5 @@
 name: Build BrowserOS unsigned IPA
+# Rebuild after fixing shared ScreenBalance asset catalog
 on:
   workflow_dispatch:
   push:
