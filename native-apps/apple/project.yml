@@ -8,6 +8,29 @@ settings:
     CURRENT_PROJECT_VERSION: "9"
     SWIFT_VERSION: "5.9"
 targets:
+  ArenaRushiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ArenaRush/ArenaRushApp.swift
+      - path: ArenaRush/ArenaScene.swift
+    info:
+      path: ArenaRush/Info.plist
+      properties:
+        CFBundleDisplayName: Arena Rush
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        CADisableMinimumFrameDurationOnPhone: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.arenarush
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
   BrowserOSiOS:
     type: application
     platform: iOS
