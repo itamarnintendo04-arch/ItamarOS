@@ -17,7 +17,7 @@ public class SkyboundExplorer : MonoBehaviour
     public void Jump() { jumpRequested = true; }
     void FixedUpdate()
     {
-        body.linearVelocity = new Vector2(horizontal * runSpeed, body.linearVelocity.y);
+        body.velocity = new Vector2(horizontal * runSpeed, body.linearVelocity.y);
         if (jumpRequested && groundCheck && Physics2D.OverlapCircle(groundCheck.position, 0.17f, ground))
             body.AddForce(Vector2.up * jumpImpulse, ForceMode2D.Impulse);
         jumpRequested = false;
