@@ -13,6 +13,8 @@ struct SkyboundIslesApp: App {
                 }
             }
             .environmentObject(cloud)
+            .statusBarHidden()
+            .persistentSystemOverlays(.hidden)
         }
     }
 }
