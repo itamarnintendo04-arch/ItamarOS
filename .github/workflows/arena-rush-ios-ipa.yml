@@ -1,0 +1,45 @@
+name: Build Arena Rush unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "native-apps/apple/ArenaRush/**"
+      - "native-apps/apple/project.yml"
+      - ".github/workflows/arena-rush-ios-ipa.yml"
+permissions:
+  contents: read
+jobs:
+  arena-rush:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate other required asset catalogs
+        run: |
+          python3 native-apps/apple/ScreenBalance/generate_icon.py
+          python3 native-apps/apple/BrowserOS/generate_icon.py
+      - name: Generate Xcode project
+        working-directory: native-apps/apple
+        run: xcodegen generate
+      - name: Build Arena Rush only
+        working-directory: native-apps/apple
+        run: |
+          set -euo pipefail
+          xcodebuild -project ItamarOSNative.xcodeproj -scheme ArenaRushiOS -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ArenaRushBuild" CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/ArenaRushBuild/Build/Products/Release-iphoneos/ArenaRushiOS.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/ArenaRushIPA/Payload" output
+          cp -R "$APP" "$RUNNER_TEMP/ArenaRushIPA/Payload/"
+          (cd "$RUNNER_TEMP/ArenaRushIPA" && zip -qry "$GITHUB_WORKSPACE/output/Arena-Rush-By-ItamarOS-UNSIGNED.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Arena-Rush-By-ItamarOS-UNSIGNED-IPA
+          path: output/Arena-Rush-By-ItamarOS-UNSIGNED.ipa
+          if-no-files-found: error
+          retention-days: 90
