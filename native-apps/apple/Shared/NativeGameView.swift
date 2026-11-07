@@ -123,6 +123,9 @@ struct NativeGameView: View {
                         ], spacing: 14) {
                             ForEach(games, id: \.self) { name in
                                 Button {
+                                    #if os(iOS)
+                                    GameSoundEffects.shared.play(.tap)
+                                    #endif
                                     selectedGame = name
                                 } label: {
                                     VStack(spacing: 13) {
@@ -214,6 +217,9 @@ struct NativeGameView: View {
         if guess == target {
             streak += 1
             best = max(best, streak)
+            #if os(iOS)
+            GameSoundEffects.shared.play(.coin)
+            #endif
             result = "Correct! New number chosen."
             target = Int.random(in: 1...100)
         } else { result = guess < target ? "Higher!" : "Lower!" }
@@ -227,9 +233,15 @@ struct NativeGameView: View {
 
     private func applyTicMove(at index: Int) {
         guard board[index].isEmpty, winner.isEmpty else { return }
+        #if os(iOS)
+        GameSoundEffects.shared.play(.tap)
+        #endif
         board[index] = turn
         if ticWinner(board) == turn {
             winner = "\(turn == "X" ? "Player 1" : (opponent == .bot ? "Bot" : "Player 2")) wins!"
+            #if os(iOS)
+            GameSoundEffects.shared.play(.victory)
+            #endif
         } else if !board.contains("") {
             winner = "Draw"
         } else {
