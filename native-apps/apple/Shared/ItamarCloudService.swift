@@ -8,7 +8,7 @@ import CryptoKit
 private final class GoogleAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            .flatMap(\\.windows).first(where: \\.isKeyWindow) ?? UIWindow()
+            .flatMap(\.windows).first(where: \.isKeyWindow) ?? UIWindow()
     }
 }
 
