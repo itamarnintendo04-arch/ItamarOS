@@ -19,6 +19,8 @@ targets:
       path: BrowserOS/Info.plist
       properties:
         CFBundleDisplayName: BrowserOS
+        ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
+        ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.browseros
