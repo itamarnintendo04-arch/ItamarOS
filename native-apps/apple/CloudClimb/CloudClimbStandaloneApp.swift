@@ -29,6 +29,7 @@ struct CloudClimbStandaloneApp: App {
             ItamarGamesLaunchView(content: CloudClimbStandaloneHome())
                 .environmentObject(cloud)
                 .persistentSystemOverlays(.hidden)
+                .statusBarHidden()
                 .environment(\.locale,language == "system" ? Locale.autoupdatingCurrent : Locale(identifier:language))
         }
     }
