@@ -1,4 +1,4 @@
-name: Build six unsigned iOS IPAs - landscape games
+name: Build seven ItamarOS unsigned iOS IPAs
 on:
   workflow_dispatch:
   push:
@@ -7,12 +7,12 @@ on:
       - "native-apps/apple/**"
       - ".github/workflows/all-four-ios-ipas.yml"
 concurrency:
-  group: six-ios-ipas
+  group: seven-ios-ipas
   cancel-in-progress: false
 permissions:
   contents: read
 jobs:
-  six-ipas:
+  seven-ipas:
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
@@ -34,18 +34,18 @@ jobs:
       - name: Generate Xcode project
         working-directory: native-apps/apple
         run: xcodegen generate
-      - name: Compile six apps
+      - name: Compile seven apps
         working-directory: native-apps/apple
         run: |
           set -euo pipefail
-          for scheme in ItamarOSiOS ItamarOSGamesiOS CloudClimbiOS SkyboundIslesiOS VoiceRecorderiOS ItamarCutiOS; do
+          for scheme in ItamarOSiOS ItamarOSGamesiOS CloudClimbiOS SkyboundIslesiOS VoiceRecorderiOS ItamarCutiOS ScreenBalanceiOS; do
             xcodebuild -project ItamarOSNative.xcodeproj -scheme "$scheme" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/Build-$scheme" CODE_SIGNING_ALLOWED=NO build
           done
-      - name: Package all six unsigned IPAs
+      - name: Package all seven unsigned IPAs
         run: |
           set -euo pipefail
           mkdir -p output
-          for scheme in ItamarOSiOS ItamarOSGamesiOS CloudClimbiOS SkyboundIslesiOS VoiceRecorderiOS ItamarCutiOS; do
+          for scheme in ItamarOSiOS ItamarOSGamesiOS CloudClimbiOS SkyboundIslesiOS VoiceRecorderiOS ItamarCutiOS ScreenBalanceiOS; do
             APP="$RUNNER_TEMP/Build-$scheme/Build/Products/Release-iphoneos/$scheme.app"
             test -d "$APP"
             mkdir -p "$RUNNER_TEMP/ipa-$scheme/Payload"
@@ -54,7 +54,7 @@ jobs:
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: All-Six-ItamarOS-iOS-UNSIGNED-IPAs
+          name: All-Seven-ItamarOS-iOS-UNSIGNED-IPAs
           path: output/*.ipa
           if-no-files-found: error
           retention-days: 90
