@@ -142,7 +142,7 @@ struct ScreenBalanceHome: View {
                 Button("Scan QR code") { showingScanner = true }
                     .buttonStyle(BalanceButtonStyle())
                 if !scannerMessage.isEmpty { Text(scannerMessage).font(.caption).foregroundStyle(BalanceTheme.accent) }
-                if !scannedCode.isEmpty { Text("Last scanned: \\(scannedCode)").font(.caption).lineLimit(2) }
+                if !scannedCode.isEmpty { Text("Last scanned: \(scannedCode)").font(.caption).lineLimit(2) }
             }
             .balancePanel()
 
