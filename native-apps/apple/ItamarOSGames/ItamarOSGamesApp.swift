@@ -72,6 +72,7 @@ private struct GamesLibraryView: View {
                             Button("Sign in with QR") {showQR=true}
                                 .buttonStyle(.bordered)
                             Button("Open ItamarOS") {
+                                GameSoundEffects.shared.play(.tap)
                                 if let url=URL(string:"itamaros://") {
                                     UIApplication.shared.open(url)
                                 }
@@ -115,7 +116,7 @@ private struct GamesLibraryView: View {
                     Text("Games you play will appear here.").foregroundStyle(.secondary)
                 }
                 if playedCloud {
-                    Button("Play Cloud Climb") { UIApplication.shared.open(gameURL) }
+                    Button("Play Cloud Climb") { GameSoundEffects.shared.play(.tap); UIApplication.shared.open(gameURL) }
                 }
                 if playedSky {
                     NavigationLink("Play Skybound Isles") { OpenWorldAdventureView() }
