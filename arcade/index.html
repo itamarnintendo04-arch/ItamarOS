@@ -72,19 +72,23 @@ for(let x=cols-1;x>=1;x--){
  if(up){for(let y=rows-2;y>=0;y--)cycle.push({x,y})}
  else{for(let y=0;y<rows-1;y++)cycle.push({x,y})}
 }
-let safe=!!window.__arcadeSnakeSafePath,step=70;
+let safe=!!window.__arcadeSnakeSafePath,wallWrap=safe||!!window.__arcadeSnakeWallWrap,step=70;
+const changeColor=()=>{let newHue;do{newHue=Math.floor(rand(0,360))}while(Math.abs(newHue-hue)<35||Math.abs(newHue-hue)>325);hue=newHue};
 let body=safe?[cycle[step],cycle[step-1],cycle[step-2]].map(p=>({...p})):[{x:8,y:10},{x:7,y:10},{x:6,y:10}];
 let dir=safe?{x:cycle[step].x-cycle[step-1].x,y:cycle[step].y-cycle[step-1].y}:{x:1,y:0};
 let next=dir,acc=0,hue=140,rainbow=false,started=safe;
 window.arcadeSnake={
  enableRainbow(){rainbow=true;console.log('🍒🌈 Rainbow Snake ON')},
  disableRainbow(){rainbow=false;console.log('Rainbow Snake OFF')},
- enableSafePath(){if(safe)return console.log('✅ Safe path already enabled');window.__arcadeSnakeSafePath=true;restart();console.log('🛡️ Safe path ON: automatic, collision-free 90° turns')},
+ enableSafePath(){if(safe)return console.log('✅ Safe path already enabled');window.__arcadeSnakeSafePath=true;restart();console.log('🛡️ Safe path ON: automatic route with wall portals and color changes')},
  disableSafePath(){window.__arcadeSnakeSafePath=false;restart();console.log('🛡️ Safe path OFF: manual controls restored')},
+ enableWallWrap(){window.__arcadeSnakeWallWrap=true;wallWrap=true;console.log('🌀 Wall portals ON! Cross any wall to appear opposite and change color')},
+ disableWallWrap(){window.__arcadeSnakeWallWrap=false;wallWrap=safe;console.log(safe?'🛡️ Safe route needs wall portals; disable safe path first':'Wall portals OFF')},
+ isWallWrapEnabled(){return wallWrap},
  isSafePathEnabled(){return safe},
  setColor(color){if(Number.isFinite(Number(color)))hue=((Number(color)%360)+360)%360},
  getColor(){return `hsl(${hue},70%,49%)`},
- controls:'Arrow keys / WASD / swipe; enableSafePath() for auto-pilot'
+ controls:'Arrow keys / WASD / swipe; console: enableSafePath() or enableWallWrap()'
 };
 function spawn(){
  const empty=[];
@@ -111,22 +115,28 @@ return{
   if(safe){
    step=(step+1)%cycle.length;
    h={...cycle[step]};
-   dir={x:h.x-body[0].x,y:h.y-body[0].y};
+   const dx=h.x-body[0].x,dy=h.y-body[0].y;
+   dir={x:Math.abs(dx)>1?Math.sign(-dx):dx,y:Math.abs(dy)>1?Math.sign(-dy):dy};
    next=dir;
   }else{
    dir=next;
    h={x:body[0].x+dir.x,y:body[0].y+dir.y};
   }
+  let wrapped=false;
+  if(wallWrap){
+   if(safe){
+    wrapped=Math.abs(h.x-body[0].x)>1||Math.abs(h.y-body[0].y)>1;
+   }else if(h.x<0||h.x>=cols||h.y<0||h.y>=rows){
+    h.x=(h.x+cols)%cols;h.y=(h.y+rows)%rows;wrapped=true;
+   }
+  }
+  if(wrapped)changeColor();
   const eat=!!food&&h.x===food.x&&h.y===food.y;
   if(h.x<0||h.x>=cols||h.y<0||h.y>=rows||body.slice(0,eat?undefined:-1).some(p=>p.x===h.x&&p.y===h.y)){end();return}
   body.unshift(h);
   if(eat){
    setScore(score+1);
-   if(rainbow){
-    let nextHue;
-    do{nextHue=Math.floor(rand(0,360))}while(Math.abs(nextHue-hue)<35||Math.abs(nextHue-hue)>325);
-    hue=nextHue
-   }
+   if(rainbow)changeColor();
    if(body.length===cols*rows){over=true;food=null;showMessage('Perfect run!','You filled the entire board without crashing!');return}
    food=spawn();
   }else body.pop();
@@ -137,9 +147,9 @@ return{
   for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)if((x+y)%2===0)round(ox+x*cell,oy+y*cell,cell,cell,0,'#22604844');
   if(safe){
    c.strokeStyle='#b7ffe477';c.lineWidth=2;c.lineJoin='round';c.beginPath();
-   cycle.forEach((p,i)=>{const x=ox+(p.x+.5)*cell,y=oy+(p.y+.5)*cell;if(i===0)c.moveTo(x,y);else c.lineTo(x,y)});
-   c.closePath();c.stroke();
-   text('🛡 SAFE ROUTE',480,20,16,'#b3ffce');
+   cycle.forEach((p,i)=>{const x=ox+(p.x+.5)*cell,y=oy+(p.y+.5)*cell;if(i===0||Math.abs(p.x-cycle[i-1].x)>1||Math.abs(p.y-cycle[i-1].y)>1)c.moveTo(x,y);else c.lineTo(x,y)});
+   c.stroke();
+   text('🛡 SAFE ROUTE · WALL PORTALS',480,20,16,'#b3ffce');
   }
   if(food)cherry(ox+(food.x+.5)*cell,oy+(food.y+.5)*cell,12);
   body.slice().reverse().forEach((b,i)=>{
