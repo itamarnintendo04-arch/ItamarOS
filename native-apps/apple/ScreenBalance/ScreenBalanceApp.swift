@@ -21,6 +21,9 @@ struct ScreenBalanceHome: View {
     @State private var permissionStatus = "Not requested"
     @State private var selectedChallenge = 0
     @State private var showingChallenge = false
+    @State private var showingScanner = false
+    @State private var scannedCode = ""
+    @State private var scannerMessage = ""
 
     private let challenges: [(String, String, String, Int)] = [
         ("Fresh air", "Take a 10-minute outdoor break.", "leaf.fill", 10),
@@ -48,12 +51,30 @@ struct ScreenBalanceHome: View {
                         .font(.footnote).foregroundStyle(.white.opacity(0.6))
                 }
                 .padding(22)
-                .frame(maxWidth: 700)
                 .frame(maxWidth: .infinity)
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear(perform: refreshDay)
+        .onAppear {
+            refreshDay()
+            permissionStatus = AuthorizationCenter.shared.authorizationStatus == .approved ? "Authorized" : "Not authorized"
+        }
+        .sheet(isPresented: $showingScanner) {
+            NavigationStack {
+                BalanceQRScanner(onScan: { value in
+                    scannedCode = value
+                    scannerMessage = "QR code scanned successfully. No activity was automatically verified."
+                    showingScanner = false
+                }, onFailure: { message in
+                    scannerMessage = message
+                    showingScanner = false
+                })
+                .ignoresSafeArea(edges: .bottom)
+                .navigationTitle("Scan QR code")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { showingScanner = false } } }
+            }
+        }
         .sheet(isPresented: $showingChallenge) {
             challengeSheet
                 .presentationDetents([.medium])
@@ -98,19 +119,30 @@ struct ScreenBalanceHome: View {
                 Text("Apple Screen Time").font(.headline)
                 Text("Permission: \(permissionStatus)")
                     .font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                Text("Granting permission does not automatically populate usage statistics. A DeviceActivity report extension is required for that.")
+                Text("Apple requires Family Controls authorization and an approved entitlement. Usage reports also require a DeviceActivity report extension.")
                     .font(.caption).foregroundStyle(.white.opacity(0.6))
                 Button("Request Screen Time access") {
                     Task {
                         do {
                             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-                            permissionStatus = "Authorized"
+                            permissionStatus = AuthorizationCenter.shared.authorizationStatus == .approved ? "Authorized" : "Not authorized"
                         } catch {
                             permissionStatus = "Unavailable or not granted"
                         }
                     }
                 }
                 .buttonStyle(BalanceButtonStyle())
+            }
+            .balancePanel()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Camera scanner", systemImage: "qrcode.viewfinder").font(.headline)
+                Text("Scan a QR code with your camera. Scanning does not prove an offline activity was completed.")
+                    .font(.caption).foregroundStyle(.white.opacity(0.7))
+                Button("Scan QR code") { showingScanner = true }
+                    .buttonStyle(BalanceButtonStyle())
+                if !scannerMessage.isEmpty { Text(scannerMessage).font(.caption).foregroundStyle(BalanceTheme.accent) }
+                if !scannedCode.isEmpty { Text("Last scanned: \\(scannedCode)").font(.caption).lineLimit(2) }
             }
             .balancePanel()
 
