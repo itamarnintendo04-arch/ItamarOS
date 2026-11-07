@@ -11,6 +11,17 @@ final class GameMusic: ObservableObject {
 
     func start(style: Style = .clouds) {
         guard !isPlaying else { return }
+        let filename = style == .clouds ? "Floating Isles" : "Floating Horizons"
+        if let url = Bundle.main.url(forResource: filename, withExtension: "mp3") {
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                player = try AVAudioPlayer(contentsOf: url)
+                player?.numberOfLoops = -1
+                player?.volume = 0.45
+                isPlaying = player?.play() ?? false
+                return
+            } catch { /* Fallback to built-in synthesized soundtrack */ }
+        }
         let sampleRate = 22050
         let seconds = 16
         let notes: [Double] = style == .clouds
