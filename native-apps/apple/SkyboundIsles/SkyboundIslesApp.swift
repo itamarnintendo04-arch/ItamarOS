@@ -53,7 +53,17 @@ private struct SkyboundSignInView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                 SecureField("Password",text:$password)
-                Button(busy ? "Signing in..." : "Sign in") {
+Button("Continue with Google") {
+                    Task {
+                        busy = true
+                        defer { busy = false }
+                        do { try await cloud.signInWithGoogle(callbackScheme: "skybound") }
+                        catch { errorMessage = error.localizedDescription }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(busy)
+                                Button(busy ? "Signing in..." : "Sign in") {
                     Task {
                         busy=true
                         defer {busy=false}
