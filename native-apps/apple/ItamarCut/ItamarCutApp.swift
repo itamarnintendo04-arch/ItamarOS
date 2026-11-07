@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 @main
 struct ItamarCutApp: App {
     var body: some Scene {
-        WindowGroup { ItamarCutEditor() }
+        WindowGroup { ItamarCutEditor().statusBarHidden().persistentSystemOverlays(.hidden) }
     }
 }
 
