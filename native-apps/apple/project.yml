@@ -165,6 +165,7 @@ targets:
       - path: Shared
         excludes:
           - Localizations/**
+      - path: GameAudio/GameSoundEffects.swift
       - path: iOS/Assets.xcassets
     info:
       path: iOS/Info.plist
