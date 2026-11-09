@@ -57,6 +57,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: ScreenBalance/ScreenBalanceApp.swift
+      - path: ScreenBalance/ParentTasks.swift
       - path: ScreenBalance/QRScannerView.swift
       - path: ScreenBalance/Assets.xcassets
     info:
