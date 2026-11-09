@@ -13,6 +13,7 @@ private enum BalanceTheme {
 }
 
 struct ScreenBalanceHome: View {
+    @StateObject private var family = BalanceFamilyStore()
     @AppStorage("balance.onboarded") private var onboarded = false
     @AppStorage("balance.estimatedHours") private var estimatedHours = 4
     @AppStorage("balance.dailyGoal") private var dailyGoal = 3
@@ -46,7 +47,17 @@ struct ScreenBalanceHome: View {
                             Text("Screen Balance").font(.largeTitle.bold()).foregroundStyle(.white)
                         }
                     }
-                    if !onboarded { onboarding } else { dashboard }
+                    if !family.ageConfirmed { ageSetup }
+                    else if family.requiresParent && !family.parentMode && !family.isPaired { parentPairing }
+                    else if !onboarded && !family.parentMode { onboarding }
+                    else {
+                        if !family.parentMode { dashboard }
+                        BalanceFamilyDashboard(store: family)
+                        Button(family.parentMode ? "Exit parent dashboard" : "Parent dashboard on this device") {
+                            family.parentMode.toggle()
+                        }
+                        .font(.subheadline).foregroundStyle(BalanceTheme.accent)
+                    }
                     Text("Your pace, your choice. Breaks are optional, and activities should feel comfortable.")
                         .font(.footnote).foregroundStyle(.white.opacity(0.6))
                 }
@@ -79,6 +90,32 @@ struct ScreenBalanceHome: View {
             challengeSheet
                 .presentationDetents([.medium])
         }
+    }
+
+    private var ageSetup: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("How old are you?").font(.title.bold())
+            Text("Your age helps us choose the right parent setup. We do not need your birth date.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            Stepper("Age: \(family.age)", value: $family.age, in: 5...100)
+            Button("Continue") { family.ageConfirmed = true }
+                .buttonStyle(BalanceButtonStyle())
+        }.balancePanel()
+    }
+
+    private var parentPairing: some View {
+        VStack(spacing: 16) {
+            Text("Connect a parent").font(.title.bold())
+            Text("Ask a parent to open Screen Balance on their own device and scan this code.")
+                .multilineTextAlignment(.center)
+            BalanceQRView(code: "itamaros-screenbalance:v1:" + family.pairingCode)
+            Text("Pairing requires secure server confirmation before it can control another device.")
+                .font(.caption).foregroundStyle(.orange).multilineTextAlignment(.center)
+            Button("Parent setup on this device") { family.parentMode = true }
+                .buttonStyle(BalanceButtonStyle())
+            Button("Change age") { family.ageConfirmed = false }
+                .foregroundStyle(BalanceTheme.accent)
+        }.balancePanel()
     }
 
     private var onboarding: some View {
