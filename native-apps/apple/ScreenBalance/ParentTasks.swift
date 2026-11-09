@@ -189,14 +189,20 @@ struct BalanceFamilyDashboard: View {
                 }
             }
         }
-        .alert("Approve completed task?", isPresented: Binding(get: { approving != nil }, set: { if !$0 { approving = nil } })) {
-            Stepper("\(approveMinutes) minutes", value: $approveMinutes, in: 1...240)
-            Button("Approve") {
-                if let task = approving { store.approve(task.id, minutes: approveMinutes) }
-                approving = nil
+        .sheet(isPresented: Binding(get: { approving != nil }, set: { if !$0 { approving = nil } })) {
+            NavigationStack {
+                Form {
+                    Text(approving?.name ?? "Task")
+                    Stepper("Reward: \(approveMinutes) minutes", value: $approveMinutes, in: 1...240)
+                    Button("Approve task") {
+                        if let task = approving { store.approve(task.id, minutes: approveMinutes) }
+                        approving = nil
+                    }
+                    Button("Cancel") { approving = nil }
+                }
+                .navigationTitle("Approve completion")
             }
-            Button("Cancel", role: .cancel) { approving = nil }
-        } message: { Text("Choose how many reward minutes to record for this task.") }
+        }
         .confirmationDialog("Delete this task?", isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } })) {
             Button("Delete task", role: .destructive) {
                 if let task = deleteTarget { store.tasks.removeAll { $0.id == task.id } }
