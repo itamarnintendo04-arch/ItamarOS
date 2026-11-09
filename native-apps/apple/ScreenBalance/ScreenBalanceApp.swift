@@ -53,6 +53,8 @@ struct ScreenBalanceHome: View {
                     else {
                         if !family.parentMode { dashboard }
                         BalanceFamilyDashboard(store: family)
+                        BalanceScreenTimePanel(childAccount: family.requiresParent)
+                            .balancePanel()
                         Button(family.parentMode ? "Exit parent dashboard" : "Parent dashboard on this device") {
                             family.parentMode.toggle()
                         }
