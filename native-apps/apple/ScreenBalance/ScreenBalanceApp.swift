@@ -48,17 +48,11 @@ struct ScreenBalanceHome: View {
                         }
                     }
                     if !family.ageConfirmed { ageSetup }
-                    else if family.requiresParent && !family.parentMode && !family.isPaired { parentPairing }
-                    else if !onboarded && !family.parentMode { onboarding }
+                    else if !onboarded { onboarding }
                     else {
-                        if !family.parentMode { dashboard }
-                        BalanceFamilyDashboard(store: family)
-                        BalanceScreenTimePanel(childAccount: family.requiresParent)
-                            .balancePanel()
-                        Button(family.parentMode ? "Exit parent dashboard" : "Parent dashboard on this device") {
-                            family.parentMode.toggle()
-                        }
-                        .font(.subheadline).foregroundStyle(BalanceTheme.accent)
+                        dashboard
+                        BalanceCloudPanel().balancePanel()
+                        BalanceScreenTimePanel(childAccount: family.requiresParent).balancePanel()
                     }
                     Text("Your pace, your choice. Breaks are optional, and activities should feel comfortable.")
                         .font(.footnote).foregroundStyle(.white.opacity(0.6))
