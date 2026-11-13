@@ -1,24 +1,28 @@
-# Screen Balance parent-control implementation status
+# Screen Balance implementation status — 2026-11-13
 
-## Implemented in the iOS app
-- Age selection on first launch. Under-13 users are shown a QR code for a parent to scan.
-- QR image generation and camera QR reading.
-- Parent-facing local task CRUD (add, rename, edit description, edit reward, delete).
-- Recurring tasks, local completion approvals, per-task adjustable reward minutes, local persistence.
-- Existing FamilyControls individual authorization request (subject to Apple's entitlement approval).
+## Backend implemented and applied to ItamarOS
+- Live Supabase project: ItamarOS (not ItamarOS App Studio).
+- Four tables: balance_links, balance_pairing_requests, balance_tasks, balance_rewards.
+- RLS enabled on all four; confirmed by database query.
+- Separate authenticated ItamarOS accounts for parent and child.
+- Child generates a random one-use QR invitation, expires after ten minutes.
+- Parent scans QR while signed in to a separate account; server-side RPC atomically claims the invitation.
+- Parent may add, rename, edit and delete child tasks and approve minutes (1–240); the child can read tasks and approvals.
+- Child cannot write rewards or tasks through the authenticated API.
+- App sync uses Supabase REST with a publishable key and a user's access token; sessions are stored in iOS Keychain.
+- Remote updates currently require pressing Sync / re-opening the app; realtime subscription and notifications are not yet implemented.
 
-## Not yet implemented (do not describe as functional)
-- The QR is a pairing **invitation**, not a verified or secure parent-child connection. Scanning only stores the code locally on the scanning phone.
-- The parent dashboard is a local prototype; it is **not access controlled**. A child can open it on the same device. It must not be used as a real parent authorization boundary.
-- Tasks and approvals do **not** sync between devices. A verified parent account, expiring pairing challenges, backend ACLs, and push/realtime updates are required.
-- Reward minutes are recorded as app data only. They do **not** extend iOS Screen Time or remove application shields.
-- Actual iOS enforcement requires Apple's Family Controls entitlement approval, FamilyActivityPicker, DeviceActivity monitor/report extensions, ManagedSettings shields, and an entitlement-approved signed build. Apple's native Screen Time limits cannot be modified arbitrarily by third-party apps.
-- For under-13 family authorization, use Apple's family/child authorization flow where eligible; individual authorization is not a substitute for parent approval.
-- Parent role must be verified server-side; never rely on a local toggle, an unverified QR, or self-reported age for security.
+## Apple Screen Time controls
+- FamilyActivityPicker, Family Controls authorization and ManagedSettings shields have been added.
+- **Not implemented:** automated temporary unshielding for earned minutes, reliable timed re-shielding with DeviceActivityMonitor extension, and a secure parent-managed policy applied on the child's device.
+- Apple must approve Family Controls distribution entitlements; unsigned IPA alone cannot validate this.
+- iOS does not expose an API to directly increase Apple's built-in Screen Time allowance.
+- A compliant reward mechanism would temporarily remove this app's own ManagedSettings shields and restore them using a DeviceActivityMonitor extension. It cannot bypass Apple's separate Screen Time restrictions.
 
-## Next steps
-1. Add authenticated parent and child account roles, with parent verified through Apple family authorization or a secure guardian-verification flow.
-2. Add server-backed one-time QR pairing and authenticated device ownership checks.
-3. Sync tasks and approvals with row-level authorization and audit logs.
-4. Add FamilyActivityPicker, DeviceActivityMonitor extension and ManagedSettingsStore; verify the actual shield and reward lifecycle on a physical iPhone.
-5. Add automated builds/tests and complete a successful signed-device test.
+## Security limitations to address before release
+- The QR links two authenticated accounts; it **does not prove legal parent/guardian status**. A real guardian verification and Apple family authorization flow are still necessary.
+- The local legacy parent task implementation in ParentTasks.swift is no longer shown in the main app, to avoid its insecure local parent-mode toggle.
+- A child's self-reported age is not a verified age. Do not treat it as authorization.
+- A child can potentially revoke app permissions or uninstall the app, subject to Apple family controls.
+- Ensure child pairing confirmation, guardian approval, and account recovery policies are reviewed before distributing this to families.
+- Build success and device testing are not yet confirmed.
