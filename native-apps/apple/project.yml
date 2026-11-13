@@ -59,6 +59,7 @@ targets:
       - path: ScreenBalance/ScreenBalanceApp.swift
       - path: ScreenBalance/ParentTasks.swift
       - path: ScreenBalance/ScreenTimeControls.swift
+      - path: ScreenBalance/FamilyCloud.swift
       - path: ScreenBalance/QRScannerView.swift
       - path: ScreenBalance/Assets.xcassets
     info:
@@ -66,6 +67,8 @@ targets:
       properties:
         CFBundleDisplayName: ItamarOS Screen Balance
         NSCameraUsageDescription: "Scan QR codes when you choose to open the camera scanner."
+        ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
+        ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.screenbalance
