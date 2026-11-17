@@ -204,11 +204,11 @@ private fun CloudClimbStandaloneHome(){
                     .padding(horizontal=if(tvMode) 72.dp else 22.dp,
                         vertical=if(tvMode) 12.dp else 28.dp),
                 horizontalAlignment=Alignment.CenterHorizontally,
-                verticalArrangement=Arrangement.spacedBy(14.dp)
+                verticalArrangement=Arrangement.spacedBy(if(tvMode) 8.dp else 14.dp)
             ) {
                 Spacer(Modifier.height(if(tvMode) 0.dp else 6.dp))
-                Box(
-                    modifier=Modifier.size(if(tvMode) 96.dp else 174.dp),
+                if(!tvMode) Box(
+                    modifier=Modifier.size(174.dp),
                     contentAlignment=Alignment.Center
                 ) {
                     Text("☁", fontSize=118.sp, color=Color.White.copy(alpha=0.25f),
@@ -246,7 +246,21 @@ private fun CloudClimbStandaloneHome(){
                     fontSize=14.sp, color=Color.White.copy(alpha=0.83f),
                     textAlign=TextAlign.Center
                 )
-                Spacer(Modifier.height(4.dp))
+                if(tvMode && !isAuthenticated && wantQR && qrUrl.isNotBlank()) {
+                    val qr=remember(qrUrl) { qrBitmap(qrUrl) }
+                    Surface(shape=RoundedCornerShape(16.dp), color=Color.White) {
+                        Image(
+                            qr.asImageBitmap(),
+                            contentDescription="Scan this QR to sign in to Cloud Climb",
+                            modifier=Modifier.padding(8.dp).size(310.dp)
+                        )
+                    }
+                    Text("Confirm this request on your signed-in phone · Code: "+
+                        requestId.take(6).uppercase(),
+                        color=Color.White,fontWeight=FontWeight.Bold,
+                        textAlign=TextAlign.Center)
+                }
+                Spacer(Modifier.height(if(tvMode) 0.dp else 4.dp))
                 if (isAuthenticated) {
                     Surface(
                         modifier=Modifier.fillMaxWidth(),
@@ -319,7 +333,7 @@ private fun CloudClimbStandaloneHome(){
                         Text("Use a QR code instead", color=Color.White.copy(alpha=0.9f))
                     }
                     if (wantQR) {
-                        Text("Compare this code in ItamarOS: "+
+                        if(!tvMode) Text("Compare this code in ItamarOS: "+
                             requestId.take(6).uppercase(),
                             fontWeight=FontWeight.Bold,color=Color.White,
                             textAlign=TextAlign.Center)
@@ -327,7 +341,7 @@ private fun CloudClimbStandaloneHome(){
                             wantQR=false;requestId="";claimSecret="";qrUrl=""
                         }){Text("Cancel Account Linking",color=Color.White)}
                     }
-                    if (wantQR && !useItamarOSApp && qrUrl.isNotBlank()) {
+                    if (!tvMode && wantQR && !useItamarOSApp && qrUrl.isNotBlank()) {
                         val qr=remember(qrUrl) { qrBitmap(qrUrl) }
                         Box(contentAlignment=Alignment.Center,
                             modifier=Modifier.fillMaxWidth()) {
