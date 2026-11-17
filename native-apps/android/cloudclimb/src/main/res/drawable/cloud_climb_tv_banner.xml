@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- 16:9 Android TV launcher banner for development builds. -->
+    <path android:fillColor="#10234F" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#2A6AB1" android:pathData="M0,114C65,81 128,104 170,77C222,47 285,84 320,60L320,180L0,180z" />
+    <path android:fillColor="#9DE8F8" android:pathData="M40,127c-13,0 -22,-10 -22,-21c0,-12 10,-22 23,-22c4,-22 22,-38 44,-38c22,0 38,13 44,31c21,-2 36,12 36,29c0,12 -11,21 -24,21z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M58,115c-9,0 -16,-7 -16,-15c0,-9 8,-16 18,-16c3,-16 17,-27 32,-27c17,0 30,9 33,24c14,-1 26,9 26,19c0,9 -8,15 -18,15z" />
+    <path android:fillColor="#FFDB76" android:pathData="M211,45h15v60h-15z M191,69h56v14h-56z" />
+    <path android:fillColor="#A5F4CF" android:pathData="M187,135c-8,-13 6,-26 20,-18c13,-19 29,-19 39,-7c19,-7 38,6 35,25z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M235,33l5,12l12,5l-12,5l-5,12l-5,-12l-12,-5l12,-5z" />
+</vector>
