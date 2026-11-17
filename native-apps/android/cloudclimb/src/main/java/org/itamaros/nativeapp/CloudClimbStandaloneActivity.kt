@@ -114,6 +114,7 @@ private fun CloudClimbStandaloneHome(){
     val tvMode=remember(context) { context.packageManager.hasSystemFeature("android.software.leanback") }
     var isAuthenticated by remember { mutableStateOf(false) }
     var localPlay by remember { mutableStateOf(false) }
+    var showMultiplayer by remember { mutableStateOf(false) }
     var wantQR by remember { mutableStateOf(false) }
     var useItamarOSApp by remember { mutableStateOf(false) }
     var requestId by remember { mutableStateOf("") }
@@ -265,12 +266,18 @@ private fun CloudClimbStandaloneHome(){
                         modifier=Modifier.fillMaxWidth().heightIn(min=64.dp),
                         colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF466BFA))
                     ) { Text("▶ Play Cloud Climb",fontWeight=FontWeight.Bold,fontSize=20.sp) }
-                    if(!tvMode) ItamarPartyGamesAndroid(api,defaultGame="cloud_climb")
+                    if(tvMode) OutlinedButton(
+                        onClick={showMultiplayer=!showMultiplayer},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),
+                        colors=ButtonDefaults.outlinedButtonColors(contentColor=Color.White)
+                    ) { Text(if(showMultiplayer) "Close Online Rooms" else "Online Multiplayer",fontSize=18.sp) }
+                    if(!tvMode || showMultiplayer) ItamarPartyGamesAndroid(api,defaultGame="cloud_climb")
                     if(tvMode) Text("Your Cloud Climb progress and unlocked content are loaded from your ItamarOS account.",
                         color=Color.White, textAlign=TextAlign.Center)
                     OutlinedButton(onClick={
                         api.token=null;api.userID=null;isAuthenticated=false
                         localPlay=false
+                        showMultiplayer=false
                         if(tvMode) { useItamarOSApp=false; wantQR=true }
                     }){Text("Sign out",color=Color.White)}
                 } else {
