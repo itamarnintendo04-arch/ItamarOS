@@ -111,8 +111,10 @@ private fun qrBitmap(contents:String):Bitmap {
 private fun CloudClimbStandaloneHome(){
     val api=remember { AndroidConnectApi() }
     val context=LocalContext.current
+    val tvMode=remember(context) { context.packageManager.hasSystemFeature("android.software.leanback") }
     var isAuthenticated by remember { mutableStateOf(false) }
     var localPlay by remember { mutableStateOf(false) }
+    var showMultiplayer by remember { mutableStateOf(false) }
     var wantQR by remember { mutableStateOf(false) }
     var useItamarOSApp by remember { mutableStateOf(false) }
     var requestId by remember { mutableStateOf("") }
@@ -121,6 +123,14 @@ private fun CloudClimbStandaloneHome(){
     var expiry by remember { mutableLongStateOf(0L) }
     var status by remember { mutableStateOf("Choose Play Offline or Link ItamarOS Account") }
     var connecting by remember { mutableStateOf(false) }
+
+    // TV login is exclusively QR-based; phones can still launch the existing app.
+    LaunchedEffect(tvMode) {
+        if (tvMode && !isAuthenticated) {
+            useItamarOSApp=false
+            wantQR=true
+        }
+    }
 
     LaunchedEffect(wantQR) {
         if(!wantQR)return@LaunchedEffect
@@ -191,12 +201,13 @@ private fun CloudClimbStandaloneHome(){
         ) {
             Column(
                 modifier=Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    .padding(horizontal=22.dp, vertical=28.dp),
+                    .padding(horizontal=if(tvMode) 72.dp else 22.dp,
+                        vertical=if(tvMode) 12.dp else 28.dp),
                 horizontalAlignment=Alignment.CenterHorizontally,
-                verticalArrangement=Arrangement.spacedBy(14.dp)
+                verticalArrangement=Arrangement.spacedBy(if(tvMode) 8.dp else 14.dp)
             ) {
-                Spacer(Modifier.height(6.dp))
-                Box(
+                Spacer(Modifier.height(if(tvMode) 0.dp else 6.dp))
+                if(!tvMode) Box(
                     modifier=Modifier.size(174.dp),
                     contentAlignment=Alignment.Center
                 ) {
@@ -210,7 +221,7 @@ private fun CloudClimbStandaloneHome(){
                         Image(
                             painterResource(R.drawable.cloud_climb_icon),
                             contentDescription="Cloud Climb game icon",
-                            modifier=Modifier.padding(15.dp).size(110.dp)
+                            modifier=Modifier.padding(9.dp).size(if(tvMode) 70.dp else 110.dp)
                         )
                     }
                     Text("✦", fontSize=34.sp, color=Color(0xFFFFE680),
@@ -218,7 +229,7 @@ private fun CloudClimbStandaloneHome(){
                 }
                 Text(
                     "Cloud Climb By ItamarOS",
-                    fontSize=34.sp, fontWeight=FontWeight.Black,
+                    fontSize=if(tvMode) 28.sp else 34.sp, fontWeight=FontWeight.Black,
                     fontFamily=FontFamily(Font(R.font.fredoka)), letterSpacing=(-0.5).sp,
                     color=Color.White, textAlign=TextAlign.Center,
                     lineHeight=39.sp
@@ -230,11 +241,26 @@ private fun CloudClimbStandaloneHome(){
                     color=Color(0xFFC5F5FF), textAlign=TextAlign.Center
                 )
                 Text(
+                    if(tvMode) "Scan the QR code with your phone, approve login, then play." else
                     "Sign in to play online, or explore the offline demo.",
                     fontSize=14.sp, color=Color.White.copy(alpha=0.83f),
                     textAlign=TextAlign.Center
                 )
-                Spacer(Modifier.height(4.dp))
+                if(tvMode && !isAuthenticated && wantQR && qrUrl.isNotBlank()) {
+                    val qr=remember(qrUrl) { qrBitmap(qrUrl) }
+                    Surface(shape=RoundedCornerShape(16.dp), color=Color.White) {
+                        Image(
+                            qr.asImageBitmap(),
+                            contentDescription="Scan this QR to sign in to Cloud Climb",
+                            modifier=Modifier.padding(8.dp).size(310.dp)
+                        )
+                    }
+                    Text("Confirm this request on your signed-in phone · Code: "+
+                        requestId.take(6).uppercase(),
+                        color=Color.White,fontWeight=FontWeight.Bold,
+                        textAlign=TextAlign.Center)
+                }
+                Spacer(Modifier.height(if(tvMode) 0.dp else 4.dp))
                 if (isAuthenticated) {
                     Surface(
                         modifier=Modifier.fillMaxWidth(),
@@ -249,13 +275,28 @@ private fun CloudClimbStandaloneHome(){
                                 color=Color.White.copy(alpha=0.78f))
                         }
                     }
-                    ItamarPartyGamesAndroid(api,defaultGame="cloud_climb")
+                    Button(
+                        onClick={localPlay=true},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=64.dp),
+                        colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF466BFA))
+                    ) { Text("▶ Play Cloud Climb",fontWeight=FontWeight.Bold,fontSize=20.sp) }
+                    if(tvMode) OutlinedButton(
+                        onClick={showMultiplayer=!showMultiplayer},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),
+                        colors=ButtonDefaults.outlinedButtonColors(contentColor=Color.White)
+                    ) { Text(if(showMultiplayer) "Close Online Rooms" else "Online Multiplayer",fontSize=18.sp) }
+                    if(!tvMode || showMultiplayer) ItamarPartyGamesAndroid(api,defaultGame="cloud_climb")
+                    if(tvMode) Text("Your Cloud Climb progress and unlocked content are loaded from your ItamarOS account.",
+                        color=Color.White, textAlign=TextAlign.Center)
                     OutlinedButton(onClick={
                         api.token=null;api.userID=null;isAuthenticated=false
+                        localPlay=false
+                        showMultiplayer=false
+                        if(tvMode) { useItamarOSApp=false; wantQR=true }
                     }){Text("Sign out",color=Color.White)}
                 } else {
                     Button(
-                        onClick={useItamarOSApp=true;wantQR=true},
+                        onClick={useItamarOSApp=!tvMode;wantQR=true},
                         enabled=!connecting && !wantQR,
                         modifier=Modifier.fillMaxWidth().heightIn(min=65.dp),
                         shape=RoundedCornerShape(20.dp),
@@ -270,7 +311,7 @@ private fun CloudClimbStandaloneHome(){
                             modifier=Modifier.size(33.dp)
                         )
                         Spacer(Modifier.width(12.dp))
-                        Text(if(connecting)"Connecting…" else "Sign in with ItamarOS",
+                        Text(if(connecting)"Connecting…" else if(tvMode) "Generate a new login QR" else "Sign in with ItamarOS",
                             fontWeight=FontWeight.Bold,fontSize=17.sp,
                             fontFamily=FontFamily(Font(R.font.fredoka)))
                     }
@@ -285,14 +326,14 @@ private fun CloudClimbStandaloneHome(){
                         Text("🎮 Play Offline Demo",fontSize=17.sp,
                             fontWeight=FontWeight.Bold,color=Color.White)
                     }
-                    TextButton(
+                    if(!tvMode) TextButton(
                         onClick={useItamarOSApp=false;wantQR=true},
                         enabled=!connecting && !wantQR
                     ) {
                         Text("Use a QR code instead", color=Color.White.copy(alpha=0.9f))
                     }
                     if (wantQR) {
-                        Text("Compare this code in ItamarOS: "+
+                        if(!tvMode) Text("Compare this code in ItamarOS: "+
                             requestId.take(6).uppercase(),
                             fontWeight=FontWeight.Bold,color=Color.White,
                             textAlign=TextAlign.Center)
@@ -300,13 +341,13 @@ private fun CloudClimbStandaloneHome(){
                             wantQR=false;requestId="";claimSecret="";qrUrl=""
                         }){Text("Cancel Account Linking",color=Color.White)}
                     }
-                    if (wantQR && !useItamarOSApp && qrUrl.isNotBlank()) {
+                    if (!tvMode && wantQR && !useItamarOSApp && qrUrl.isNotBlank()) {
                         val qr=remember(qrUrl) { qrBitmap(qrUrl) }
                         Box(contentAlignment=Alignment.Center,
                             modifier=Modifier.fillMaxWidth()) {
                             Image(qr.asImageBitmap(),
                                 contentDescription="One-time ItamarOS login QR",
-                                modifier=Modifier.size(248.dp))
+                                modifier=Modifier.size(if(tvMode) 310.dp else 248.dp))
                             Surface(shape=RoundedCornerShape(12.dp),
                                 color=Color.White) {
                                 Image(painterResource(R.drawable.itamaros_logo),
@@ -314,7 +355,8 @@ private fun CloudClimbStandaloneHome(){
                                     modifier=Modifier.padding(6.dp).size(39.dp))
                             }
                         }
-                        Text("Verify your identity and explicitly approve this login.",
+                        Text(if(tvMode) "Scan with your phone camera and approve this login in ItamarOS." else
+                            "Verify your identity and explicitly approve this login.",
                             color=Color.White,textAlign=TextAlign.Center)
                     }
                 }

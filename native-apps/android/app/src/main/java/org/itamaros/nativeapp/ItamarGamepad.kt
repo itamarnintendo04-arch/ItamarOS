@@ -12,6 +12,8 @@ import androidx.compose.runtime.setValue
 // the Android version, pairing, manufacturer, and exposed gamepad input profile.
 object ItamarGamepad {
     var enabled=false
+    // Let Android/Compose handle D-pad focus while pause or dialog UI is visible.
+    var menuOpen=false
     var axis by mutableFloatStateOf(0f)
     var jump by mutableStateOf(false)
     var left by mutableStateOf(false)
@@ -28,18 +30,20 @@ object ItamarGamepad {
     fun key(event: KeyEvent):Boolean {
         if(!enabled || (event.source and InputDevice.SOURCE_GAMEPAD != InputDevice.SOURCE_GAMEPAD &&
              event.source and InputDevice.SOURCE_DPAD != InputDevice.SOURCE_DPAD))return false
+        if(menuOpen && event.keyCode != KeyEvent.KEYCODE_BUTTON_START) return false
         val down=event.action==KeyEvent.ACTION_DOWN
         when(event.keyCode){
             KeyEvent.KEYCODE_DPAD_LEFT->left=down
             KeyEvent.KEYCODE_DPAD_RIGHT->right=down
             KeyEvent.KEYCODE_BUTTON_A,KeyEvent.KEYCODE_BUTTON_B,
             KeyEvent.KEYCODE_DPAD_UP->jump=down
-            KeyEvent.KEYCODE_BUTTON_X,KeyEvent.KEYCODE_BUTTON_Y->attack=down
+            KeyEvent.KEYCODE_BUTTON_X,KeyEvent.KEYCODE_BUTTON_Y,
+            KeyEvent.KEYCODE_DPAD_CENTER->attack=down
             KeyEvent.KEYCODE_BUTTON_START->pause=down
             else->return false
         }
         detected=true
         return true
     }
-    fun reset(){enabled=false;axis=0f;jump=false;left=false;right=false;attack=false;pause=false;detected=false}
+    fun reset(){enabled=false;menuOpen=false;axis=0f;jump=false;left=false;right=false;attack=false;pause=false;detected=false}
 }
