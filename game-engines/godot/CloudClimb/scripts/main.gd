@@ -18,9 +18,15 @@ var jump_requested := false
 var camera_offset := 0.0
 var hud: Label
 var buttons: Array[Button] = []
+var pause_panel: PanelContainer
+var resume_button: Button
+var is_paused := false
+var touch_controls_visible := true
 
 func _ready() -> void:
     randomize()
+    Engine.max_fps = 60
+    _register_controller_inputs()
     _create_stage()
     var layer := CanvasLayer.new()
     add_child(layer)
@@ -31,6 +37,8 @@ func _ready() -> void:
     _touch_button(layer, "◀", Vector2(35, 575), func(): touch_direction = -1.0, func(): touch_direction = 0.0)
     _touch_button(layer, "▶", Vector2(160, 575), func(): touch_direction = 1.0, func(): touch_direction = 0.0)
     _touch_button(layer, "JUMP", Vector2(1090, 575), func(): jump_requested = true, func(): pass)
+    _create_pause_menu(layer)
+    _refresh_touch_controls()
 
 func _touch_button(parent: Node, label: String, pos: Vector2, pressed: Callable, released: Callable) -> void:
     var button := Button.new()
@@ -57,6 +65,8 @@ func _create_stage() -> void:
     camera_offset = 0.0
 
 func _physics_process(delta: float) -> void:
+    if is_paused:
+        return
     var direction := Input.get_axis("move_left", "move_right")
     if abs(touch_direction) > 0.1:
         direction = touch_direction
@@ -94,6 +104,86 @@ func _physics_process(delta: float) -> void:
         _create_stage()
     hud.text = "CLOUD CLIMB   Stage %d   Coins %d   Hearts %d" % [stage, score, hearts]
     queue_redraw()
+
+
+# Configure controller input at runtime so desktop, Android TV and phones
+# share the same movement actions. D-pad/joystick and face buttons work.
+func _register_controller_inputs() -> void:
+    if not InputMap.has_action("pause_game"):
+        InputMap.add_action("pause_game")
+    var joy_bindings := [
+        ["move_left", JOY_BUTTON_DPAD_LEFT],
+        ["move_right", JOY_BUTTON_DPAD_RIGHT],
+        ["jump", JOY_BUTTON_A],
+        ["jump", JOY_BUTTON_B],
+        ["jump", JOY_BUTTON_DPAD_UP],
+        ["pause_game", JOY_BUTTON_START],
+    ]
+    for binding in joy_bindings:
+        var button := InputEventJoypadButton.new()
+        button.button_index = binding[1]
+        InputMap.action_add_event(binding[0], button)
+    for axis_value in [-1.0, 1.0]:
+        var motion := InputEventJoypadMotion.new()
+        motion.axis = JOY_AXIS_LEFT_X
+        motion.axis_value = axis_value
+        InputMap.action_add_event("move_left" if axis_value < 0.0 else "move_right", motion)
+    var pause_key := InputEventKey.new()
+    pause_key.physical_keycode = KEY_ESCAPE
+    InputMap.action_add_event("pause_game", pause_key)
+
+func _create_pause_menu(layer: CanvasLayer) -> void:
+    pause_panel = PanelContainer.new()
+    pause_panel.position = Vector2(445, 160)
+    pause_panel.custom_minimum_size = Vector2(390, 290)
+    pause_panel.visible = false
+    layer.add_child(pause_panel)
+    var menu := VBoxContainer.new()
+    menu.add_theme_constant_override("separation", 18)
+    pause_panel.add_child(menu)
+    var heading := Label.new()
+    heading.text = "CLOUD CLIMB - PAUSED"
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    heading.add_theme_font_size_override("font_size", 28)
+    menu.add_child(heading)
+    var controls := Label.new()
+    controls.text = "D-pad / stick: Move  |  A: Jump  |  Start / Back: Pause"
+    controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    menu.add_child(controls)
+    resume_button = Button.new()
+    resume_button.text = "Resume"
+    resume_button.custom_minimum_size.y = 65
+    menu.add_child(resume_button)
+    resume_button.pressed.connect(func(): _set_paused(false))
+    var exit_button := Button.new()
+    exit_button.text = "Exit game"
+    exit_button.custom_minimum_size.y = 65
+    menu.add_child(exit_button)
+    exit_button.pressed.connect(func(): get_tree().quit())
+
+func _set_paused(value: bool) -> void:
+    is_paused = value
+    pause_panel.visible = value
+    touch_direction = 0.0
+    jump_requested = false
+    if value:
+        resume_button.grab_focus()
+
+func _input(event: InputEvent) -> void:
+    if event.is_action_pressed("pause_game") or event.is_action_pressed("ui_cancel"):
+        _set_paused(not is_paused)
+        get_viewport().set_input_as_handled()
+
+func _process(_delta: float) -> void:
+    _refresh_touch_controls()
+
+func _refresh_touch_controls() -> void:
+    var should_show := DisplayServer.is_touchscreen_available() and Input.get_connected_joypads().is_empty()
+    if should_show == touch_controls_visible:
+        return
+    touch_controls_visible = should_show
+    for button in buttons:
+        button.visible = should_show
 
 func _draw() -> void:
     draw_rect(Rect2(0, 0, WIDTH, HEIGHT), Color("#172b59"))
