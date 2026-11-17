@@ -37,6 +37,7 @@ import kotlin.math.abs
 fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onExit: () -> Unit) {
     val room = match?.optString("code").orEmpty()
     val roomSeed = match?.optInt("seed") ?: 0
+    var tvOptionsVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val tvMode = remember(context) {
         context.packageManager.hasSystemFeature("android.software.leanback")
@@ -368,7 +369,11 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         ItamarGamepad.menuOpen = paused || gameOver || shopDue != 0 || settingsOpen
     }
     BackHandler(enabled = tvMode) {
-        paused = !paused
+        if(tvOptionsVisible) {
+            tvOptionsVisible = false
+        } else {
+            paused = !paused
+        }
         left = false; right = false; jump = false
     }
     fun strikeBoss() {
@@ -424,7 +429,8 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
     Column(
         modifier = Modifier.fillMaxSize()
             .background(Brush.verticalGradient(listOf(darkBackground, lightBackground)), RoundedCornerShape(24.dp))
-            .padding(if (tvMode) 8.dp else 16.dp),
+            .padding(if (tvMode) 8.dp else 16.dp)
+            .then(if(tvMode) Modifier.verticalScroll(rememberScrollState()) else Modifier),
         verticalArrangement = Arrangement.spacedBy(if (tvMode) 4.dp else 12.dp)
     ) {
         Text("☁  CLOUD CLIMB", color = Color.White, style = MaterialTheme.typography.headlineMedium)
@@ -433,7 +439,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Spacer(Modifier.weight(1f))
             Text("❤️ " + hearts + "/3  🪙 " + coins, color = Color.White)
         }
-        if (!tvMode) {
+        if (!tvMode || tvOptionsVisible) {
         Text("👤 " + playerName + "   ·   WORLD " + activeWorld +
             "   ·   🔑 " + worldKeys, color = Color.White)
         Text(rewardsStatus, color=goldAccent,style=MaterialTheme.typography.bodySmall)
@@ -470,10 +476,17 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         }
         if (bossStage) Text("BOSS ENCOUNTER · " + bossHealth + "/3",
             color = goldAccent, style = MaterialTheme.typography.titleMedium)
-        if (showControlHints && !tvMode) Text(
+        if (showControlHints && (!tvMode || tvOptionsVisible)) Text(
             "Reach the top platform. Earn 10 coins per stage · Boss every 30 levels.",
             color = Color.White.copy(alpha = 0.9f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if(tvMode) OutlinedButton(onClick = {
+                tvOptionsVisible = !tvOptionsVisible
+                if(tvOptionsVisible) paused = true
+                left = false; right = false; jump = false
+            }, colors=ButtonDefaults.outlinedButtonColors(contentColor=Color.White)) {
+                Text(if(tvOptionsVisible) "Hide Game Options" else "Game Options")
+            }
             OutlinedButton(onClick = { settingsOpen = true },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("⚙ Settings") }
             OutlinedButton(onClick = { paused = !paused; left = false; right = false },
@@ -514,7 +527,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             Button(onClick = onExit) { Text("Exit to menu") }
         } else {
             Canvas(modifier = (if (tvMode)
-                Modifier.align(Alignment.CenterHorizontally).width(255.dp)
+                Modifier.align(Alignment.CenterHorizontally).width(285.dp)
                 else Modifier.fillMaxWidth()).aspectRatio(4f / 5f)) {
                 val sx = size.width / 400f; val sy = size.height / 500f
                 drawRect(brush = Brush.verticalGradient(listOf(darkBackground, lightBackground)))
@@ -580,7 +593,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
                 Button(onClick = { jump = true }) { Text("Jump") }
             }
         }
-        if (!tvMode && activeWorld in 1..10 && !paused && !gameOver && shopDue==0) {
+        if (activeWorld in 1..10 && !paused && !gameOver && shopDue==0) {
             val closeDoor=unopenedDoors.firstOrNull { door ->
                 val p=platforms[door]
                 abs(px-(p.first+p.third/2))<60f && abs(py-(p.second-5f))<60f
@@ -591,7 +604,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
         }
         if (message.isNotEmpty() && !gameOver) Text(message,
             color=Color.White,style=MaterialTheme.typography.bodySmall)
-        if (!tvMode) {
+        if (!tvMode || tvOptionsVisible) {
         Text(
             if (controllerConnected) "🎮 Controller connected · A: Jump · X: Attack · Start: Pause"
             else if (showControlHints) "Touch controls · Connect a controller to hide them automatically."
@@ -679,7 +692,7 @@ fun CloudClimbAndroid(api: AndroidConnectApi, match: JSONObject?, slot: Int, onE
             },
             confirmButton = { TextButton(onClick = { settingsOpen = false }) { Text("Done") } }
         )
-        } // Hide phone-only extras on Android TV
+        } // Full regular-game features are accessible from Game Options on TV
     }
 }
 private fun cloudStages(seed: Int): List<Triple<Float, Float, Float>> {
