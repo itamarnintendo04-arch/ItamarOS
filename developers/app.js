@@ -114,7 +114,7 @@ async function loadAdmin() {
   try {
     const res = await call('list_pending');
     pending.replaceChildren();
-    if (!res.requests?.length) { pending.append(element('p', 'No pending requests.', 'muted')); return; }
+    if (!res.requests?.length) { pending.append(element('p', 'No pending or awaiting-claim applications.', 'muted')); return; }
     for (const item of res.requests) {
       const card = element('div', undefined, 'request');
       card.append(element('h3', item.app_name));
@@ -127,14 +127,27 @@ async function loadAdmin() {
         'Type: ' + item.client_type
       ]) card.append(element('p', line));
       const actions = element('div', undefined, 'admin-actions');
-      actions.append(
-        button('Approve', () => review(item.id, 'approve'), 'primary'),
-        button('Reject', () => review(item.id, 'reject'), 'secondary')
-      );
+      if (item.status === 'approved') {
+        card.append(element('p', 'Approved — awaiting credential claim.', 'status'));
+        actions.append(button('Resend approval email', () => resendApproval(item.id), 'secondary'));
+      } else {
+        actions.append(
+          button('Approve', () => review(item.id, 'approve'), 'primary'),
+          button('Reject', () => review(item.id, 'reject'), 'secondary')
+        );
+      }
       card.append(actions);
       pending.append(card);
     }
   } catch (error) { pending.replaceChildren(element('p', error.message, 'warning')); }
+}
+async function resendApproval(id) {
+  if (!confirm('Send another secure sign-in link to the approved applicant?')) return;
+  status('Sending approval email…');
+  try {
+    const result = await call('resend_email', { id });
+    status(result.email_sent ? 'A new approval email was sent.' : 'Could not send the email.');
+  } catch (error) { status(error.message); }
 }
 async function review(id, decision) {
   if (!confirm('Are you sure you want to ' + decision + ' this developer application?')) return;
