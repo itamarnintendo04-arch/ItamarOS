@@ -172,7 +172,7 @@ $('loginForm').addEventListener('submit', async (event) => {
       email,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: new URL('/developers/', window.location.origin).href
+        emailRedirectTo: new URL('/developers/index.html', window.location.origin).href
       }
     });
     if (error) throw error;
