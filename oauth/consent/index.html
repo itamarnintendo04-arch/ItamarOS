@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#090e19">
+<title>Authorize application · ItamarOS</title><link rel="stylesheet" href="/developers/style.css">
+</head><body><header><a class="brand" href="/">✦ ItamarOS <span>Accounts</span></a><span class="grow"></span><span class="beta">SECURE AUTHORIZATION</span></header>
+<main style="max-width:630px">
+<section class="card"><h1 id="heading">Connect your ItamarOS account</h1>
+<p id="description" class="muted">Loading authorization request…</p>
+<div id="login" hidden>
+<form id="loginForm"><label for="email">Your ItamarOS account email</label><input id="email" type="email" autocomplete="email" required placeholder="name@example.com"><button class="primary wide">Email me a secure sign-in link</button></form>
+<p class="muted">Your existing ItamarOS account is required.</p></div>
+<div id="consent" hidden><dl>
+<dt>Application</dt><dd id="client"></dd>
+<dt>Redirect destination</dt><dd id="redirectUri"></dd>
+<dt>Requested permissions</dt><dd id="scopes"></dd></dl>
+<p>Only approve access if you trust this application. You can deny the request.</p>
+<div class="admin-actions"><button id="approve" class="primary">Allow access</button><button id="deny" class="secondary">Deny access</button></div>
+</div><p id="status" role="status" aria-live="polite"></p>
+</section></main><script type="module" src="./app.js"></script></body></html>
