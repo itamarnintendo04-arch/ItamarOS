@@ -1,7 +1,7 @@
 # ItamarOS OAuth Beta — operator setup
 
-The beta application portal is at `/developers/` (or `/developers/index.html`).
-The user consent screen is at `/oauth/consent/` (or `/oauth/consent/index.html`).
+The beta application portal is at `/developers/index.html`.
+The user consent screen is at `/oauth/consent/index.html`.
 
 ## Supabase project
 
@@ -17,8 +17,8 @@ Already installed:
 ## Required operator steps
 
 1. In **Supabase > Authentication > OAuth Server**, **enable OAuth 2.1 Server**.
-2. Set authorization URL path to `/oauth/consent/`. Supabase combines this with the Auth **Site URL**.
-3. Ensure Auth **Site URL** points to `https://itamaros-web-emulator.onrender.com` and the host actually serves `/oauth/consent/`. Review existing sign-in routes before changing the global Site URL.
+2. Set authorization URL path to `/oauth/consent/index.html`. Supabase combines this with the Auth **Site URL**.
+3. Ensure Auth **Site URL** points to `https://itamaros-web-emulator.onrender.com` and the host actually serves `/oauth/consent/index.html`. Review existing sign-in routes before changing the global Site URL.
 4. In **Authentication > URL Configuration**, allow `https://itamaros-web-emulator.onrender.com/developers/**` and `https://itamaros-web-emulator.onrender.com/oauth/consent/**` for email magic-link redirects.
 5. Configure production SMTP under **Authentication > SMTP Settings**. The default email service has restrictions and is not suitable for public beta notifications. Test that a confirmed ItamarOS user receives email magic links.
 6. If requesting OIDC `openid` scopes, configure **asymmetric signing keys** (RS256/ES256) as specified in Supabase OAuth Server docs.
