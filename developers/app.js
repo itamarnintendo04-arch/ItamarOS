@@ -43,7 +43,7 @@ async function refreshUser() {
   refreshing = true;
   try {
     const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
+    if (error && error.name !== 'AuthSessionMissingError') throw error;
     currentUser = data.user || null;
     $('loginPanel').hidden = Boolean(currentUser);
     $('appPanel').hidden = !currentUser;
