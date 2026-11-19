@@ -14,7 +14,7 @@ async function load() {
   try {
     if (!authorizationId || authorizationId.length > 256) throw new Error('Missing or invalid authorization request.');
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
+    if (authError && authError.name !== 'AuthSessionMissingError') throw authError;
     $('login').hidden = Boolean(user);
     if (!user) {
       $('heading').textContent = 'Sign in to ItamarOS';
