@@ -101,7 +101,8 @@ def native_rows(yml: str, release: dict | None = None) -> list[dict]:
         if target == "ItamarOSiOS":
             source_folder = "iOS"
         elif target in TARGETS:
-            source_folder = known.get("folder") or known.get("art", "").split("/")[2]
+            source_parts = known.get("art", "").split("/")
+            source_folder = known.get("folder") or (source_parts[2] if len(source_parts) > 2 else target[:-3])
             if not source_folder:
                 source_folder = target[:-3]
         else:
