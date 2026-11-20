@@ -70,3 +70,12 @@ except (OSError, ValueError) as exc:
     # The app can request this URL at run time and show "Logo unavailable" otherwise.
 
 print("Prepared artwork:", sorted(p.name for p in ASSETS.iterdir()))
+
+# Bundle the official first-party release registry so the Wi-Fi companion
+# always has a safe catalog even while GitHub is temporarily unavailable.
+CATALOG = ROOT / "catalog" / "ios-apps.json"
+if CATALOG.is_file():
+    shutil.copyfile(CATALOG, ASSETS / "official-ios-apps.json")
+    print("Bundled official main-repository iOS download catalog")
+else:
+    raise FileNotFoundError("Missing official release registry: " + str(CATALOG))
