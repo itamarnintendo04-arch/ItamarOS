@@ -220,7 +220,6 @@ private struct AppInstallSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("installer.target.udid") private var deviceUDID = ""
     @State private var showingSigner = false
-    @State private var showingComputerInstall = false
 
     private var candidates: [CertificateMatch] {
         vault.matchesForCustomIPA(bundleIdentifier: app.bundle_id, targetUDID: deviceUDID)
@@ -277,23 +276,20 @@ private struct AppInstallSheet: View {
                         .disabled(catalog.downloadingId != nil)
                     }
                 }
-                Section("2. Sign") {
+                Section("2. Install in WebView") {
                     Button {
                         showingSigner = true
                     } label: {
-                        Label("Open authorized IPA signer", systemImage: "signature")
+                        Label("Open WebView installation", systemImage: "globe")
                     }
                     .disabled(catalog.downloaded[app.id] == nil || approvedCandidate == nil)
-                    Text("The selected certificate is used for compatibility checks. To protect saved private keys, the current signing workspace requires you to select your authorized P12 and profile again; they are not sent automatically to a remote web page.")
+                    Text("Inside the WebView, tap Install — sign IPA first. The signer requires you to select your authorized P12 and profile again, then produces a signed IPA. Apple's iOS security model does not permit direct installation of the IPA by an ordinary WebView.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Section("3. Install using computer") {
-                    Button {
-                        showingComputerInstall = true
-                    } label: {
-                        Label("Install over USB — no manifest", systemImage: "iphone.and.arrow.forward")
-                    }
-                    Text("Transfer the signed IPA to a trusted Windows or Mac computer, connect the iPhone by USB and install it with a supported device installer. No manifest needed.")
+                Section("Installation status") {
+                    Label("Signing is supported; direct WebView installation is not supported by iOS.", systemImage: "info.circle")
+                        .font(.footnote)
+                    Text("No manifest or computer is requested by this signing screen. Saving the IPA does not install it.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -305,10 +301,7 @@ private struct AppInstallSheet: View {
                 }
             }
             .sheet(isPresented: $showingSigner) {
-                EmbeddedIPASignerView()
-            }
-            .sheet(isPresented: $showingComputerInstall) {
-                ComputerInstallView(originalIPA: catalog.downloaded[app.id], expectedBundleIdentifier: app.bundle_id)
+                EmbeddedIPASignerView(appName: app.name, originalIPA: catalog.downloaded[app.id])
             }
         }
     }
