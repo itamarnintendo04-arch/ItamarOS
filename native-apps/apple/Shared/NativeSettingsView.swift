@@ -55,6 +55,11 @@ struct NativeSettingsView: View {
         NavigationStack {
             Form {
                 Section("Appearance") {
+                    #if os(iOS)
+                    NavigationLink { ChangeAppIconView() } label: {
+                        Label("Change App Icon", systemImage: "paintpalette.fill")
+                    }
+                    #endif
                     Picker("Accent", selection: $accent) {
                         Text("Blue").tag("blue")
                         Text("Green").tag("green")

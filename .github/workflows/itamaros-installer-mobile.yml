@@ -20,6 +20,8 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages Pillow
           python3 icon.py
+      - name: Generate Installer Home Screen icon colors
+        run: python3 ../scripts/generate_icon_variants.py --app 'ItamarOS Installer'
       - name: Generate Xcode project
         run: |
           xcodebuild -version

@@ -68,6 +68,7 @@ final class VoiceRecorderStore: ObservableObject {
 
 struct VoiceRecorderHome: View {
     @StateObject private var store=VoiceRecorderStore()
+    @State private var showingSettings = false
     var body:some View {
         NavigationStack {
             List {
@@ -98,6 +99,25 @@ struct VoiceRecorderHome: View {
                 }
             }
             .navigationTitle("Voice Recorder")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingSettings = true } label: { Image(systemName: "gearshape.fill") }
+                        .accessibilityLabel("Settings")
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    Form {
+                        Section("Appearance") {
+                            NavigationLink { ChangeAppIconView() } label: {
+                                Label("Change App Icon", systemImage: "paintpalette.fill")
+                            }
+                        }
+                    }
+                    .navigationTitle("Settings")
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showingSettings = false } } }
+                }
+            }
         }
     }
 }

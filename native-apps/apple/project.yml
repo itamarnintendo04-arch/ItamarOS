@@ -36,6 +36,7 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
+      - path: Shared/ChangeAppIconView.swift
       - path: BrowserOS/BrowserOSApp.swift
       - path: BrowserOS/BrowserAccount.swift
       - path: BrowserOS/Assets.xcassets
@@ -47,6 +48,7 @@ targets:
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
     settings:
       base:
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "ItamarIconBlue ItamarIconGreen ItamarIconPurple ItamarIconPink ItamarIconOrange ItamarIconRed"
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.browseros
         ASSETCATALOG_COMPILER_APPICON_NAME: BrowserOSIcon
         GENERATE_INFOPLIST_FILE: YES
@@ -56,6 +58,7 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
+      - path: Shared/ChangeAppIconView.swift
       - path: ScreenBalance/ScreenBalanceApp.swift
       - path: ScreenBalance/ParentTasks.swift
       - path: ScreenBalance/ScreenTimeControls.swift
@@ -71,6 +74,7 @@ targets:
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
     settings:
       base:
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "ItamarIconBlue ItamarIconGreen ItamarIconPurple ItamarIconPink ItamarIconOrange ItamarIconRed"
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.screenbalance
         CODE_SIGN_ENTITLEMENTS: ScreenBalance/ScreenBalance.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: ScreenBalanceIcon
@@ -81,6 +85,7 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
+      - path: Shared/ChangeAppIconView.swift
       - path: ItamarCut/ItamarCutApp.swift
       - path: ItamarCut/Assets.xcassets
     info:
@@ -90,6 +95,7 @@ targets:
         NSPhotoLibraryUsageDescription: "Choose videos to edit in ItamarCut."
     settings:
       base:
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "ItamarIconBlue ItamarIconGreen ItamarIconPurple ItamarIconPink ItamarIconOrange ItamarIconRed"
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.cut
         ASSETCATALOG_COMPILER_APPICON_NAME: ItamarCutIcon
         GENERATE_INFOPLIST_FILE: YES
@@ -99,6 +105,7 @@ targets:
     platform: iOS
     deploymentTarget: "17.0"
     sources:
+      - path: Shared/ChangeAppIconView.swift
       - path: VoiceRecorder/VoiceRecorderApp.swift
       - path: VoiceRecorder/Assets.xcassets
     info:
@@ -109,6 +116,7 @@ targets:
         UIFileSharingEnabled: YES
     settings:
       base:
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "ItamarIconBlue ItamarIconGreen ItamarIconPurple ItamarIconPink ItamarIconOrange ItamarIconRed"
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.voicerecorder
         ASSETCATALOG_COMPILER_APPICON_NAME: VoiceRecorderIcon
         GENERATE_INFOPLIST_FILE: YES
@@ -251,6 +259,7 @@ targets:
               - itamaros
     settings:
       base:
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "ItamarIconBlue ItamarIconGreen ItamarIconPurple ItamarIconPink ItamarIconOrange ItamarIconRed"
         PRODUCT_BUNDLE_IDENTIFIER: org.itamaros.mobile
         CODE_SIGN_ENTITLEMENTS: iOS/ItamarOS.entitlements
         GENERATE_INFOPLIST_FILE: YES

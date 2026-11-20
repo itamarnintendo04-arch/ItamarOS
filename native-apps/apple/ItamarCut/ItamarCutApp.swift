@@ -98,6 +98,7 @@ final class ItamarCutProject: ObservableObject {
 
 struct ItamarCutEditor: View {
     @StateObject private var project=ItamarCutProject()
+    @State private var showingSettings = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var start:Double=0
     @State private var end:Double=0
@@ -182,6 +183,25 @@ struct ItamarCutEditor: View {
                 }
             }
             .navigationTitle("ItamarCut")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingSettings = true } label: { Image(systemName: "gearshape.fill") }
+                        .accessibilityLabel("Settings")
+                }
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    Form {
+                        Section("Appearance") {
+                            NavigationLink { ChangeAppIconView() } label: {
+                                Label("Change App Icon", systemImage: "paintpalette.fill")
+                            }
+                        }
+                    }
+                    .navigationTitle("Settings")
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showingSettings = false } } }
+                }
+            }
             .onChange(of:pickerItem) { _,item in
                 Task {
                     guard let item,let data=try? await item.loadTransferable(type:Data.self) else {return}

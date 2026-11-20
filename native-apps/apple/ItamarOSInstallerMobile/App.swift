@@ -64,6 +64,11 @@ struct MainScreen: View {
                 .tabItem { Label("Custom IPA", systemImage: "square.and.arrow.down.on.square") }.tag(2)
             NavigationStack {
                 Form {
+                    Section("Appearance") {
+                        NavigationLink { ChangeAppIconView() } label: {
+                            Label("Change App Icon", systemImage: "paintpalette.fill")
+                        }
+                    }
                     Section("Selected certificate") {
                         if let selected = vault.selected {
                             Text(selected.name)

@@ -23,6 +23,7 @@ struct ScreenBalanceHome: View {
     @State private var selectedChallenge = 0
     @State private var showingChallenge = false
     @State private var showingScanner = false
+    @State private var showingSettings = false
     @State private var scannedCode = ""
     @State private var scannerMessage = ""
 
@@ -46,6 +47,14 @@ struct ScreenBalanceHome: View {
                             Text("ItamarOS").font(.subheadline.weight(.semibold)).foregroundStyle(BalanceTheme.accent)
                             Text("Screen Balance").font(.largeTitle.bold()).foregroundStyle(.white)
                         }
+                        Spacer(minLength: 0)
+                        Button { showingSettings = true } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.title3)
+                                .foregroundStyle(BalanceTheme.accent)
+                                .padding(10)
+                        }
+                        .accessibilityLabel("Settings")
                     }
                     if !family.ageConfirmed { ageSetup }
                     else if !onboarded { onboarding }
@@ -80,6 +89,19 @@ struct ScreenBalanceHome: View {
                 .navigationTitle("Scan QR code")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { showingScanner = false } } }
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                Form {
+                    Section("Appearance") {
+                        NavigationLink { ChangeAppIconView() } label: {
+                            Label("Change App Icon", systemImage: "paintpalette.fill")
+                        }
+                    }
+                }
+                .navigationTitle("Settings")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showingSettings = false } } }
             }
         }
         .sheet(isPresented: $showingChallenge) {

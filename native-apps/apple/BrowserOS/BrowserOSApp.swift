@@ -442,6 +442,11 @@ struct BrowserHome: View {
     private var settingsSheet: some View {
         NavigationStack {
             List {
+                Section("Appearance") {
+                    NavigationLink { ChangeAppIconView() } label: {
+                        Label("Change App Icon", systemImage: "paintpalette.fill")
+                    }
+                }
                 Section("Privacy") {
                     Button("Clear history and website data", role: .destructive) {
                         browser.clearWebsiteData()
