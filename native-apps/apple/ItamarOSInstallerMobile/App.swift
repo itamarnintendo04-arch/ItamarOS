@@ -65,6 +65,8 @@ struct MainScreen: View {
                 .tabItem { Label("ItamarOS Apps", systemImage: "square.grid.2x2.fill") }.tag(1)
             CustomIPAScreen()
                 .tabItem { Label("Custom IPA", systemImage: "square.and.arrow.down.on.square") }.tag(2)
+            WiFiCompanionScreen()
+                .tabItem { Label("Wi-Fi", systemImage: "wifi") }.tag(4)
             NavigationStack {
                 Form {
                     Section("Appearance") {
@@ -91,7 +93,7 @@ struct MainScreen: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     Section("Important") {
-                        Text("To install without a manifest, use a correctly signed IPA with ItamarOS Installer on a Windows or Mac computer connected to your iPhone over USB. iOS verifies the app signature and provisioning.")
+                        Text("Wi-Fi Companion connects to a paired Windows installer over a local encrypted connection. The computer shares device information and downloads official IPAs automatically. Apple verifies signatures and provisioning; unsigned developer builds still require signing.")
                             .font(.footnote)
                     }
                 }
