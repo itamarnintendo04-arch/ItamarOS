@@ -15,6 +15,10 @@ import urllib.parse
 import urllib.request
 
 import customtkinter as ctk
+from lan_bridge import CompanionServer, InstallRequest, local_ipv4
+from official_catalog import OfficialCatalog
+import qrcode
+
 from installer_core import (
     GitHubCatalog, CatalogApp, InstallerError, DOWNLOAD_DIR,
     command_for_device_tool, friendly_error, install_ipa,
@@ -41,6 +45,10 @@ class Installer(ctk.CTk):
         self.selected_udid = ""
         self.busy = False
         self.catalog = GitHubCatalog()
+        self.official = OfficialCatalog()
+        self.lan_server: CompanionServer | None = None
+        self.lan_image = None
+        self.lan_status_text = None
         self.category_filter = "All"
         self._app_images = {}
         self._image_fetching = set()
@@ -69,6 +77,7 @@ class Installer(ctk.CTk):
                      text_color=WHITE, justify="left").pack(side="left", padx=12)
         self._nav(side, "▦  App Catalog", self.show_catalog)
         self._nav(side, "◉  My iPhone", self.show_device)
+        self._nav(side, "⌁  Wi-Fi Companion", self.show_wifi_companion)
         self._nav(side, "⇣  Downloads", self.open_downloads)
         ctk.CTkFrame(side, fg_color=BORDER, height=1).pack(fill="x", padx=23, pady=22)
         ctk.CTkLabel(side, text="APPLE ACCOUNT", font=("Segoe UI", 11, "bold"),
@@ -80,7 +89,7 @@ class Installer(ctk.CTk):
                       font=("Segoe UI", 13, "bold")).pack(fill="x", padx=20, pady=8)
         ctk.CTkLabel(side, text="Apple sign-in uses a browser,\nnever a password field here.",
                      justify="left", font=("Segoe UI", 11), text_color=MUTED).pack(anchor="w", padx=24)
-        ctk.CTkLabel(side, text="ItamarOS Installer v2.0\nWindows 10 / 11",
+        ctk.CTkLabel(side, text="ItamarOS Installer v2.2\nWindows 10 / 11",
                      text_color="#7892a1", font=("Segoe UI", 11), justify="left").pack(
                          side="bottom", anchor="w", padx=24, pady=24)
 
@@ -344,6 +353,129 @@ class Installer(ctk.CTk):
                           fg_color="#263749",command=self.show_helper_setup,
                           height=43).pack(anchor="w",padx=8,pady=14)
 
+    def show_wifi_companion(self):
+        self._clear()
+        self._section("Wi-Fi Companion",
+                      "Pair with ItamarOS Installer on the same private Wi-Fi network. "
+                      "Only a trusted iPhone can read device details or request app installs.")
+        panel = self._card(self.content)
+        panel.pack(fill="x", padx=8, pady=12)
+        if not self.lan_server:
+            ctk.CTkLabel(panel,
+                         text="Server is off. Start it to show a temporary QR pairing code.",
+                         wraplength=760, font=("Segoe UI",14), text_color=MUTED).pack(
+                         padx=20, pady=(24,14))
+            ctk.CTkButton(panel, text="Start secure Wi-Fi server",
+                          command=self.start_wifi_server, height=45,
+                          fg_color=TEAL, text_color=BG).pack(padx=20, pady=(0,22))
+            return
+        server = self.lan_server
+        ctk.CTkLabel(panel,
+                     text=f"Server: https://{local_ipv4()}:{server.port}\n"
+                          f"Pair code (valid 10 minutes): {server.pair_code}\n"
+                          "The pairing QR pins this server's TLS fingerprint; "
+                          "do not share it with people outside your private network.",
+                     text_color=WHITE, font=("Segoe UI",13),
+                     wraplength=750, justify="left").pack(padx=20,pady=(18,12))
+        try:
+            qr = qrcode.make(server.pairing_url).convert("RGB").resize((264,264))
+            self.lan_image = ctk.CTkImage(light_image=qr, dark_image=qr, size=(264,264))
+            ctk.CTkLabel(panel, text="", image=self.lan_image).pack(pady=5)
+        except Exception:
+            pass
+        buttons = ctk.CTkFrame(panel, fg_color="transparent")
+        buttons.pack(padx=20,pady=(13,18))
+        ctk.CTkButton(buttons,text="Rotate pairing code",command=self.rotate_wifi_code,
+                      height=38).pack(side="left",padx=8)
+        ctk.CTkButton(buttons,text="Stop server",command=self.stop_wifi_server,
+                      fg_color="#754149",height=38).pack(side="left",padx=8)
+        ctk.CTkLabel(self.content,
+                     text="First pair your iPhone with this computer using USB and tap Trust. "
+                          "In Apple Devices (or iTunes), enable syncing over Wi-Fi if needed. "
+                          "Apple device pairing is separate from this QR connection. "
+                          "Wi-Fi installation works only if the supported device helper "
+                          "actually detects the paired iPhone. Official apps come from "
+                          "ItamarOS GitHub Releases automatically; current unsigned previews "
+                          "require your own authorized signing before iOS can install them.",
+                     text_color=MUTED, wraplength=820, justify="left").pack(
+                     anchor="w",padx=20,pady=12)
+
+    def start_wifi_server(self):
+        if self.lan_server is not None:
+            return
+        def task():
+            try:
+                self.official.refresh()
+                server = CompanionServer(
+                    get_devices=lambda: list(self.devices),
+                    get_apps=lambda: self.official.list_apps(),
+                    on_request=lambda req: self.events.put(("lan-request",req,None)),
+                )
+                server.start()
+                self.lan_server = server
+                self.events.put(("lan-started",None,None))
+            except Exception as exc:
+                self.events.put(("lan-start-error",str(exc),None))
+        threading.Thread(target=task,daemon=True).start()
+        self.status.configure(text="Starting the private Wi-Fi companion…")
+
+    def rotate_wifi_code(self):
+        if self.lan_server:
+            self.lan_server.rotate_code()
+            self.show_wifi_companion()
+
+    def stop_wifi_server(self):
+        if self.lan_server:
+            self.lan_server.stop()
+            self.lan_server = None
+        self.show_wifi_companion()
+
+    def _approve_lan_install(self, request: InstallRequest):
+        if self.lan_server is None:
+            return
+        app = next((a for a in self.official.list_apps() if a["id"]==request.app_id),None)
+        if app is None:
+            self.lan_server.finish_request(request.id,"denied","Unknown official app.")
+            return
+        target = next((d for d in self.devices if d["udid"]==request.target_udid), None)
+        if target is None:
+            self.lan_server.finish_request(request.id,"denied","iPhone not detected.")
+            return
+        if not messagebox.askyesno("Wi-Fi installation request",
+                                  f"The paired iPhone requests {app['name']}.\n\n"
+                                  f"Target: {target['name']}\n\n"
+                                  "Download this official IPA automatically from "
+                                  "ItamarOS GitHub Releases? If it is unsigned, "
+                                  "you must sign it yourself before installation."):
+            self.lan_server.finish_request(request.id,"denied","Declined on the computer.")
+            return
+        self.lan_server.finish_request(request.id,"downloading")
+        def job():
+            file, signed = self.official.download(request.app_id)
+            if not signed:
+                return ("requires_signing",
+                        "Official IPA downloaded to the computer. "
+                        "It is unsigned; use an authorized signing certificate "
+                        "and provisioning profile before it can be installed.")
+            return ("installed", install_ipa(file,request.target_udid))
+        def completed(result):
+            state, info = result
+            if self.lan_server:
+                self.lan_server.finish_request(request.id,state,str(info))
+            if state == "requires_signing":
+                messagebox.showinfo("Official app downloaded",
+                                    f"{app['name']} was downloaded automatically. "
+                                    "This release is unsigned, so iOS cannot install it yet. "
+                                    "Sign the IPA with your authorized certificate first.")
+            else:
+                messagebox.showinfo("Installation completed",
+                                    f"{app['name']} was installed on the iPhone.")
+        if self.busy:
+            self.lan_server.finish_request(request.id,"failed",
+                                          "Desktop is currently busy; request again shortly.")
+        else:
+            self._run(job,completed)
+
     def _select_device(self, text):
         for device in self.devices:
             if device["udid"][:8] in text:
@@ -402,9 +534,24 @@ class Installer(ctk.CTk):
                 if kind=="image-ready":
                     self._render_apps()
                     continue
+                if kind=="lan-request":
+                    self._approve_lan_install(value)
+                    continue
+                if kind=="lan-started":
+                    self.show_wifi_companion()
+                    continue
+                if kind=="lan-start-error":
+                    self.status.configure(text="Wi-Fi server unavailable")
+                    messagebox.showerror("Wi-Fi Companion", str(value))
+                    continue
                 self.busy=False
                 self.refresh_button.configure(state="normal")
                 if kind=="error":
+                    if self.lan_server:
+                        with self.lan_server.guard:
+                            for key, value0 in self.lan_server.requests.items():
+                                if value0.get("state") == "downloading":
+                                    self.lan_server.finish_request(key, "failed", str(value))
                     self.status.configure(text="Operation failed")
                     messagebox.showerror("ItamarOS Installer",value)
                 elif callback:
@@ -529,6 +676,9 @@ class Installer(ctk.CTk):
         self.after(1_200_000,self._periodic_refresh)
 
     def _close(self):
+        if self.lan_server:
+            self.lan_server.stop()
+            self.lan_server = None
         self.destroy()
 
 
