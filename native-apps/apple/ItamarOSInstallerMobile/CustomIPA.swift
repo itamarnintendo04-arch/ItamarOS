@@ -111,7 +111,6 @@ struct CustomIPAScreen: View {
     @State private var errorText: String?
     @State private var selectedMatchID: UUID?
     @State private var showSigner = false
-    @State private var showComputerInstall = false
 
     private var matches: [CertificateMatch] {
         guard let application else { return [] }
@@ -217,23 +216,18 @@ struct CustomIPAScreen: View {
                         }
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Signing and installation").font(.headline)
+                            Text("Install in WebView").font(.headline)
                             Button { showSigner = true } label: {
-                                Label("Sign IPA with my authorized certificate",
-                                      systemImage: "signature")
+                                Label("Open WebView installation",
+                                      systemImage: "globe")
                                     .frame(maxWidth: .infinity, minHeight: 42)
                             }
                             .buttonStyle(.borderedProminent)
-                            Text("The signer processes files in a browser-based WebAssembly workspace. For privacy, select your IPA, P12 and provisioning profile there manually; saved private keys and TXT passwords are never automatically sent to the page.")
+                            .disabled(preferred == nil)
+                            Text("In the WebView tap Install — sign IPA first. Select your own P12, matching provisioning profile and certificate password. The file is signed locally in the signer workspace and can then be saved.")
                                 .font(.caption).foregroundStyle(.secondary)
-                            Button { showComputerInstall = true } label: {
-                                Label("Install signed IPA via computer (no manifest)",
-                                      systemImage: "arrow.down.app")
-                                    .frame(maxWidth: .infinity, minHeight: 42)
-                            }
-                            .buttonStyle(.bordered)
-                            Text("Send the signed IPA to your computer and install through USB. No manifest or hosting required; iOS checks the signature.")
-                                .font(.caption).foregroundStyle(.secondary)
+                            Text("iOS does not permit an ordinary WebView to install the resulting IPA directly. No manifest or computer is required to use this signing screen; the signed file is not an installed app.")
+                                .font(.caption).foregroundStyle(.orange)
                         }
                         .installerPanel()
 
@@ -255,10 +249,7 @@ struct CustomIPAScreen: View {
             }
             .navigationTitle("Custom IPA")
             .sheet(isPresented: $showSigner) {
-                EmbeddedIPASignerView()
-            }
-            .sheet(isPresented: $showComputerInstall) {
-                ComputerInstallView(originalIPA: application?.url, expectedBundleIdentifier: application?.bundleIdentifier)
+                EmbeddedIPASignerView(appName: application?.fileName, originalIPA: application?.url)
             }
             .fileImporter(isPresented: $importing,
                           allowedContentTypes: [UTType(filenameExtension: "ipa", conformingTo: .data) ?? .data]) { result in
