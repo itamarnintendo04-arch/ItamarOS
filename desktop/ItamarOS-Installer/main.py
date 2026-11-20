@@ -8,6 +8,9 @@ import threading
 import webbrowser
 from pathlib import Path
 from tkinter import messagebox
+from PIL import Image
+import urllib.parse
+import urllib.request
 
 import customtkinter as ctk
 from installer_core import (
@@ -36,6 +39,9 @@ class Installer(ctk.CTk):
         self.selected_udid = ""
         self.busy = False
         self.catalog = GitHubCatalog()
+        self.category_filter = "All"
+        self._app_images = {}
+        self._image_fetching = set()
         self.search_text = ctk.StringVar()
         self.device_choice = ctk.StringVar(value="No iPhone selected")
         self._init_shell()
@@ -52,7 +58,11 @@ class Installer(ctk.CTk):
         side.grid_propagate(False)
         logo = ctk.CTkFrame(side, height=68, fg_color="transparent")
         logo.pack(fill="x", padx=20, pady=(24, 28))
-        ctk.CTkLabel(logo, text="✦", font=("Segoe UI", 31, "bold"), text_color=TEAL).pack(side="left")
+        brand_icon = self._load_resource("brand", (54, 54))
+        if brand_icon:
+            ctk.CTkLabel(logo, text="", image=brand_icon, width=56, height=56).pack(side="left")
+        else:
+            ctk.CTkLabel(logo, text="◈", font=("Segoe UI", 31, "bold"), text_color=TEAL).pack(side="left")
         ctk.CTkLabel(logo, text="ItamarOS\nInstaller", font=("Segoe UI", 20, "bold"),
                      text_color=WHITE, justify="left").pack(side="left", padx=12)
         self._nav(side, "▦  App Catalog", self.show_catalog)
@@ -68,7 +78,7 @@ class Installer(ctk.CTk):
                       font=("Segoe UI", 13, "bold")).pack(fill="x", padx=20, pady=8)
         ctk.CTkLabel(side, text="Apple sign-in uses a browser,\nnever a password field here.",
                      justify="left", font=("Segoe UI", 11), text_color=MUTED).pack(anchor="w", padx=24)
-        ctk.CTkLabel(side, text="ItamarOS Installer v1.0\nWindows 10 / 11",
+        ctk.CTkLabel(side, text="ItamarOS Installer v2.0\nWindows 10 / 11",
                      text_color="#7892a1", font=("Segoe UI", 11), justify="left").pack(
                          side="bottom", anchor="w", padx=24, pady=24)
 
@@ -78,7 +88,7 @@ class Installer(ctk.CTk):
         self.main.grid_rowconfigure(1, weight=1)
         header = ctk.CTkFrame(self.main, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=30, pady=(27, 16))
-        ctk.CTkLabel(header, text="Discover • Install • Update", text_color=WHITE,
+        ctk.CTkLabel(header, text="Your iPhone. Your apps.", text_color=WHITE,
                      font=("Segoe UI", 25, "bold")).pack(side="left")
         self.refresh_button = ctk.CTkButton(
             header, text="↻ Refresh Catalog", font=("Segoe UI", 13, "bold"),
@@ -122,23 +132,110 @@ class Installer(ctk.CTk):
         return ctk.CTkFrame(parent, fg_color=PANEL, corner_radius=15,
                             border_width=1, border_color=BORDER)
 
+    @staticmethod
+    def _resource_dir():
+        # PyInstaller extracts bundled assets into sys._MEIPASS.
+        return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent)) / "resources"
+
+    def _load_resource(self, slug, size=(78, 78)):
+        key = (slug, size)
+        if key in self._app_images:
+            return self._app_images[key]
+        path = self._resource_dir() / (slug + ".png")
+        if not path.is_file():
+            path = self.catalog.root / "icon-cache" / (slug + ".png")
+        if not path.is_file():
+            return None
+        try:
+            with Image.open(path) as opened:
+                art = opened.convert("RGBA").copy()
+            image = ctk.CTkImage(light_image=art, dark_image=art, size=size)
+            self._app_images[key] = image
+            return image
+        except (OSError, ValueError):
+            return None
+
+    def _fetch_logo_if_needed(self, app):
+        slug = app.icon_slug
+        url = app.icon_url
+        if not slug or not url or slug in self._image_fetching:
+            return
+        if self._load_resource(slug):
+            return
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != "https" or parsed.hostname != "raw.githubusercontent.com":
+            return
+        if not parsed.path.startswith("/itamarnintendo04-arch/"):
+            return
+        self._image_fetching.add(slug)
+        def task():
+            try:
+                path = self.catalog.root / "icon-cache" / (slug + ".png")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                request = urllib.request.Request(url, headers={"User-Agent":"ItamarOS Installer"})
+                with urllib.request.urlopen(request, timeout=18) as remote:
+                    data = remote.read(2_000_001)
+                if len(data) > 2_000_000:
+                    return
+                from io import BytesIO
+                with Image.open(BytesIO(data)) as image:
+                    image.convert("RGBA").resize((256, 256), Image.Resampling.LANCZOS).save(path)
+                self.events.put(("image-ready", slug, None))
+            except (OSError, ValueError):
+                pass
+            finally:
+                self._image_fetching.discard(slug)
+        threading.Thread(target=task, daemon=True).start()
+
+    def _set_category(self, category):
+        self.category_filter = category
+        self._render_apps()
+
     def show_catalog(self):
         self._clear()
-        self._section("iPhone App Catalog",
-            "Always shows the latest releases published by official ItamarOS GitHub projects. Newly tagged iOS projects appear automatically.")
-        toolbar = ctk.CTkFrame(self.content, fg_color="transparent")
-        toolbar.pack(fill="x", padx=8, pady=(0, 14))
-        entry = ctk.CTkEntry(toolbar, textvariable=self.search_text,
-                             placeholder_text="Search ItamarOS apps...", height=42,
-                             corner_radius=12, fg_color=INNER, border_color=BORDER,
-                             font=("Segoe UI", 13), text_color=WHITE)
-        entry.pack(side="left", fill="x", expand=True)
+        hero = ctk.CTkFrame(self.content, corner_radius=18, fg_color="#112b45",
+                            border_width=1, border_color="#285275")
+        hero.pack(fill="x", padx=7, pady=(8, 21))
+        left = ctk.CTkFrame(hero, fg_color="transparent")
+        left.pack(side="left", fill="x", expand=True, padx=(23, 9), pady=20)
+        ctk.CTkLabel(left, text="ITAMAROS APP COLLECTION", font=("Segoe UI", 10, "bold"),
+                     text_color="#69e4d4").pack(anchor="w")
+        ctk.CTkLabel(left, text="Explore iPhone apps", font=("Segoe UI", 26, "bold"),
+                     text_color=WHITE).pack(anchor="w", pady=(6, 3))
+        ctk.CTkLabel(left, text="Original app icons, verified projects, fresh versions.",
+                     font=("Segoe UI", 12), text_color="#b8d0e3").pack(anchor="w")
+        logo = self._load_resource("brand", (92,92))
+        if logo:
+            ctk.CTkLabel(hero, text="", image=logo, width=100, height=100).pack(side="right", padx=23, pady=9)
+        self._section("All ItamarOS iPhone Apps",
+                      "Native iOS targets from the ItamarOS source tree plus standalone official iPhone app repositories.")
+        stats = ctk.CTkFrame(self.content, fg_color="transparent")
+        stats.pack(fill="x", padx=7, pady=(0,13))
+        self.all_count = ctk.CTkLabel(stats, text="All apps: 0", text_color=WHITE, font=("Segoe UI", 13, "bold"))
+        self.all_count.pack(side="left", padx=(8,18))
+        self.ready_count = ctk.CTkLabel(stats, text="Installable: 0", text_color=TEAL, font=("Segoe UI", 13, "bold"))
+        self.ready_count.pack(side="left")
+        searchbar = ctk.CTkFrame(self.content, fg_color="transparent")
+        searchbar.pack(fill="x", padx=7, pady=(0, 12))
+        search = ctk.CTkEntry(searchbar, textvariable=self.search_text,
+                             placeholder_text="Search by name, category or description...",
+                             height=45, corner_radius=12, fg_color=INNER,
+                             border_color="#35546a", font=("Segoe UI", 13), text_color=WHITE)
+        search.pack(side="left", fill="x", expand=True)
+        self.count = ctk.CTkLabel(searchbar, text="", text_color=MUTED)
+        self.count.pack(side="right", padx=14)
+        chips = ctk.CTkFrame(self.content, fg_color="transparent")
+        chips.pack(fill="x", padx=7, pady=(0, 15))
+        for category in ("All", "Games", "Creative", "Utilities", "Security", "System", "Apps"):
+            ctk.CTkButton(chips, text=category, corner_radius=16, height=30,
+                          fg_color=HOVER if self.category_filter == category else "#182a39",
+                          hover_color="#236a71", text_color=WHITE, width=64,
+                          command=lambda cat=category:self._set_category(cat),
+                          font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0,6))
         if hasattr(self, "_search_trace"):
             try: self.search_text.trace_remove("write", self._search_trace)
             except Exception: pass
         self._search_trace = self.search_text.trace_add("write", lambda *_: self._render_apps())
-        self.count = ctk.CTkLabel(toolbar, text="", text_color=MUTED)
-        self.count.pack(side="right", padx=14)
         self.cards_container = ctk.CTkFrame(self.content, fg_color="transparent")
         self.cards_container.pack(fill="both", expand=True, padx=3, pady=5)
         self.cards_container.grid_columnconfigure((0,1), weight=1, uniform="apps")
@@ -150,41 +247,61 @@ class Installer(ctk.CTk):
         for child in self.cards_container.winfo_children():
             child.destroy()
         needle = self.search_text.get().strip().lower()
-        items = [a for a in self.apps if needle in (a.name + " " + a.description).lower()]
-        self.count.configure(text=f"{len(items)} apps")
+        items = [app for app in self.apps
+                 if (not needle or needle in (app.name + " " + app.description + " " + app.category).lower())
+                 and (self.category_filter == "All" or app.category == self.category_filter)]
+        self.count.configure(text=f"{len(items)} shown")
+        if hasattr(self, "all_count") and self.all_count.winfo_exists():
+            self.all_count.configure(text=f"All apps: {len(self.apps)}")
+            self.ready_count.configure(text=f"Installable: {sum(app.installable() for app in self.apps)}")
         if not items:
-            text = "No matching apps." if self.apps else "Loading catalog — or no official iOS releases have been published yet."
-            ctk.CTkLabel(self.cards_container, text=text, text_color=MUTED,
-                         font=("Segoe UI", 15), wraplength=690).grid(row=0,column=0,columnspan=2,pady=36)
+            label = "No apps match these filters." if self.apps else "Loading apps from official ItamarOS sources..."
+            ctk.CTkLabel(self.cards_container, text=label, text_color=MUTED,
+                         font=("Segoe UI",15)).grid(row=0, column=0, columnspan=2, pady=40)
             return
         for idx, app in enumerate(items):
-            card = self._card(self.cards_container)
-            card.grid(row=idx//2, column=idx%2, sticky="nsew", padx=7,pady=7)
-            top=ctk.CTkFrame(card,fg_color="transparent")
-            top.pack(fill="x", padx=19,pady=(18,7))
-            ctk.CTkLabel(top,text="◈",font=("Segoe UI",29,"bold"),text_color=TEAL).pack(side="left")
-            title=ctk.CTkFrame(top,fg_color="transparent")
-            title.pack(side="left",fill="x",expand=True,padx=10)
-            ctk.CTkLabel(title,text=app.name,anchor="w",font=("Segoe UI",17,"bold"),
-                         text_color=WHITE).pack(anchor="w")
-            ctk.CTkLabel(title,text=app.version,anchor="w",font=("Segoe UI",11),
-                         text_color=MUTED).pack(anchor="w",pady=2)
-            badge="IPA AVAILABLE" if app.installable() else "NOT RELEASED"
-            ctk.CTkLabel(top,text=badge,text_color=TEAL if app.installable() else "#b5a9b0",
-                         font=("Segoe UI",10,"bold")).pack(side="right",anchor="n",padx=1,pady=3)
-            ctk.CTkLabel(card,text=app.description[:185],wraplength=380,justify="left",
-                         text_color="#a9bfcb",font=("Segoe UI",12),
-                         height=48,anchor="nw").pack(fill="x",padx=20,pady=(2,12))
-            actions=ctk.CTkFrame(card,fg_color="transparent")
-            actions.pack(fill="x",padx=18,pady=(0,18))
-            ctk.CTkButton(actions,text="Install on iPhone" if app.installable() else "No IPA yet",
-                          command=lambda a=app: self.install_app(a),
-                          height=37,corner_radius=10,fg_color=HOVER,hover_color="#1da68d",
-                          state="normal" if app.installable() else "disabled",
+            card = ctk.CTkFrame(self.cards_container, fg_color=PANEL,
+                                corner_radius=17, border_width=1, border_color="#263d54")
+            card.grid(row=idx//2, column=idx%2, sticky="nsew", padx=7, pady=7)
+            top = ctk.CTkFrame(card, fg_color="transparent")
+            top.pack(fill="x", padx=16, pady=(18, 9))
+            art = self._load_resource(app.icon_slug)
+            if art:
+                ctk.CTkLabel(top, text="", image=art, width=80, height=80).pack(side="left")
+            else:
+                placeholder = ctk.CTkFrame(top, width=80,height=80,fg_color="#1b3a52",corner_radius=15)
+                placeholder.pack(side="left")
+                placeholder.pack_propagate(False)
+                ctk.CTkLabel(placeholder,text=app.name[:1].upper(),
+                             text_color="#8feedd",font=("Segoe UI",34,"bold")).pack(expand=True)
+                self._fetch_logo_if_needed(app)
+            detail = ctk.CTkFrame(top, fg_color="transparent")
+            detail.pack(side="left", fill="x", expand=True, padx=12)
+            ctk.CTkLabel(detail, text=app.category.upper(), font=("Segoe UI",10,"bold"),
+                         text_color="#53dac5").pack(anchor="w")
+            ctk.CTkLabel(detail, text=app.name, font=("Segoe UI",16,"bold"),
+                         text_color=WHITE, anchor="w", wraplength=185, justify="left").pack(anchor="w", pady=(2,4))
+            ctk.CTkLabel(detail, text=app.version, font=("Segoe UI",11),
+                         text_color=MUTED, anchor="w").pack(anchor="w")
+            available = app.installable()
+            ctk.CTkLabel(card,text=app.description[:200],wraplength=370,justify="left",
+                         text_color="#acc1d2",font=("Segoe UI",12),
+                         anchor="nw",height=46).pack(fill="x",padx=19,pady=(3,12))
+            statusrow = ctk.CTkFrame(card, fg_color="transparent")
+            statusrow.pack(fill="x", padx=19, pady=(0,9))
+            ctk.CTkLabel(statusrow,text="●  Ready to install" if available else "○  Source available • IPA not published",
+                         text_color=TEAL if available else "#b9aabb",
+                         font=("Segoe UI",11),anchor="w").pack(side="left")
+            actions = ctk.CTkFrame(card, fg_color="transparent")
+            actions.pack(fill="x", padx=17, pady=(0,17))
+            ctk.CTkButton(actions,text="Install on iPhone" if available else "Not available yet",
+                          command=lambda a=app: self.install_app(a), height=38, corner_radius=11,
+                          fg_color=HOVER,hover_color="#19a38d",
+                          state="normal" if available else "disabled",
                           font=("Segoe UI",12,"bold")).pack(side="left",fill="x",expand=True)
-            ctk.CTkButton(actions,text="Repository",command=lambda a=app: webbrowser.open(a.repository_url),
-                          width=92,height=37,corner_radius=10,fg_color=INNER,hover_color="#254152",
-                          font=("Segoe UI",12)).pack(side="right",padx=(9,0))
+            ctk.CTkButton(actions, text="View source", command=lambda a=app:webbrowser.open(a.repository_url),
+                          width=105,height=38,corner_radius=11,fg_color=INNER,
+                          hover_color="#254152",font=("Segoe UI",12)).pack(side="right",padx=(10,0))
 
     def show_device(self):
         self._clear()
@@ -274,6 +391,9 @@ class Installer(ctk.CTk):
                 if kind=="progress":
                     self.progress.set(value)
                     continue
+                if kind=="image-ready":
+                    self._render_apps()
+                    continue
                 self.busy=False
                 self.refresh_button.configure(state="normal")
                 if kind=="error":
@@ -292,7 +412,7 @@ class Installer(ctk.CTk):
 
     def _catalog_ready(self,apps):
         self.apps=apps
-        self.status.configure(text=f"Catalog up to date • {len(apps)} projects • Checked GitHub Releases")
+        self.status.configure(text=f"Catalog current • {len(apps)} iPhone apps • ItamarOS sources + GitHub Releases")
         self.progress.set(1)
         self._render_apps()
         if not self.devices and command_for_device_tool() is not None:
