@@ -60,6 +60,8 @@ struct MainScreen: View {
             .tabItem { Label("Certificates", systemImage: "checkmark.shield.fill") }.tag(0)
             CatalogScreen()
                 .tabItem { Label("ItamarOS Apps", systemImage: "square.grid.2x2.fill") }.tag(1)
+            CustomIPAScreen()
+                .tabItem { Label("Custom IPA", systemImage: "square.and.arrow.down.on.square") }.tag(2)
             NavigationStack {
                 Form {
                     Section("Selected certificate") {
@@ -81,12 +83,12 @@ struct MainScreen: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     Section("Important") {
-                        Text("A certificate with a future expiry date may still be revoked or lack a valid provisioning profile for this iPhone. This version does not sign or install IPA files.")
+                        Text("Custom IPA preflight checks your device UDID, app Bundle ID, matching identity and expiry dates. It does not revoke-check, sign, or directly install IPAs on iOS. Use a supported signed installation method.")
                             .font(.footnote)
                     }
                 }
                 .navigationTitle("Settings")
-            }.tabItem { Label("Settings", systemImage: "gearshape.fill") }.tag(2)
+            }.tabItem { Label("Settings", systemImage: "gearshape.fill") }.tag(3)
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.zip, .data], allowsMultipleSelection: true) { result in
             switch result {
