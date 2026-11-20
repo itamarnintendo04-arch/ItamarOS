@@ -129,9 +129,10 @@ jobs:
             if not path.is_dir():
               raise RuntimeError(f"Missing main-repository source folder: {path}")
             if app["id"] == "ItamarOS-Windows-Installer":
-              matches = [f for f in input_files if f.name == app["asset_name"]]
+              matches = [f for f in input_files if f.suffix.lower() == ".exe"
+                         and "itamaros" in f.name.lower() and "installer" in f.name.lower()]
               if len(matches) != 1:
-                raise RuntimeError("Verified Windows Installer EXE not found")
+                raise RuntimeError(f"Expected exactly one verified Windows Installer EXE, found {[f.name for f in matches]}")
               shutil.copyfile(matches[0], dst / app["asset_name"])
               (dst / "RELEASE_NOTES.md").write_text(
                 "# ItamarOS Installer — Windows preview\n\n"
