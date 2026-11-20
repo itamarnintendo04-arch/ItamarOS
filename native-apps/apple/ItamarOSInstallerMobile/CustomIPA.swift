@@ -63,7 +63,7 @@ enum IPAAnalyzer {
             guard let archive = Archive(url: target, accessMode: .read) else {
                 throw VaultError.message("IPA is not a readable ZIP archive.")
             }
-            var metadataEntry: Archive.Entry?
+            var metadataEntry: Entry?
             for entry in archive {
                 if entry.path.range(of: #"^Payload/[^/]+\.app/Info\.plist$"#,
                                     options: .regularExpression) != nil {
