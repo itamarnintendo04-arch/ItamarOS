@@ -26,3 +26,13 @@ On iOS 18+, the app reads certificate not-valid-after dates via the iOS Security
 GitHub Actions: Build ItamarOS Installer Mobile IPA. Produces an unsigned iOS IPA requiring valid signing before installation. iOS 18+.
 
 No user certificates or passwords are included in this repository.
+
+## Custom IPA — v1.1 preflight
+
+The **Custom IPA** tab imports a user-selected `.ipa` from Files into local Documents, reads `Payload/*.app/Info.plist`, and matches its Bundle ID to each imported provisioning profile. It checks expiration, certificate SHA-256 against `DeveloperCertificates`, app identifier and `ProvisionedDevices` against a **manually entered device UDID**. A matching entry is labeled **Preflight match**, not "working" or "installed". Unknown, expired and mismatching profiles are explicitly marked.
+
+- Ordinary iOS apps **cannot obtain the hardware UDID** via a public API. The user must copy it manually from Finder, Apple Devices or iTunes on a trusted computer. `identifierForVendor` is not the UDID.
+- Only profiles naming the provided UDID can pass strict local preflight. `ProvisionsAllDevices` enterprise profiles require extra review and are not automatically declared compatible. App Store profiles are not accepted as direct-install profiles.
+- CMS profile signatures and Apple revocation are not validated locally; iOS must perform final verification.
+- The app can **export/share the selected IPA** for a supported signed installation workflow on a Mac/PC; it **does not sign or directly install the IPA on iOS**. These are deliberate limits to avoid misleading installation claims.
+- Certificates, TXT passwords, private keys and profile contents must **never** be uploaded publicly or committed to this repository. If an archive containing a P12 and its password was published to a public file-sharing link, immediately remove access and contact the certificate owner to rotate/revoke the exposed identity.
