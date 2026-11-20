@@ -71,6 +71,13 @@ struct NativeSettingsView: View {
                     Toggle("Background music", isOn: $music)
                     if music { HStack { Text("Music volume"); Slider(value:$musicVolume,in:0...1); Text("\\(Int(musicVolume*100))%").monospacedDigit().frame(width:48) } }
                 }
+                #if os(iOS)
+                Section("Desktop Companion") {
+                    NavigationLink { WiFiCompanionScreen() } label: {
+                        Label("Connect to ItamarOS Installer over Wi-Fi", systemImage: "wifi")
+                    }
+                }
+                #endif
                 Section("App language") {
                     Picker("Language", selection: $selectedLanguage) {
                         Text("System default").tag("system")

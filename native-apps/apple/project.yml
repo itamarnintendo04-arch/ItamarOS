@@ -37,12 +37,17 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared/ChangeAppIconView.swift
+      - path: Shared/WiFiCompanion.swift
       - path: BrowserOS/BrowserOSApp.swift
       - path: BrowserOS/BrowserAccount.swift
       - path: BrowserOS/Assets.xcassets
     info:
       path: BrowserOS/Info.plist
       properties:
+        NSLocalNetworkUsageDescription: "Securely pair with ItamarOS Installer on your Windows computer over local Wi-Fi."
+        NSBonjourServices:
+          - _itamaros._tcp
+        NSCameraUsageDescription: "Scan the trusted ItamarOS Installer pairing QR code."
         CFBundleDisplayName: BrowserOS
         ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
         ITAMAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable__WVo13dRVkDYChuGxHxk9A_CDoVR9ts"
@@ -59,6 +64,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared/ChangeAppIconView.swift
+      - path: Shared/WiFiCompanion.swift
       - path: ScreenBalance/ScreenBalanceApp.swift
       - path: ScreenBalance/ParentTasks.swift
       - path: ScreenBalance/ScreenTimeControls.swift
@@ -68,6 +74,9 @@ targets:
     info:
       path: ScreenBalance/Info.plist
       properties:
+        NSLocalNetworkUsageDescription: "Securely pair with ItamarOS Installer on your Windows computer over local Wi-Fi."
+        NSBonjourServices:
+          - _itamaros._tcp
         CFBundleDisplayName: ItamarOS Screen Balance
         NSCameraUsageDescription: "Scan QR codes when you choose to open the camera scanner."
         ITAMAR_SUPABASE_URL: "https://slqjkysinhfkqjoigfuz.supabase.co"
@@ -86,11 +95,16 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared/ChangeAppIconView.swift
+      - path: Shared/WiFiCompanion.swift
       - path: ItamarCut/ItamarCutApp.swift
       - path: ItamarCut/Assets.xcassets
     info:
       path: ItamarCut/Info.plist
       properties:
+        NSLocalNetworkUsageDescription: "Securely pair with ItamarOS Installer on your Windows computer over local Wi-Fi."
+        NSBonjourServices:
+          - _itamaros._tcp
+        NSCameraUsageDescription: "Scan the trusted ItamarOS Installer pairing QR code."
         CFBundleDisplayName: ItamarCut
         NSPhotoLibraryUsageDescription: "Choose videos to edit in ItamarCut."
     settings:
@@ -106,11 +120,16 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Shared/ChangeAppIconView.swift
+      - path: Shared/WiFiCompanion.swift
       - path: VoiceRecorder/VoiceRecorderApp.swift
       - path: VoiceRecorder/Assets.xcassets
     info:
       path: VoiceRecorder/Info.plist
       properties:
+        NSLocalNetworkUsageDescription: "Securely pair with ItamarOS Installer on your Windows computer over local Wi-Fi."
+        NSBonjourServices:
+          - _itamaros._tcp
+        NSCameraUsageDescription: "Scan the trusted ItamarOS Installer pairing QR code."
         CFBundleDisplayName: Voice Recorder
         NSMicrophoneUsageDescription: "Record audio when you tap Start recording."
         UIFileSharingEnabled: YES
@@ -246,6 +265,9 @@ targets:
     info:
       path: iOS/Info.plist
       properties:
+        NSLocalNetworkUsageDescription: "Securely pair with ItamarOS Installer on your Windows computer over local Wi-Fi."
+        NSBonjourServices:
+          - _itamaros._tcp
         NSCameraUsageDescription: "Scan QR codes to securely connect your ItamarOS account to another device."
         NSFaceIDUsageDescription: "Confirm it is you before approving sign-in on another ItamarOS device."
         NSContactsUsageDescription: "Contacts are used only when you explicitly choose names for private local message drafts. They are never uploaded."

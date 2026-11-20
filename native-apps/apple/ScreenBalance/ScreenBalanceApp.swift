@@ -98,6 +98,9 @@ struct ScreenBalanceHome: View {
                         NavigationLink { ChangeAppIconView() } label: {
                             Label("Change App Icon", systemImage: "paintpalette.fill")
                         }
+                        NavigationLink { WiFiCompanionScreen() } label: {
+                            Label("Connect to ItamarOS Installer", systemImage: "wifi")
+                        }
                     }
                 }
                 .navigationTitle("Settings")

@@ -446,6 +446,9 @@ struct BrowserHome: View {
                     NavigationLink { ChangeAppIconView() } label: {
                         Label("Change App Icon", systemImage: "paintpalette.fill")
                     }
+                    NavigationLink { WiFiCompanionScreen() } label: {
+                        Label("Connect to ItamarOS Installer", systemImage: "wifi")
+                    }
                 }
                 Section("Privacy") {
                     Button("Clear history and website data", role: .destructive) {
