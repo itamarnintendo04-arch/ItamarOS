@@ -220,7 +220,7 @@ private struct AppInstallSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("installer.target.udid") private var deviceUDID = ""
     @State private var showingSigner = false
-    @State private var showingManifest = false
+    @State private var showingComputerInstall = false
 
     private var candidates: [CertificateMatch] {
         vault.matchesForCustomIPA(bundleIdentifier: app.bundle_id, targetUDID: deviceUDID)
@@ -287,13 +287,13 @@ private struct AppInstallSheet: View {
                     Text("The selected certificate is used for compatibility checks. To protect saved private keys, the current signing workspace requires you to select your authorized P12 and profile again; they are not sent automatically to a remote web page.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Section("3. Install through iOS") {
+                Section("3. Install using computer") {
                     Button {
-                        showingManifest = true
+                        showingComputerInstall = true
                     } label: {
-                        Label("Install with HTTPS manifest", systemImage: "iphone.and.arrow.forward")
+                        Label("Install over USB — no manifest", systemImage: "iphone.and.arrow.forward")
                     }
-                    Text("The signed IPA must be hosted by an authorized distributor with a valid HTTPS manifest. iOS controls the actual installation. This installer cannot silently install an unsigned IPA.")
+                    Text("Transfer the signed IPA to a trusted Windows or Mac computer, connect the iPhone by USB and install it with a supported device installer. No manifest needed.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -307,8 +307,8 @@ private struct AppInstallSheet: View {
             .sheet(isPresented: $showingSigner) {
                 EmbeddedIPASignerView()
             }
-            .sheet(isPresented: $showingManifest) {
-                ManifestInstallView()
+            .sheet(isPresented: $showingComputerInstall) {
+                ComputerInstallView(originalIPA: catalog.downloaded[app.id], expectedBundleIdentifier: app.bundle_id)
             }
         }
     }
