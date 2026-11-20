@@ -18,6 +18,51 @@ nav .brand-nav{display:flex;gap:10px;align-items:center}nav .brand-nav img{heigh
 <nav><strong class="brand-nav"><img src="/assets/branding/itamaros-mark-512.png" width="42" height="42" alt=""> ItamarOS</strong><div><a href="/">Web Emulator</a><a href="https://github.com/itamarnintendo04-arch/ItamarOS" target="_blank" rel="noopener noreferrer">GitHub repository</a><a href="/feedback.html">💬 Feedback</a></div></nav>
 <h1>Download ItamarOS</h1>
 <p class="intro">Official project releases and installer assets are listed from GitHub. This site only links to files actually uploaded to the project. Do not install unverified operating systems on your main device.</p>
+<section class="card" id="official-iphone-apps" aria-live="polite">
+  <span class="badge">Official ItamarOS iPhone apps</span>
+  <h2>Install from the ItamarOS catalog — no manual IPA selection</h2>
+  <p>Choose an official app below. The Windows ItamarOS Installer downloads the corresponding GitHub Release automatically when you select it through the paired Wi-Fi Companion. The signed IPA must still be authorized for your device. The development IPAs below are unsigned.</p>
+  <p><a class="btn" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/windows-installer-2026.11.20-usb.1" rel="noopener noreferrer" target="_blank">Get Windows Installer</a> <a class="btn alt" href="#iphone-download">iPhone installer details</a></p>
+  <div id="official-app-list"><p>Loading the official first-party apps catalog…</p></div>
+  <p class="hint">The IPA files are hosted in official GitHub Releases; they are not embedded in this HTML page. You do not have to browse for or upload an IPA in the companion installation flow.</p>
+</section>
+<script>
+(async function() {
+  const container=document.getElementById('official-app-list');
+  const owner='itamarnintendo04-arch/ItamarOS';
+  const catalogURL='https://raw.githubusercontent.com/'+owner+'/main/catalog/ios-apps.json';
+  try {
+    const response=await fetch(catalogURL,{cache:'no-store'});
+    if(!response.ok)throw Error('Cannot fetch official catalog');
+    const catalog=await response.json();
+    if(catalog.schema_version!==1||!Array.isArray(catalog.apps))throw Error('Unexpected app catalog');
+    container.replaceChildren();
+    for(const app of catalog.apps) {
+      if(!/^[A-Za-z0-9._-]+$/.test(app.release_tag||'')||
+         !/^[A-Za-z0-9._-]+\.ipa$/.test(app.asset_name||''))continue;
+      const card=document.createElement('div');card.className='release';
+      const heading=document.createElement('h3');heading.textContent=app.name;
+      const description=document.createElement('p');
+      description.textContent=(app.description||'')+' — Unsigned developer preview; authorized Apple signing required.';
+      const downloads=document.createElement('a');downloads.className='btn';
+      downloads.textContent='Download official IPA';
+      downloads.href='https://github.com/'+owner+'/releases/download/'+
+        encodeURIComponent(app.release_tag)+'/'+encodeURIComponent(app.asset_name);
+      downloads.rel='noopener noreferrer';downloads.target='_blank';
+      const release=document.createElement('a');release.className='btn alt';
+      release.textContent='Open release';
+      release.href='https://github.com/'+owner+'/releases/tag/'+encodeURIComponent(app.release_tag);
+      release.rel='noopener noreferrer';release.target='_blank';
+      card.append(heading,description,downloads,release);container.append(card);
+    }
+  } catch(error) {
+    container.textContent='The official catalog could not be loaded. Open the GitHub ItamarOS Releases page for verified downloads.';
+    const link=document.createElement('a');link.href='https://github.com/'+owner+'/releases';
+    link.textContent='Open ItamarOS Releases';link.className='btn alt';
+    container.append(link);
+  }
+})();
+</script>
 <section class="card" id="device-files">
 <span class="badge">Choose your device</span>
 <h2>Device-specific ItamarOS downloads</h2>
