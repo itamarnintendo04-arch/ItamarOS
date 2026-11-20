@@ -23,6 +23,9 @@ struct MainScreen: View {
     @State private var importing = false
     @State private var selectedTab = 0
     @State private var alertText: String?
+    @State private var pendingCertificateFiles: [URL] = []
+    @State private var certificatePassword = ""
+    @State private var confirmCertificatePassword = false
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
@@ -30,7 +33,7 @@ struct MainScreen: View {
                     VStack(alignment: .leading, spacing: 20) {
                         header
                         HStack(spacing: 10) {
-                            Label("Import ZIP / P12", systemImage: "square.and.arrow.down")
+                            Label("Import your P12", systemImage: "square.and.arrow.down")
                                 .font(.headline)
                             Spacer()
                             Button { importing = true } label: {
@@ -38,11 +41,11 @@ struct MainScreen: View {
                             }
                         }
                         .padding(.horizontal)
-                        Text("Import your own certificate archives directly from Files. Nothing is uploaded to ItamarOS.")
+                        Text("Choose a P12 or ZIP from Files, then enter its password securely. TXT files are not needed; private keys stay on this iPhone.")
                             .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
                         if vault.records.isEmpty {
                             ContentUnavailableView("No certificates yet", systemImage: "lock.shield",
-                                description: Text("Add a ZIP containing a P12 and password TXT, or import P12 and TXT files."))
+                                description: Text("Import an authorized .p12 certificate and a matching .mobileprovision file. You will be asked for its password."))
                                 .padding(.top, 40)
                         }
                         ForEach(vault.records) { cert in
@@ -84,7 +87,7 @@ struct MainScreen: View {
                     Section("Privacy") {
                         Label("Stored encrypted only on this iPhone", systemImage: "lock.shield")
                         Label("Encryption key stays in iOS Keychain", systemImage: "key.fill")
-                        Text("A TXT password is read once during import, then stored encrypted. This app does not send keys or passwords to a server.")
+                        Text("Enter your P12 password when you import a certificate. The certificate and its password are stored encrypted on this iPhone, never sent to a server.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     Section("Important") {
@@ -98,14 +101,56 @@ struct MainScreen: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [.zip, .data], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let files):
-                do {
-                    let count = try vault.importFiles(files)
-                    alertText = "Imported \(count) certificate(s). \(vault.records.count) are saved on this iPhone."
-                } catch {
-                    alertText = error.localizedDescription
-                }
+                pendingCertificateFiles = files
+                certificatePassword = ""
+                confirmCertificatePassword = true
             case .failure(let error):
                 alertText = error.localizedDescription
+            }
+        }
+        .sheet(isPresented: $confirmCertificatePassword, onDismiss: {
+            certificatePassword = ""
+            pendingCertificateFiles = []
+        }) {
+            NavigationStack {
+                Form {
+                    Section("Certificate password") {
+                        SecureField("Password for the selected P12", text: $certificatePassword)
+                            .textContentType(.password)
+                            .privacySensitive()
+                        Text("This is your certificate password, not your Apple Account password. No TXT file is searched. If the P12 has an empty password, leave this field blank.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Section("Import files") {
+                        Text("\(pendingCertificateFiles.count) selected")
+                        Text("Only import signing certificates you own or are authorized to use.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Button("Import certificate", systemImage: "checkmark.shield.fill") {
+                        do {
+                            let count = try vault.importFiles(pendingCertificateFiles, password: certificatePassword)
+                            alertText = "Imported \(count) certificate(s) to your private vault."
+                        } catch {
+                            alertText = error.localizedDescription
+                        }
+                        certificatePassword = ""
+                        pendingCertificateFiles = []
+                        confirmCertificatePassword = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .navigationTitle("Import Certificate")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Cancel") {
+                            certificatePassword = ""
+                            pendingCertificateFiles = []
+                            confirmCertificatePassword = false
+                        }
+                    }
+                }
             }
         }
         .alert("ItamarOS Installer", isPresented: Binding(get: { alertText != nil },
