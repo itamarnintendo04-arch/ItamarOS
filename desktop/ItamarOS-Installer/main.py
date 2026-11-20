@@ -42,7 +42,7 @@ class Installer(ctk.CTk):
         self.after(100, self._handle_events)
         self.after(180, lambda: self.refresh_catalog(force=False))
         self.after(400, self.scan_device)
-        self.after(300_000, self._periodic_refresh)
+        self.after(1_200_000, self._periodic_refresh)
 
     def _init_shell(self):
         self.grid_columnconfigure(1, weight=1)
@@ -295,6 +295,8 @@ class Installer(ctk.CTk):
         self.status.configure(text=f"Catalog up to date • {len(apps)} projects • Checked GitHub Releases")
         self.progress.set(1)
         self._render_apps()
+        if not self.devices and command_for_device_tool() is not None:
+            self.after(300, self.scan_device)
 
     def scan_device(self):
         if self.busy: return
@@ -335,8 +337,8 @@ class Installer(ctk.CTk):
 
     def _periodic_refresh(self):
         if not self.busy:
-            self.refresh_catalog(force=True)
-        self.after(300_000,self._periodic_refresh)
+            self.refresh_catalog(force=False)
+        self.after(1_200_000,self._periodic_refresh)
 
     def _close(self):
         self.destroy()
