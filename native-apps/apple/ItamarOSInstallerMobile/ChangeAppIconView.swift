@@ -19,11 +19,11 @@ struct ChangeAppIconView: View {
     private let options: [Option] = [
         .init(id: "original", title: "Original", assetName: nil, previewName: "ItamarIconPreviewOriginal"),
         .init(id: "blue", title: "Rainbow Glitch", assetName: "ItamarIconBlue", previewName: "ItamarIconPreviewBlue"),
-        .init(id: "green", title: "Prism Shift", assetName: "ItamarIconGreen", previewName: "ItamarIconPreviewGreen"),
-        .init(id: "purple", title: "RGB Split", assetName: "ItamarIconPurple", previewName: "ItamarIconPreviewPurple"),
-        .init(id: "pink", title: "Holographic", assetName: "ItamarIconPink", previewName: "ItamarIconPreviewPink"),
-        .init(id: "orange", title: "Liquid Spectrum", assetName: "ItamarIconOrange", previewName: "ItamarIconPreviewOrange"),
-        .init(id: "red", title: "Neon Noise", assetName: "ItamarIconRed", previewName: "ItamarIconPreviewRed")
+        .init(id: "green", title: "Prism Shatter", assetName: "ItamarIconGreen", previewName: "ItamarIconPreviewGreen"),
+        .init(id: "purple", title: "RGB Ghost", assetName: "ItamarIconPurple", previewName: "ItamarIconPreviewPurple"),
+        .init(id: "pink", title: "Hologram Waves", assetName: "ItamarIconPink", previewName: "ItamarIconPreviewPink"),
+        .init(id: "orange", title: "Liquid Vortex", assetName: "ItamarIconOrange", previewName: "ItamarIconPreviewOrange"),
+        .init(id: "red", title: "Neon Pixel Storm", assetName: "ItamarIconRed", previewName: "ItamarIconPreviewRed")
     ]
 
     private var columns: [GridItem] {
@@ -34,7 +34,7 @@ struct ChangeAppIconView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Choose a multicolor glitch version of the original logo. Each icon blends multiple rainbow colors with RGB distortion, prismatic light and holographic effects.")
+                Text("Every icon is a different full-image distortion of the original logo: torn rainbow strips, fractured prism pieces, separated RGB ghosts, holographic waves, a liquid vortex or chunky neon pixels. All styles contain multiple colors.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
