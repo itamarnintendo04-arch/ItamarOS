@@ -9,7 +9,7 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: itamaros-all-app-releases
+  group: itamaros-app-releases-fast-track
   cancel-in-progress: false
 jobs:
   build-mirrored-authenticator:
