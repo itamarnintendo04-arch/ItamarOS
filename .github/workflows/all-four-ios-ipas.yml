@@ -36,7 +36,9 @@ jobs:
       - name: Generate non-game iOS Home Screen icon colors
         run: |
           python3 native-apps/apple/BrowserOS/generate_icon.py
-          python3 native-apps/apple/scripts/generate_icon_variants.py
+          for app in "ItamarOS" "BrowserOS" "Screen Balance" "ItamarCut" "Voice Recorder"; do
+            python3 native-apps/apple/scripts/generate_icon_variants.py --app "$app"
+          done
       - name: Generate Xcode project
         working-directory: native-apps/apple
         run: xcodegen generate

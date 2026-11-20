@@ -18,7 +18,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Screen Balance app icon
-        run: python3 native-apps/apple/ScreenBalance/generate_icon.py
+        run: |
+          python3 -m pip install --break-system-packages Pillow
+          python3 native-apps/apple/ScreenBalance/generate_icon.py
       - name: Generate Screen Balance Home Screen color icons
         run: |
           python3 -m pip install --break-system-packages Pillow

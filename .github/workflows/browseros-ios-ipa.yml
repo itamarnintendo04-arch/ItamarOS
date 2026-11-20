@@ -19,7 +19,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate BrowserOS icon
-        run: python3 native-apps/apple/BrowserOS/generate_icon.py
+        run: |
+          python3 -m pip install --break-system-packages Pillow
+          python3 native-apps/apple/BrowserOS/generate_icon.py
       - name: Generate BrowserOS Home Screen color icons
         run: |
           python3 -m pip install --break-system-packages Pillow
