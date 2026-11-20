@@ -1,0 +1,50 @@
+name: Publish ItamarOS USB Installer Windows Release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-itamaros-usb-release.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download successful Windows USB Installer build
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh run download 44787387299 --repo "$GITHUB_REPOSITORY" --dir dist
+      - name: Validate and hash EXE
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          files = [p for p in Path("dist").rglob("*") if p.suffix.lower() == ".exe"]
+          assert len(files) == 1, f"Expected one EXE, found {files}"
+          data = files[0].read_bytes()
+          assert len(data) >= 100_000 and data[:2] == b"MZ", "Invalid Windows EXE"
+          destination = Path("ItamarOS-Installer-USB-v2.1.exe")
+          destination.write_bytes(data)
+          Path("SHA256SUMS.txt").write_text(sha256(data).hexdigest() + "  " + destination.name + "\n")
+          print(destination.name, destination.stat().st_size)
+          PY
+      - name: Publish USB Installer prerelease
+        run: |
+          set -euo pipefail
+          TAG='windows-installer-2026.11.20-usb.1'
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; leaving existing binaries unchanged."
+            exit 0
+          fi
+          gh release create "$TAG" ItamarOS-Installer-USB-v2.1.exe SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'ItamarOS Installer for Windows — USB installation without manifest' \
+            --notes 'Windows utility with My iPhone > Install Local IPA over USB. Connect, unlock and trust your iPhone, then select a properly signed IPA. No manifest or public hosting is necessary. Requires Apple Mobile Device Support and the configured pymobiledevice3 helper. iOS checks signing identity and provisioning and may reject untrusted IPA files. This executable does not include certificates, P12 passwords or Apple account credentials.'
