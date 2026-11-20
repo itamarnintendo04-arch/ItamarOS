@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "published_at": "2026-11-20",
+  "note": "All downloadable iOS builds are unsigned development previews. They require legitimate Apple code signing and device provisioning. No private certificates are distributed.",
+  "apps": [
+    {
+      "id": "ItamarOSiOS",
+      "name": "ItamarOS",
+      "description": "The ItamarOS native iPhone and iPad app.",
+      "category": "System",
+      "bundle_id": "org.itamaros.mobile",
+      "release_tag": "ios-itamaros-2026.11.20-preview.1",
+      "asset_name": "ItamarOSiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/iOS",
+      "icon_path": "native-apps/apple/iOS/Assets.xcassets/AppIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "CloudClimbiOS",
+      "name": "Cloud Climb",
+      "description": "Cloud Climb platform adventure.",
+      "category": "Games",
+      "bundle_id": "org.itamaros.cloudclimb",
+      "release_tag": "ios-cloud-climb-2026.11.20-preview.1",
+      "asset_name": "CloudClimbiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/CloudClimb",
+      "icon_path": "native-apps/apple/CloudClimb/Assets.xcassets/CloudClimbAppIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "ItamarOSGamesiOS",
+      "name": "ItamarOS Games",
+      "description": "ItamarOS original games collection.",
+      "category": "Games",
+      "bundle_id": "org.itamaros.games",
+      "release_tag": "ios-itamaros-games-2026.11.20-preview.1",
+      "asset_name": "ItamarOSGamesiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/ItamarOSGames",
+      "icon_path": "native-apps/apple/ItamarOSGames/Assets.xcassets/GamesIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "SkyboundIslesiOS",
+      "name": "Skybound Isles",
+      "description": "Explore sky islands in a standalone game.",
+      "category": "Games",
+      "bundle_id": "org.itamaros.skybound",
+      "release_tag": "ios-skybound-isles-2026.11.20-preview.1",
+      "asset_name": "SkyboundIslesiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/SkyboundIsles",
+      "icon_path": "native-apps/apple/SkyboundIsles/Assets.xcassets/SkyboundIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "ArenaRushiOS",
+      "name": "Arena Rush",
+      "description": "Arena Rush standalone action game.",
+      "category": "Games",
+      "bundle_id": "org.itamaros.arenarush",
+      "release_tag": "ios-arena-rush-2026.11.20-preview.1",
+      "asset_name": "Arena-Rush-By-ItamarOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/ArenaRush",
+      "icon_path": "",
+      "requires_signing": true
+    },
+    {
+      "id": "ItamarCutiOS",
+      "name": "ItamarCut",
+      "description": "Video editor for iPhone.",
+      "category": "Creative",
+      "bundle_id": "org.itamaros.cut",
+      "release_tag": "ios-itamarcut-2026.11.20-preview.1",
+      "asset_name": "ItamarCutiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/ItamarCut",
+      "icon_path": "native-apps/apple/ItamarCut/Assets.xcassets/ItamarCutIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "VoiceRecorderiOS",
+      "name": "Voice Recorder",
+      "description": "Voice recording and audio library.",
+      "category": "Creative",
+      "bundle_id": "org.itamaros.voicerecorder",
+      "release_tag": "ios-voice-recorder-2026.11.20-preview.1",
+      "asset_name": "VoiceRecorderiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/VoiceRecorder",
+      "icon_path": "native-apps/apple/VoiceRecorder/Assets.xcassets/VoiceRecorderIcon.appiconset/Icon.png",
+      "requires_signing": true
+    },
+    {
+      "id": "BrowserOSiOS",
+      "name": "BrowserOS",
+      "description": "Native ItamarOS web browser.",
+      "category": "Utilities",
+      "bundle_id": "org.itamaros.browseros",
+      "release_tag": "ios-browseros-2026.11.20-preview.1",
+      "asset_name": "BrowserOS-By-ItamarOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/BrowserOS",
+      "icon_path": "",
+      "requires_signing": true
+    },
+    {
+      "id": "ScreenBalanceiOS",
+      "name": "ItamarOS Screen Balance",
+      "description": "Screen time and family balance.",
+      "category": "Utilities",
+      "bundle_id": "org.itamaros.screenbalance",
+      "release_tag": "ios-screen-balance-2026.11.20-preview.1",
+      "asset_name": "ScreenBalanceiOS-UNSIGNED.ipa",
+      "source_path": "native-apps/apple/ScreenBalance",
+      "icon_path": "",
+      "requires_signing": true
+    },
+    {
+      "id": "ItamarOS-Authenticator",
+      "name": "ItamarOS Authenticator",
+      "description": "Secure account codes and sign-in approvals.",
+      "category": "Security",
+      "bundle_id": "net.itamaros.authenticator",
+      "release_tag": "ios-authenticator-2026.11.20-preview.1",
+      "asset_name": "ItamarOSAuthenticator-unsigned.ipa",
+      "source_path": "external-apps/ItamarOS-Authenticator/ItamarOSAuthenticator",
+      "icon_path": "external-apps/ItamarOS-Authenticator/assets/icon-source.png",
+      "requires_signing": true
+    },
+    {
+      "id": "ItamarOS-Installer",
+      "name": "ItamarOS Installer",
+      "description": "iOS app catalog and private signing certificate vault.",
+      "category": "Utilities",
+      "bundle_id": "net.itamaros.installer.mobile",
+      "release_tag": "ios-installer-2026.11.20-preview.1",
+      "asset_name": "ItamarOSInstallerMobile-unsigned.ipa",
+      "source_path": "native-apps/apple/ItamarOSInstallerMobile",
+      "icon_path": "",
+      "requires_signing": true
+    }
+  ],
+  "other_apps": [
+    {
+      "id": "ItamarOS-Windows-Installer",
+      "name": "ItamarOS Installer for Windows",
+      "category": "Windows",
+      "release_tag": "windows-installer-2026.11.20-preview.1",
+      "asset_name": "ItamarOS.Installer.exe",
+      "source_path": "desktop/ItamarOS-Installer"
+    },
+    {
+      "id": "ItamarOS-iPhone-Studio",
+      "name": "ItamarOS iPhone Studio",
+      "category": "Windows",
+      "release_tag": "windows-iphone-studio-2026.11.20-preview.1",
+      "asset_name": null,
+      "source_path": "external-apps/ItamarOS-iPhone-Studio"
+    },
+    {
+      "id": "ItamarOS-App-Studio",
+      "name": "ItamarOS App Studio",
+      "category": "Web",
+      "release_tag": "web-app-studio-2026.11.20-preview.1",
+      "asset_name": null,
+      "source_path": "external-apps/ItamarOS-App-Studio"
+    }
+  ]
+}
