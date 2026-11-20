@@ -156,7 +156,7 @@ struct CustomIPAScreen: View {
                             Text("Your iPhone's device UDID").font(.headline)
                             TextField("Enter UDID from your trusted computer", text: $deviceUDID)
                                 .textInputAutocapitalization(.characters)
-                                .textInputAutocorrectionDisabled()
+                                .autocorrectionDisabled()
                                 .font(.caption.monospaced())
                                 .textFieldStyle(.roundedBorder)
                             Text("iOS apps cannot read the hardware UDID. Copy it from Finder, Apple Devices, or iTunes on a computer you trust. This value stays on your iPhone.")
