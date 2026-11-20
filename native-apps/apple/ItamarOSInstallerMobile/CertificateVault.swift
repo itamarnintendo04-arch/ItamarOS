@@ -271,7 +271,7 @@ final class CertificateVault: ObservableObject {
         guard status == errSecSuccess,
               let rows = identities as? [[String: Any]],
               let row = rows.first,
-              let identity = row[kSecImportItemIdentity as String] as! SecIdentity? else {
+              let identity = row[kSecImportItemIdentity as String] as? SecIdentity else {
             throw VaultError.message("P12 could not be unlocked with the matching TXT password.")
         }
         var cert: SecCertificate?
