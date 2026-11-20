@@ -15,14 +15,14 @@ The main-repository registry is `catalog/ios-apps.json`, with links to each app'
 
 1. Inspect the user's locally imported P12 and provisioning profile for **Bundle ID**, **expiration**, **signing identity** and **iPhone UDID** compatibility.
 2. Download the app's **unsigned developer IPA** from its main-repository release, inspect the IPA's Info.plist, and verify that the Bundle ID matches the registry.
-3. Open the existing **first-party browser-based WebAssembly signer**. The signer currently requires the user to explicitly choose their authorized P12, profile and IPA files again. The app does **not** silently transmit vault secrets to the website.
-4. **No manifest required:** export the signed IPA to your Windows or Mac computer, connect your unlocked and trusted iPhone using USB, and open **ItamarOS Installer → My iPhone → Install Local IPA over USB**. Apple's device services and iOS verify the signature and provisioning. The mobile app cannot install another app silently.
+3. Tap **Open WebView installation**. The embedded WKWebView displays the first-party browser-based WebAssembly signer. Its **Install — sign IPA first** button runs local signing after the user explicitly chooses the authorized P12, profile, password and IPA. The app does **not** silently transmit vault secrets to the page.
+4. Once the signer exports the signed IPA, it can be saved or shared from the app. **The WebView cannot itself install arbitrary IPAs**. Using this signing screen does not require a manifest or a connected computer, but installing the resulting IPA still requires Apple's approved distribution method (for example an authorized USB device installer or an OTA installation manifest hosted by an authorized distributor).
 
 The iPhone UDID must be provided from a trusted Windows/Mac device, because iOS third-party applications cannot access the real hardware UDID directly. A matching profile is a **preflight match**, not proof of non-revocation or guaranteed installation.
 
 ## What is not implemented
 
-**Automatic use of encrypted P12 credentials within the signer, silent on-device signing and one-tap installation of arbitrary unsigned IPAs are not implemented.** The app's Install buttons guide users through authorized steps and do not claim an app is installed before iOS confirms it. Full automatic signing would require a reviewed, bundled **offline** signing engine that never passes private keys to remote JavaScript.
+**Automatic use of encrypted P12 credentials within the signer and one-tap installation of arbitrary IPAs from a WebView are not implemented (and normal WKWebView applications are not granted such installation privileges).** The app's Install buttons guide users through authorized steps and do not claim an app is installed before iOS confirms it. Full automatic signing would require a reviewed, bundled **offline** signing engine that never passes private keys to remote JavaScript.
 
 ## Source and builds
 
