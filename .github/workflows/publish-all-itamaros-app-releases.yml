@@ -1,0 +1,178 @@
+name: Publish all ItamarOS app Releases
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-all-itamaros-app-releases.yml'
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: itamaros-all-app-releases
+  cancel-in-progress: false
+jobs:
+  build-mirrored-authenticator:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Authenticator images
+        working-directory: external-apps/ItamarOS-Authenticator
+        run: |
+          set -euo pipefail
+          python3 -m pip install --break-system-packages Pillow
+          mkdir -p ItamarOSAuthenticator/Assets.xcassets/AppIcon.appiconset
+          sips -s format png -z 1024 1024 assets/icon-source.png \
+            --out ItamarOSAuthenticator/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+          python3 scripts/generate_icon_variants.py
+      - name: Build unsigned Authenticator from main-repo source
+        working-directory: external-apps/ItamarOS-Authenticator
+        run: |
+          set -euo pipefail
+          brew install xcodegen
+          xcodegen generate --spec project.yml
+          xcodebuild -project ItamarOSAuthenticator.xcodeproj \
+            -scheme ItamarOSAuthenticator -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/AuthenticatorBuild" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          APP="$RUNNER_TEMP/AuthenticatorBuild/Build/Products/Release-iphoneos/ItamarOSAuthenticator.app"
+          test -d "$APP"
+          mkdir -p "$RUNNER_TEMP/auth-ipa/Payload" "$GITHUB_WORKSPACE/output"
+          cp -R "$APP" "$RUNNER_TEMP/auth-ipa/Payload/"
+          (cd "$RUNNER_TEMP/auth-ipa" && zip -qry "$GITHUB_WORKSPACE/output/ItamarOSAuthenticator-unsigned.ipa" Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Authenticator-Main-Repository-IPA
+          path: output/ItamarOSAuthenticator-unsigned.ipa
+          if-no-files-found: error
+
+  publish:
+    needs: [build-mirrored-authenticator]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified iOS and Windows artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p incoming/seven incoming/browseros incoming/arena incoming/installer incoming/windows
+          gh run download 44768119866 --repo "$GITHUB_REPOSITORY" --dir incoming/seven
+          gh run download 44768119966 --repo "$GITHUB_REPOSITORY" --dir incoming/browseros
+          gh run download 44771278200 --repo "$GITHUB_REPOSITORY" --dir incoming/arena
+          gh run download 44771957859 --repo "$GITHUB_REPOSITORY" --dir incoming/installer
+          gh run download 44746420294 --repo "$GITHUB_REPOSITORY" --dir incoming/windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: Authenticator-Main-Repository-IPA
+          path: incoming/authenticator
+      - name: Validate IPA identities and prepare 14 releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, plistlib, shutil, zipfile
+          root = pathlib.Path("incoming")
+          out = pathlib.Path("release-staging")
+          out.mkdir(exist_ok=True)
+          catalog = json.loads(pathlib.Path("catalog/ios-apps.json").read_text())
+          input_files = [p for p in root.rglob("*") if p.is_file()]
+          original_runs = {
+            "ItamarOSiOS": "44768119866", "CloudClimbiOS": "44768119866",
+            "ItamarOSGamesiOS": "44768119866", "SkyboundIslesiOS": "44768119866",
+            "VoiceRecorderiOS": "44768119866", "ItamarCutiOS": "44768119866",
+            "ScreenBalanceiOS": "44768119866", "BrowserOSiOS": "44768119966",
+            "ArenaRushiOS": "44771278200", "ItamarOS-Installer": "44771957859",
+            "ItamarOS-Authenticator": "built from main-repository source"
+          }
+          for app in catalog["apps"]:
+            tag, name = app["release_tag"], app["asset_name"]
+            matches = [f for f in input_files if f.name == name]
+            if len(matches) != 1:
+              raise RuntimeError(f"Expected exactly one {name}, got {len(matches)}")
+            ipa = matches[0]
+            if ipa.stat().st_size < 1000:
+              raise RuntimeError(f"Empty IPA {ipa}")
+            with zipfile.ZipFile(ipa) as z:
+              if z.testzip() is not None:
+                raise RuntimeError(f"Corrupt IPA {ipa}")
+              infos = [n for n in z.namelist() if n.startswith("Payload/") and
+                       n.count("/") == 2 and n.endswith(".app/Info.plist")]
+              if len(infos) != 1:
+                raise RuntimeError(f"Invalid IPA metadata: {ipa}")
+              info = plistlib.loads(z.read(infos[0]))
+              actual_id = str(info.get("CFBundleIdentifier", ""))
+              if actual_id != app["bundle_id"]:
+                raise RuntimeError(f"{name}: Bundle ID is {actual_id}; expected {app['bundle_id']}")
+              actual_version = str(info.get("CFBundleShortVersionString", "Unknown"))
+            dst = out / tag
+            dst.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ipa, dst / name)
+            digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+            (dst / "RELEASE_NOTES.md").write_text(
+              f"# {app['name']} — iOS developer preview\n\n"
+              "**UNSIGNED IPA — this is not a directly installable app.**\n\n"
+              "To install it, use an Apple-issued certificate that you own or have explicit "
+              "permission to use, an appropriate provisioning profile for your device, "
+              "and a supported Apple installation method. No private signing credentials "
+              "are included with this release.\n\n"
+              f"- Bundle ID: {actual_id}\n- App version: {actual_version}\n"
+              f"- Build provenance: {original_runs[app['id']]}\n"
+              f"- Main-repository source: https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/{app['source_path']}\n"
+              f"- SHA-256: {digest}\n"
+            )
+            print(f"Verified {app['name']}: {actual_id} ({actual_version}), {ipa.stat().st_size} bytes")
+          for app in catalog["other_apps"]:
+            dst = out / app["release_tag"]
+            dst.mkdir(parents=True, exist_ok=True)
+            path = pathlib.Path(app["source_path"])
+            if not path.is_dir():
+              raise RuntimeError(f"Missing main-repository source folder: {path}")
+            if app["id"] == "ItamarOS-Windows-Installer":
+              matches = [f for f in input_files if f.name == app["asset_name"]]
+              if len(matches) != 1:
+                raise RuntimeError("Verified Windows Installer EXE not found")
+              shutil.copyfile(matches[0], dst / app["asset_name"])
+              (dst / "RELEASE_NOTES.md").write_text(
+                "# ItamarOS Installer — Windows preview\n\n"
+                "Windows EXE built in successful Actions run 44746420294. "
+                "It requires supported iPhone USB drivers and signed IPAs.\n"
+              )
+            else:
+              archive_name = app["id"] + "-source.zip"
+              with zipfile.ZipFile(dst / archive_name, "w", zipfile.ZIP_DEFLATED) as z:
+                for f in path.rglob("*"):
+                  if f.is_file() and not any(x in f.parts for x in (".git", "node_modules", "build")):
+                    z.write(f, f.relative_to(path.parent))
+              (dst / "RELEASE_NOTES.md").write_text(
+                f"# {app['name']} — source preview\n\n"
+                "Source snapshot mirrored into the main ItamarOS repository. "
+                "It is not a verified signed app build. See the included README.\n"
+              )
+            assets = [p for p in dst.iterdir() if p.is_file() and p.name != "RELEASE_NOTES.md"]
+            (dst / "SHA256SUMS.txt").write_text("".join(
+              hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.name + "\n"
+              for p in assets
+            ))
+          PY
+      - name: Publish all individual app prereleases
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in release-staging/*; do
+            [ -d "$dir" ] || continue
+            tag="$(basename "$dir")"
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Preserving existing release: $tag"
+              continue
+            fi
+            shopt -s nullglob
+            assets=("$dir"/*.ipa "$dir"/*.exe "$dir"/*.zip "$dir"/SHA256SUMS.txt)
+            gh release create "$tag" "${assets[@]}" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease --title "$tag" \
+              --notes-file "$dir/RELEASE_NOTES.md"
+            echo "Published $tag"
+          done
