@@ -1,0 +1,46 @@
+name: Build ItamarOS Installer Mobile IPA
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'native-apps/apple/ItamarOSInstallerMobile/**'
+      - '.github/workflows/itamaros-installer-mobile.yml'
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: native-apps/apple/ItamarOSInstallerMobile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Installer icon
+        run: |
+          python3 icon.py
+      - name: Generate Xcode project
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate --spec project.yml
+      - name: Build unsigned iOS IPA
+        run: |
+          set -euo pipefail
+          xcodebuild -project ItamarOSInstallerMobile.xcodeproj -scheme ItamarOSInstaller \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$PWD/build" -resolvePackageDependencies \
+            CODE_SIGNING_ALLOWED=NO
+          xcodebuild -project ItamarOSInstallerMobile.xcodeproj -scheme ItamarOSInstaller \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          test -d build/Build/Products/Release-iphoneos/ItamarOSInstaller.app
+          mkdir -p dist/Payload
+          cp -R build/Build/Products/Release-iphoneos/ItamarOSInstaller.app dist/Payload/
+          (cd dist && zip -qr ../ItamarOSInstallerMobile-unsigned.ipa Payload)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Installer-Mobile-Unsigned-IPA
+          path: native-apps/apple/ItamarOSInstallerMobile/ItamarOSInstallerMobile-unsigned.ipa
+          if-no-files-found: error
