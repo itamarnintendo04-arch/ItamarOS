@@ -303,3 +303,101 @@ final class CertificateVault: ObservableObject {
         return object["ExpirationDate"] as? Date
     }
 }
+
+
+// All checks below are local, best-effort eligibility checks.
+// They are NOT Apple signature, revocation, or installation verification.
+extension CertificateVault {
+    func matchesForCustomIPA(bundleIdentifier: String, targetUDID: String) -> [CertificateMatch] {
+        let device = targetUDID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let results = EncryptedStore.loadAll().map { stored -> CertificateMatch in
+            let cert = stored.info
+            func reject(_ reason: String) -> CertificateMatch {
+                CertificateMatch(id: cert.id, name: cert.name, expiry: cert.effectiveExpiry,
+                                 level: .rejected, reason: reason)
+            }
+            func review(_ reason: String) -> CertificateMatch {
+                CertificateMatch(id: cert.id, name: cert.name, expiry: cert.effectiveExpiry,
+                                 level: .reviewRequired, reason: reason)
+            }
+            if cert.dateExpired { return reject("Certificate or profile expired.") }
+            guard let p12Expiry = cert.certificateExpires, p12Expiry > Date() else {
+                return review("Unable to confirm certificate expiration.")
+            }
+            guard let profileData = stored.mobileprovision else {
+                return reject("Missing .mobileprovision for this signing identity.")
+            }
+            guard let profile = Self.readProfilePlist(profileData) else {
+                return review("Cannot inspect this provisioning profile.")
+            }
+            guard let profileExpiry = profile["ExpirationDate"] as? Date else {
+                return review("Provisioning profile has no readable expiration date.")
+            }
+            if profileExpiry <= Date() { return reject("Provisioning profile expired.") }
+            guard let includedCerts = profile["DeveloperCertificates"] as? [Data],
+                  !includedCerts.isEmpty else {
+                return review("Profile's signing certificate list is unavailable.")
+            }
+            let matchesIdentity = includedCerts.contains { item in
+                SHA256.hash(data: item).map { String(format: "%02x", $0) }.joined()
+                    .caseInsensitiveCompare(cert.fingerprint) == .orderedSame
+            }
+            if !matchesIdentity {
+                return reject("This P12 is not a signing identity in this profile.")
+            }
+            guard let entitlements = profile["Entitlements"] as? [String: Any],
+                  let appId = (entitlements["application-identifier"] as? String)
+                    ?? (entitlements["com.apple.application-identifier"] as? String) else {
+                return review("Profile does not expose an application identifier.")
+            }
+            let components = appId.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+            guard components.count == 2 else {
+                return review("Profile app identifier cannot be interpreted.")
+            }
+            let allowed = String(components[1])
+            if !(allowed == bundleIdentifier ||
+                 (allowed.hasSuffix("*") && bundleIdentifier.hasPrefix(String(allowed.dropLast())))) {
+                return reject("Provisioning profile does not match this IPA's Bundle ID.")
+            }
+            if let platforms = profile["Platform"] as? [String], !platforms.contains("iOS") {
+                return reject("Provisioning profile is not for iOS.")
+            }
+            if device.isEmpty {
+                return review("Enter your iPhone UDID to verify the device restriction.")
+            }
+            guard device.range(of: #"^[A-F0-9-]{16,48}$"#, options: .regularExpression) != nil else {
+                return review("The entered device UDID format needs to be checked.")
+            }
+            if let registered = profile["ProvisionedDevices"] as? [String] {
+                if !registered.contains(where: { $0.uppercased() == device }) {
+                    return reject("This provisioning profile does not list the selected iPhone UDID.")
+                }
+            } else if (profile["ProvisionsAllDevices"] as? Bool) == true {
+                return review("Enterprise profile: eligibility and authorization must be checked separately.")
+            } else {
+                return reject("App Store or unknown profile: not usable for direct device installation.")
+            }
+            return CertificateMatch(id: cert.id, name: cert.name,
+                                    expiry: min(p12Expiry, profileExpiry),
+                                    level: .preflightMatch,
+                                    reason: "P12, Bundle ID, dates, and device UDID match. Apple verification still required.")
+        }
+        return results.sorted { lhs, rhs in
+            if lhs.level != rhs.level { return lhs.level.rawValue > rhs.level.rawValue }
+            return (lhs.expiry ?? .distantPast) > (rhs.expiry ?? .distantPast)
+        }
+    }
+
+    private static func readProfilePlist(_ data: Data) -> [String: Any]? {
+        // CMS contains a property-list payload. Do not trust its fields as verified
+        // until Apple validates the CMS signature during installation.
+        let startTag = Data("<plist".utf8)
+        let endTag = Data("</plist>".utf8)
+        guard let start = data.range(of: startTag),
+              let end = data.range(of: endTag, in: start.lowerBound..<data.endIndex),
+              end.upperBound - start.lowerBound < 1_000_000 else { return nil }
+        let bytes = data.subdata(in: start.lowerBound..<end.upperBound)
+        return (try? PropertyListSerialization.propertyList(from: bytes,
+                      options: [], format: nil)) as? [String: Any]
+    }
+}
