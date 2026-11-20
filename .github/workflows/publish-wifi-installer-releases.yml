@@ -1,0 +1,78 @@
+name: Publish ItamarOS Wi-Fi Installer Releases
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-wifi-installer-releases.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download validated Windows and iOS builds
+        run: |
+          set -euo pipefail
+          mkdir -p original/windows original/ios release/windows release/ios
+          gh run download 44796513512 --repo "$GITHUB_REPOSITORY" --dir original/windows
+          gh run download 44796253896 --repo "$GITHUB_REPOSITORY" --dir original/ios
+      - name: Verify embedded files and generate SHA256SUMS
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import pathlib
+          import plistlib
+          import shutil
+          import zipfile
+          root=pathlib.Path("original")
+          out=pathlib.Path("release")
+          exe=[p for p in (root/"windows").rglob("*.exe") if p.is_file()]
+          ipa=[p for p in (root/"ios").rglob("*.ipa") if p.is_file()]
+          assert len(exe)==len(ipa)==1, "Expected one successfully built Windows EXE and one unsigned iPhone IPA"
+          exe_name="ItamarOS-Installer-WiFi-v2.2.exe"
+          ipa_name="ItamarOS-Installer-WiFi-v1.5-UNSIGNED.ipa"
+          assert exe[0].stat().st_size > 500_000 and exe[0].read_bytes()[:2]==b"MZ", "Invalid Windows EXE"
+          with zipfile.ZipFile(ipa[0]) as z:
+            assert z.testzip() is None, "Corrupted IPA"
+            matching=[x for x in z.namelist() if x.startswith("Payload/") and
+                      x.count("/")==2 and x.endswith(".app/Info.plist")]
+            assert len(matching)==1, "IPA missing Info.plist"
+            info=plistlib.loads(z.read(matching[0]))
+            assert info.get("CFBundleIdentifier")=="net.itamaros.installer.mobile", "Wrong iOS bundle"
+            assert info.get("CFBundleShortVersionString")=="1.5.0", "Wrong iPhone app version"
+            assert "_itamaros._tcp" in info.get("NSBonjourServices",[]), "Bonjour discovery missing"
+          shutil.copyfile(exe[0],out/"windows"/exe_name)
+          shutil.copyfile(ipa[0],out/"ios"/ipa_name)
+          for platform,name in (("windows",exe_name),("ios",ipa_name)):
+            p=out/platform/name
+            (out/platform/"SHA256SUMS.txt").write_text(
+              hashlib.sha256(p.read_bytes()).hexdigest()+"  "+name+"\n"
+            )
+            print("Verified",name,p.stat().st_size)
+          PY
+      - name: Publish Windows and iOS preview Releases
+        run: |
+          set -euo pipefail
+          WINDOWS=windows-installer-2026.11.20-wifi.1
+          IOS=ios-installer-2026.11.20-wifi.1
+          if ! gh release view "$WINDOWS" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$WINDOWS" release/windows/ItamarOS-Installer-WiFi-v2.2.exe \
+              release/windows/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title "ItamarOS Installer 2.2 — Windows Wi-Fi Companion" \
+              --notes 'Verified Windows build from GitHub Actions 44796513512. Opt-in TLS-pinned local Wi-Fi server, ephemeral QR pairing, Bonjour discovery, desktop-approved requests to install official first-party apps and automatic IPA downloads from the ItamarOS GitHub releases. Requires one-time Apple USB pairing for supported Wi-Fi device services. Official unsigned previews still require appropriate authorized Apple signing and provisioning before installation. No P12 keys or passwords are distributed.'
+          fi
+          if ! gh release view "$IOS" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$IOS" release/ios/ItamarOS-Installer-WiFi-v1.5-UNSIGNED.ipa \
+              release/ios/SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title "ItamarOS Installer Mobile 1.5 — Wi-Fi Companion (Unsigned IPA)" \
+              --notes 'Verified unsigned iOS build from GitHub Actions 44796253896, bundle net.itamaros.installer.mobile. Contains Wi-Fi Companion tab, Bonjour discovery, camera QR pairing, pinned HTTPS requests, official first-party app catalog and device metadata view. This IPA MUST be signed by an authorized Apple-issued identity and provisioned for the recipient device before it can be installed. The app cannot bypass iOS installation restrictions. No Apple keys or passwords are embedded.'
+          fi
