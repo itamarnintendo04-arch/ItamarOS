@@ -1,0 +1,47 @@
+name: Build ItamarOS Installer (Windows)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'desktop/ItamarOS-Installer/**'
+      - '.github/workflows/build-itamaros-installer.yml'
+permissions:
+  contents: read
+jobs:
+  windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop/ItamarOS-Installer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.16,<7"
+      - name: Run core tests
+        run: python -m unittest discover -s tests -v
+      - name: Check GUI import
+        run: python -c "import main; print('GUI imported successfully')"
+      - name: Generate Windows icon
+        run: python scripts/create_icon.py
+      - name: Build standalone EXE
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "ItamarOS Installer" --icon assets/installer.ico --collect-all customtkinter main.py
+      - name: Verify executable
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'dist/ItamarOS Installer.exe')) { throw "Windows executable not produced" }
+          Get-Item 'dist/ItamarOS Installer.exe' | Select-Object Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Installer-Windows-EXE
+          path: desktop/ItamarOS-Installer/dist/ItamarOS Installer.exe
+          if-no-files-found: error
+          retention-days: 90
