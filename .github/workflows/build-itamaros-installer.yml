@@ -30,10 +30,12 @@ jobs:
         run: python -c "import main; print('GUI imported successfully')"
       - name: Generate Windows icon
         run: python scripts/create_icon.py
+      - name: Prepare official ItamarOS app icons
+        run: python scripts/prepare_assets.py
       - name: Build standalone EXE
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "ItamarOS Installer" --icon assets/installer.ico --collect-all customtkinter main.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name "ItamarOS Installer" --icon "../../assets/branding/itamaros-icon.ico" --add-data "resources;resources" --collect-all customtkinter main.py
       - name: Verify executable
         shell: pwsh
         run: |
