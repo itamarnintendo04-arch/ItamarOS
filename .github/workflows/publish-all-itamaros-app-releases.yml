@@ -106,6 +106,7 @@ jobs:
             dst.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ipa, dst / name)
             digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+            (dst / "SHA256SUMS.txt").write_text(f"{digest}  {name}\n")
             (dst / "RELEASE_NOTES.md").write_text(
               f"# {app['name']} — iOS developer preview\n\n"
               "**UNSIGNED IPA — this is not a directly installable app.**\n\n"
