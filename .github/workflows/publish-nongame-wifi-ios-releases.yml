@@ -1,0 +1,93 @@
+name: Publish verified ItamarOS Wi-Fi Companion iOS apps
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-nongame-wifi-ios-releases.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download existing successful iOS builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p input/seven input/browser input/screen
+          gh run download 44797601245 --repo "$GITHUB_REPOSITORY" --dir input/seven
+          gh run download 44797601195 --repo "$GITHUB_REPOSITORY" --dir input/browser
+          gh run download 44797601153 --repo "$GITHUB_REPOSITORY" --dir input/screen
+      - name: Validate and publish five separate app Releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import os
+          import pathlib
+          import plistlib
+          import subprocess
+          import zipfile
+          builds=[
+            ("ItamarOS", "ItamarOSiOS-UNSIGNED.ipa", "org.itamaros.mobile",
+             "ios-itamaros-2026.11.20-wifi.1", "44797601245"),
+            ("BrowserOS", "BrowserOS-By-ItamarOS-UNSIGNED.ipa", "org.itamaros.browseros",
+             "ios-browseros-2026.11.20-wifi.1", "44797601195"),
+            ("Screen Balance", "ScreenBalanceiOS-UNSIGNED.ipa", "org.itamaros.screenbalance",
+             "ios-screen-balance-2026.11.20-wifi.1", "44797601153"),
+            ("ItamarCut", "ItamarCutiOS-UNSIGNED.ipa", "org.itamaros.cut",
+             "ios-itamarcut-2026.11.20-wifi.1", "44797601245"),
+            ("Voice Recorder", "VoiceRecorderiOS-UNSIGNED.ipa", "org.itamaros.voicerecorder",
+             "ios-voice-recorder-2026.11.20-wifi.1", "44797601245"),
+          ]
+          files=[p for p in pathlib.Path("input").rglob("*.ipa") if p.is_file()]
+          repo=os.environ["GITHUB_REPOSITORY"]
+          for name,filename,bundle,tag,run in builds:
+            matches=[p for p in files if p.name==filename]
+            if len(matches)!=1: raise RuntimeError(f"Expected one official IPA {filename}, found {matches}")
+            ipa=matches[0]
+            with zipfile.ZipFile(ipa) as z:
+              if z.testzip() is not None: raise RuntimeError(f"IPA corrupted: {filename}")
+              plists=[n for n in z.namelist() if n.startswith("Payload/")
+                      and n.count("/")==2 and n.endswith(".app/Info.plist")]
+              if len(plists)!=1: raise RuntimeError(f"No unique Info.plist in {filename}")
+              plist=plistlib.loads(z.read(plists[0]))
+              if plist.get("CFBundleIdentifier")!=bundle: raise RuntimeError("Bundle ID mismatch")
+              if "_itamaros._tcp" not in plist.get("NSBonjourServices",[]):
+                raise RuntimeError(f"Wi-Fi Bonjour service missing: {filename}")
+            sha=hashlib.sha256(ipa.read_bytes()).hexdigest()
+            folder=pathlib.Path("release-assets")/tag
+            folder.mkdir(parents=True,exist_ok=True)
+            destination=folder/filename
+            destination.write_bytes(ipa.read_bytes())
+            sums=folder/"SHA256SUMS.txt"
+            sums.write_text(sha+"  "+filename+"\n")
+            notes=folder/"NOTES.md"
+            notes.write_text(
+              f"# {name} — iPhone Wi-Fi Companion Preview\n\n"
+              "**Unsigned IPA**: a valid Apple-issued signing identity and matching provisioning "
+              "profile are required before installation on an eligible iPhone.\n\n"
+              "Includes Settings > Connect to ItamarOS Installer, Bonjour discovery, "
+              "QR pairing with a pinned HTTPS server, device details and official app "
+              "downloads requested from the paired Windows computer. "
+              "The desktop installer requires confirmation for every request; unsigned "
+              "IPAs must be signed independently before iOS can install them.\n\n"
+              f"Bundle ID: {bundle}\nBuild run: {run}\nSHA-256: {sha}\n"
+            )
+            check=subprocess.run(["gh","release","view",tag,"--repo",repo],capture_output=True)
+            if check.returncode==0:
+              print("Existing release preserved:",tag)
+              continue
+            subprocess.run(["gh","release","create",tag,str(destination),str(sums),
+                            "--repo",repo,"--target",os.environ["GITHUB_SHA"],
+                            "--prerelease","--title",name+" — Wi-Fi Companion unsigned iOS",
+                            "--notes-file",str(notes)],check=True)
+            print("Published verified release:",tag)
+          PY
