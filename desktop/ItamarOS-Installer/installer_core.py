@@ -17,6 +17,7 @@ import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable
+from catalog_native import native_rows, read_project_yaml, icon_for_repository
 
 OWNER = "itamarnintendo04-arch"
 AGENT = "ItamarOS-Installer/1.0 (+https://github.com/itamarnintendo04-arch/ItamarOS)"
@@ -25,7 +26,7 @@ MAX_IPA_BYTES = 2 * 1024 * 1024 * 1024
 CACHE_SECONDS = 1200
 APP_ROOT = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ItamarOS Installer"
 DOWNLOAD_DIR = APP_ROOT / "Downloads"
-KNOWN_REPOS = {"ItamarOS", "ItamarOS-Authenticator", "Cloud-Climb", "ItamarOS-Games"}
+KNOWN_REPOS = {"ItamarOS-Authenticator"}
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,11 @@ class CatalogApp:
     size_bytes: int = 0
     expected_sha256: str = ""
     repository_url: str = ""
+    category: str = "Apps"
+    icon_url: str = ""
+    icon_slug: str = ""
+    bundle_id: str = ""
+    source_kind: str = "repository"
     def installable(self) -> bool:
         return bool(self.ipa_url)
 
@@ -106,7 +112,7 @@ def catalog_from_repos(repositories: list[dict], release_lookup: Callable[[str],
             release = {}
         assets = release.get("assets") or []
         # Prefer a clearly signed IPA over an unsigned, un-installable build.
-        eligible = [a for a in assets if str(a.get("name", "")).lower().endswith(".ipa")]
+        eligible = [a for a in assets if str(a.get("name", "")).lower().endswith(".ipa") and "unsigned" not in str(a.get("name", "")).lower()]
         eligible.sort(key=lambda a: (
             "unsigned" not in str(a.get("name", "")).lower(),
             bool(a.get("digest")),
@@ -118,8 +124,9 @@ def catalog_from_repos(repositories: list[dict], release_lookup: Callable[[str],
         ipa = str(item.get("browser_download_url") or "")
         if ipa and (not ipa.startswith(f"https://github.com/{OWNER}/") or "unsigned" in str(item.get("name", "")).lower()):
             ipa = ""  # Never offer unverified third-party or explicitly unsigned packages as installable.
+        image_url, image_slug = icon_for_repository(name)
         apps.append(CatalogApp(
-            name=str(repo.get("name", "")).replace("-", " "),
+            name=("ItamarOS Authenticator" if name == "ItamarOS-Authenticator" else str(repo.get("name", "")).replace("-", " ")),
             repo=name,
             description=str(repo.get("description") or "Official ItamarOS project."),
             version=str(release.get("tag_name") or "Not released"),
@@ -129,6 +136,9 @@ def catalog_from_repos(repositories: list[dict], release_lookup: Callable[[str],
             size_bytes=int(item.get("size", 0)) if ipa else 0,
             expected_sha256=sha if ipa else "",
             repository_url=str(repo.get("html_url") or f"https://github.com/{OWNER}/{name}"),
+            category="Security" if name == "ItamarOS-Authenticator" else "Apps",
+            icon_url=image_url,
+            icon_slug=image_slug,
         ))
     apps.sort(key=lambda item: (not item.installable(), item.name.lower()))
     return apps
@@ -162,13 +172,25 @@ class GitHubCatalog:
             except InstallerError:
                 return None
         apps = catalog_from_repos(self._repositories(), release_for)
+        try:
+            spec = read_project_yaml(api_json)
+            release = release_for("ItamarOS")
+            native = [CatalogApp(**row) for row in native_rows(spec, release)]
+            # Deduplicate source-defined apps against stand-alone repositories.
+            native_names = {item.name.casefold() for item in native}
+            apps = native + [app for app in apps if app.name.casefold() not in native_names]
+        except (InstallerError, ValueError, KeyError, TypeError) as exc:
+            # Preserve the verified public repository list if the source project is offline.
+            if not apps:
+                raise InstallerError("ItamarOS app catalog could not load: " + str(exc)) from exc
+        apps.sort(key=lambda app: (not app.installable(), app.category, app.name.lower()))
         self.root.mkdir(parents=True, exist_ok=True)
         self.file.write_text(json.dumps([asdict(a) for a in apps], indent=2), encoding="utf-8")
         return apps
 
 
 def safe_filename(app: CatalogApp) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9_.-]", "_", f"{app.repo}-{app.version}")
+    slug = re.sub(r"[^a-zA-Z0-9_.-]", "_", f"{app.repo}-{app.icon_slug or app.name}-{app.version}")
     return slug[:180] + ".ipa"
 
 
