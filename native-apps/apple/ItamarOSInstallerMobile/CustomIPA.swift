@@ -111,7 +111,7 @@ struct CustomIPAScreen: View {
     @State private var errorText: String?
     @State private var selectedMatchID: UUID?
     @State private var showSigner = false
-    @State private var showInstallManifest = false
+    @State private var showComputerInstall = false
 
     private var matches: [CertificateMatch] {
         guard let application else { return [] }
@@ -226,13 +226,13 @@ struct CustomIPAScreen: View {
                             .buttonStyle(.borderedProminent)
                             Text("The signer processes files in a browser-based WebAssembly workspace. For privacy, select your IPA, P12 and provisioning profile there manually; saved private keys and TXT passwords are never automatically sent to the page.")
                                 .font(.caption).foregroundStyle(.secondary)
-                            Button { showInstallManifest = true } label: {
-                                Label("Install signed IPA using HTTPS manifest",
+                            Button { showComputerInstall = true } label: {
+                                Label("Install signed IPA via computer (no manifest)",
                                       systemImage: "arrow.down.app")
                                     .frame(maxWidth: .infinity, minHeight: 42)
                             }
                             .buttonStyle(.bordered)
-                            Text("For a correctly signed IPA that is already hosted through an Apple-supported distribution method. Requires a real HTTPS manifest from the publisher. No silent installation.")
+                            Text("Send the signed IPA to your computer and install through USB. No manifest or hosting required; iOS checks the signature.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         .installerPanel()
@@ -257,8 +257,8 @@ struct CustomIPAScreen: View {
             .sheet(isPresented: $showSigner) {
                 EmbeddedIPASignerView()
             }
-            .sheet(isPresented: $showInstallManifest) {
-                ManifestInstallView()
+            .sheet(isPresented: $showComputerInstall) {
+                ComputerInstallView(originalIPA: application?.url, expectedBundleIdentifier: application?.bundleIdentifier)
             }
             .fileImporter(isPresented: $importing,
                           allowedContentTypes: [UTType(filenameExtension: "ipa", conformingTo: .data) ?? .data]) { result in
