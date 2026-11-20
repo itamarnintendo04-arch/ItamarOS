@@ -16,7 +16,7 @@ The main-repository registry is `catalog/ios-apps.json`, with links to each app'
 1. Inspect the user's locally imported P12 and provisioning profile for **Bundle ID**, **expiration**, **signing identity** and **iPhone UDID** compatibility.
 2. Download the app's **unsigned developer IPA** from its main-repository release, inspect the IPA's Info.plist, and verify that the Bundle ID matches the registry.
 3. Open the existing **first-party browser-based WebAssembly signer**. The signer currently requires the user to explicitly choose their authorized P12, profile and IPA files again. The app does **not** silently transmit vault secrets to the website.
-4. Once signed and distributed by a developer through a legitimate HTTPS app-install manifest, request installation through iOS. Only iOS may approve installation; this is not a silent installer.
+4. **No manifest required:** export the signed IPA to your Windows or Mac computer, connect your unlocked and trusted iPhone using USB, and open **ItamarOS Installer → My iPhone → Install Local IPA over USB**. Apple's device services and iOS verify the signature and provisioning. The mobile app cannot install another app silently.
 
 The iPhone UDID must be provided from a trusted Windows/Mac device, because iOS third-party applications cannot access the real hardware UDID directly. A matching profile is a **preflight match**, not proof of non-revocation or guaranteed installation.
 
@@ -30,6 +30,6 @@ The iPhone UDID must be provided from a trusted Windows/Mac device, because iOS 
 - Unsigned IPA is built by `.github/workflows/itamaros-installer-mobile.yml`.
 - First-party apps share the main repository; standalone Authenticator, iPhone Studio and App Studio sources are mirrored in `external-apps/`.
 - Preview releases are created by `.github/workflows/publish-all-itamaros-app-releases.yml`.
-- Home Screen icon options: original plus six color variants.
+- Home Screen icon options: original plus six full-spectrum multicolor RGB distortion variants (Rainbow Glitch, Prism Shift, RGB Split, Holographic, Liquid Spectrum, Neon Noise). They distort the original logo's colors rather than recoloring the entire icon uniformly.
 
 No Apple account password, provisioning private key, P12 password TXT, or real signing certificate is committed to the repository.
