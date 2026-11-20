@@ -48,7 +48,6 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [build-mirrored-authenticator]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -65,10 +64,6 @@ jobs:
           gh run download 44771278200 --repo "$GITHUB_REPOSITORY" --dir incoming/arena
           gh run download 44771957859 --repo "$GITHUB_REPOSITORY" --dir incoming/installer
           gh run download 44746420294 --repo "$GITHUB_REPOSITORY" --dir incoming/windows
-      - uses: actions/download-artifact@v4
-        with:
-          name: Authenticator-Main-Repository-IPA
-          path: incoming/authenticator
       - name: Validate IPA identities and prepare 14 releases
         shell: bash
         run: |
@@ -89,6 +84,8 @@ jobs:
             "ItamarOS-Authenticator": "built from main-repository source"
           }
           for app in catalog["apps"]:
+            if app["id"] == "ItamarOS-Authenticator":
+              continue  # Published by the independent Mac build job below.
             tag, name = app["release_tag"], app["asset_name"]
             matches = [f for f in input_files if f.name == name]
             if len(matches) != 1:
@@ -176,3 +173,54 @@ jobs:
               --notes-file "$dir/RELEASE_NOTES.md"
             echo "Published $tag"
           done
+
+  publish-authenticator:
+    needs: [build-mirrored-authenticator]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Authenticator-Main-Repository-IPA
+          path: unsigned-authenticator
+      - name: Verify and publish the mirrored Authenticator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, pathlib, plistlib, zipfile
+          app = next(x for x in json.loads(pathlib.Path("catalog/ios-apps.json").read_text())["apps"]
+                     if x["id"] == "ItamarOS-Authenticator")
+          ipa = pathlib.Path("unsigned-authenticator") / app["asset_name"]
+          if not ipa.is_file():
+            raise RuntimeError(f"Missing Authenticator build: {ipa}")
+          with zipfile.ZipFile(ipa) as z:
+            assert z.testzip() is None, "Corrupted Authenticator IPA"
+            infos = [x for x in z.namelist() if x.startswith("Payload/") and
+                     x.count("/") == 2 and x.endswith(".app/Info.plist")]
+            assert len(infos) == 1, "Expected one Info.plist"
+            metadata = plistlib.loads(z.read(infos[0]))
+            assert metadata.get("CFBundleIdentifier") == app["bundle_id"], "Wrong bundle ID"
+          digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+          pathlib.Path("SHA256SUMS.txt").write_text(f"{digest}  {ipa.name}\n")
+          pathlib.Path("NOTES.md").write_text(
+            "# ItamarOS Authenticator — iOS developer preview\n\n"
+            "**UNSIGNED IPA**, compiled from source mirrored into the main ItamarOS repository. "
+            "Install only after signing with an Apple-issued identity and compatible provisioning "
+            "profile that you own or are authorized to use. No private credentials are distributed.\n\n"
+            f"Bundle ID: {app['bundle_id']}\nSHA-256: {digest}\n"
+            "Source: https://github.com/itamarnintendo04-arch/ItamarOS/tree/main/"
+            "external-apps/ItamarOS-Authenticator\n")
+          pathlib.Path("RELEASE_TAG.txt").write_text(app["release_tag"])
+          PY
+          tag="$(cat RELEASE_TAG.txt)"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Authenticator prerelease already exists"
+            exit 0
+          fi
+          gh release create "$tag" unsigned-authenticator/*.ipa SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'ItamarOS Authenticator — iOS unsigned preview' --notes-file NOTES.md
