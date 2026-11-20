@@ -1,0 +1,76 @@
+name: Publish Preview Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Unique tag for a new preview release (optional)'
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-preview-release.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REQUESTED_TAG: ${{ github.event.inputs.tag || '' }}
+      DEFAULT_TAG: 'tools-2026.11.20-preview.1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare verified preview assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="$DEFAULT_TAG"
+          if [ -n "$REQUESTED_TAG" ]; then TAG="$REQUESTED_TAG"; fi
+          if [[ ! "$TAG" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{0,90}$ ]]; then exit 1; fi
+          printf '%s' "$TAG" > "$RUNNER_TEMP/release-tag"
+          mkdir -p "$RUNNER_TEMP/release-assets"
+          cat > "$RUNNER_TEMP/release-notes.md" <<'ITAMAROS_NOTES'
+          # ItamarOS Installer Tools — Preview
+          
+          **Preview / prerelease. Not a stable production release.**
+          
+          ItamarOS source snapshot with Windows Installer 2.0 and iPhone Installer 1.1. Existing main iOS and Android releases are available separately.
+          
+          Windows Installer EXE and iOS Installer unsigned IPA; the IPA needs valid signing and provisioning.
+          
+          Binary assets, if present, were downloaded from successful earlier GitHub Actions builds and may not match the exact commit of this source snapshot.
+          Unsigned IPAs require valid device-specific Apple signing and provisioning. No Apple ID passwords, P12 files, private signing keys, or certificate password files are included.
+          - Build run: https://github.com/itamarnintendo04-arch/ItamarOS/actions/runs/44746420294
+          - Build run: https://github.com/itamarnintendo04-arch/ItamarOS/actions/runs/44753002862
+          
+          To publish another version, use Actions > Publish Preview Release and provide a unique tag.
+          ITAMAROS_NOTES
+          mkdir -p "$RUNNER_TEMP/release-source-0"
+          gh run download 44746420294 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-source-0"
+          find "$RUNNER_TEMP/release-source-0" -type f \( -iname '*.ipa' -o -iname '*.exe' -o -iname '*.apk' \) -exec cp -v {} "$RUNNER_TEMP/release-assets/" \;
+          mkdir -p "$RUNNER_TEMP/release-source-1"
+          gh run download 44753002862 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/release-source-1"
+          find "$RUNNER_TEMP/release-source-1" -type f \( -iname '*.ipa' -o -iname '*.exe' -o -iname '*.apk' \) -exec cp -v {} "$RUNNER_TEMP/release-assets/" \;
+          test "$(find "$RUNNER_TEMP/release-assets" -maxdepth 1 -type f | wc -l)" -gt 0
+          if compgen -G "$RUNNER_TEMP/release-assets/*" > /dev/null; then
+            (cd "$RUNNER_TEMP/release-assets" && sha256sum * > SHA256SUMS.txt)
+          fi
+      - name: Create GitHub prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="$(cat "$RUNNER_TEMP/release-tag")"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; leaving it unchanged."
+            exit 0
+          fi
+          shopt -s nullglob
+          ASSETS=("$RUNNER_TEMP"/release-assets/*)
+          gh release create "$TAG" "${ASSETS[@]}" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --title 'ItamarOS Installer Tools — Preview' \
+            --notes-file "$RUNNER_TEMP/release-notes.md"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq '.url'
