@@ -1,0 +1,57 @@
+name: Sync standalone ItamarOS applications into main repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-itamaros-apps.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: itamaros-source-mirrors
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Mirror standalone app source into external-apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER=itamarnintendo04-arch
+          for REPO in ItamarOS-Authenticator ItamarOS-iPhone-Studio ItamarOS-App-Studio; do
+            echo "::group::Sync $REPO"
+            git clone --depth 1 --quiet "https://github.com/$OWNER/$REPO.git" "$RUNNER_TEMP/$REPO"
+            mkdir -p "external-apps/$REPO"
+            rsync -a --delete \
+              --exclude='.git/' \
+              --exclude='.github/' \
+              --exclude='*.p12' --exclude='*.pfx' --exclude='*.mobileprovision' \
+              --exclude='*.key' --exclude='*.p8' \
+              --exclude='*.ipa' --exclude='*.exe' --exclude='*.apk' \
+              --exclude='.env*' --exclude='*.password' \
+              --exclude='build/' --exclude='dist/' --exclude='node_modules/' \
+              --exclude='__pycache__/' \
+              "$RUNNER_TEMP/$REPO/" "external-apps/$REPO/"
+            printf 'Upstream: https://github.com/%s/%s\nCommit: %s\nSync: source only; do not store signing keys.\n' \
+              "$OWNER" "$REPO" "$(git -C "$RUNNER_TEMP/$REPO" rev-parse HEAD)" \
+              > "external-apps/$REPO/UPSTREAM.txt"
+            echo "::endgroup::"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- external-apps/
+          if ! git diff --cached --quiet; then
+            git commit -m "Mirror all standalone ItamarOS app sources in main repository"
+            git push origin HEAD:main
+          else
+            echo "All standalone app source mirrors already up to date."
+          fi
