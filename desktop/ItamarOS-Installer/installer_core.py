@@ -22,7 +22,7 @@ OWNER = "itamarnintendo04-arch"
 AGENT = "ItamarOS-Installer/1.0 (+https://github.com/itamarnintendo04-arch/ItamarOS)"
 API = "https://api.github.com"
 MAX_IPA_BYTES = 2 * 1024 * 1024 * 1024
-CACHE_SECONDS = 300
+CACHE_SECONDS = 1200
 APP_ROOT = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ItamarOS Installer"
 DOWNLOAD_DIR = APP_ROOT / "Downloads"
 KNOWN_REPOS = {"ItamarOS", "ItamarOS-Authenticator", "Cloud-Climb", "ItamarOS-Games"}
@@ -98,7 +98,7 @@ def catalog_from_repos(repositories: list[dict], release_lookup: Callable[[str],
         topics = repo.get("topics") or []
         if repo.get("fork") or repo.get("archived"):
             continue
-        if not (name in KNOWN_REPOS or name.lower().startswith("itamaros-") or "itamaros-ios" in topics):
+        if not (name in KNOWN_REPOS or name.lower().endswith("-ios") or "itamaros-ios" in topics):
             continue
         try:
             release = release_lookup(name) or {}
