@@ -105,6 +105,8 @@ struct CustomIPAScreen: View {
     @State private var application: IPAInspection?
     @State private var errorText: String?
     @State private var selectedMatchID: UUID?
+    @State private var showSigner = false
+    @State private var showInstallManifest = false
 
     private var matches: [CertificateMatch] {
         guard let application else { return [] }
@@ -209,14 +211,35 @@ struct CustomIPAScreen: View {
                                 .font(.subheadline).foregroundStyle(.orange)
                         }
 
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Signing and installation").font(.headline)
+                            Button { showSigner = true } label: {
+                                Label("Sign IPA with my authorized certificate",
+                                      systemImage: "signature")
+                                    .frame(maxWidth: .infinity, minHeight: 42)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            Text("The signer processes files in a browser-based WebAssembly workspace. For privacy, select your IPA, P12 and provisioning profile there manually; saved private keys and TXT passwords are never automatically sent to the page.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Button { showInstallManifest = true } label: {
+                                Label("Install signed IPA using HTTPS manifest",
+                                      systemImage: "arrow.down.app")
+                                    .frame(maxWidth: .infinity, minHeight: 42)
+                            }
+                            .buttonStyle(.bordered)
+                            Text("For a correctly signed IPA that is already hosted through an Apple-supported distribution method. Requires a real HTTPS manifest from the publisher. No silent installation.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        .installerPanel()
+
                         ShareLink(item: application.url) {
-                            Label("Export IPA for signing or installation on a computer",
+                            Label("Export original IPA to a computer",
                                   systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity, minHeight: 42)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
 
-                        Text("The IPA is not modified or installed by this preview. A certificate must be Apple-issued, the profile must authorize your device and app, and the signed IPA must be installed through a supported distribution method. Never share your P12 or TXT password.")
+                        Text("Only use certificates you own or have explicit authorization to use. An IPA is not installed simply by generating a signed file. Apple controls final device trust, profile eligibility, and installation.")
                             .font(.footnote).foregroundStyle(.secondary)
                     } else {
                         ContentUnavailableView("No IPA selected", systemImage: "square.stack.3d.up",
@@ -226,6 +249,12 @@ struct CustomIPAScreen: View {
                 }.padding()
             }
             .navigationTitle("Custom IPA")
+            .sheet(isPresented: $showSigner) {
+                EmbeddedIPASignerView()
+            }
+            .sheet(isPresented: $showInstallManifest) {
+                ManifestInstallView()
+            }
             .fileImporter(isPresented: $importing,
                           allowedContentTypes: [UTType(filenameExtension: "ipa", conformingTo: .data) ?? .data]) { result in
                 switch result {
