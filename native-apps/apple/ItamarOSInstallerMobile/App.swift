@@ -91,7 +91,7 @@ struct MainScreen: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     Section("Important") {
-                        Text("Custom IPA preflight checks your device UDID, app Bundle ID, matching identity and expiry dates. It does not revoke-check, sign, or directly install IPAs on iOS. Use a supported signed installation method.")
+                        Text("To install without a manifest, use a correctly signed IPA with ItamarOS Installer on a Windows or Mac computer connected to your iPhone over USB. iOS verifies the app signature and provisioning.")
                             .font(.footnote)
                     }
                 }
