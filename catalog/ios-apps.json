@@ -126,11 +126,11 @@
     {
       "id": "ItamarOS-Installer",
       "name": "ItamarOS Installer",
-      "description": "iOS app catalog and private signing certificate vault.",
+      "description": "Native iPhone installer with private certificate vault, secure Wi-Fi pairing and automatic official app catalog.",
       "category": "Utilities",
       "bundle_id": "net.itamaros.installer.mobile",
-      "release_tag": "ios-installer-2026.11.20-preview.1",
-      "asset_name": "ItamarOSInstallerMobile-unsigned.ipa",
+      "release_tag": "ios-installer-2026.11.20-wifi.1",
+      "asset_name": "ItamarOS-Installer-WiFi-v1.5-UNSIGNED.ipa",
       "source_path": "native-apps/apple/ItamarOSInstallerMobile",
       "icon_path": "",
       "requires_signing": true
@@ -141,8 +141,8 @@
       "id": "ItamarOS-Windows-Installer",
       "name": "ItamarOS Installer for Windows",
       "category": "Windows",
-      "release_tag": "windows-installer-2026.11.20-preview.1",
-      "asset_name": "ItamarOS.Installer.exe",
+      "release_tag": "windows-installer-2026.11.20-wifi.1",
+      "asset_name": "ItamarOS-Installer-WiFi-v2.2.exe",
       "source_path": "desktop/ItamarOS-Installer"
     },
     {
