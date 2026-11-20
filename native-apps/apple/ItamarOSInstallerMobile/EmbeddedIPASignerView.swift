@@ -8,6 +8,13 @@ import UIKit
 // loads ItamarOS's first-party zsign WebAssembly signer within the app.
 // It is NOT an iOS app installer and does not sign using Apple Account login.
 struct EmbeddedIPASignerView: View {
+    let appName: String?
+    let originalIPA: URL?
+
+    init(appName: String? = nil, originalIPA: URL? = nil) {
+        self.appName = appName
+        self.originalIPA = originalIPA
+    }
     @Environment(\.dismiss) private var dismiss
     @State private var downloadedIPA: URL?
     @State private var status = "Open the signing workspace to choose a local IPA, certificate and provisioning profile."
@@ -17,11 +24,19 @@ struct EmbeddedIPASignerView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Local IPA Signing", systemImage: "signature")
+                Label(appName.map { "Install \($0)" } ?? "Install Custom IPA",
+                      systemImage: "arrow.down.app.fill")
                     .font(.title2.bold())
-                Text("Choose an IPA, your own Apple-issued .p12 certificate, a matching .mobileprovision and the certificate password (if needed). Signing is performed by the website's WebAssembly engine inside this app, not by Sign in with Apple.")
+                Text("The Install button is inside the WebView. It starts the local IPA signing process using your authorized P12, provisioning profile and password. iOS cannot directly install the resulting IPA from this WebView.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+
+                if let originalIPA {
+                    ShareLink(item: originalIPA) {
+                        Label("Save selected IPA to Files for the signer", systemImage: "square.and.arrow.up")
+                    }
+                    .font(.footnote)
+                }
                 EmbeddedSignerWebView(url: signerURL, status: $status, downloadedIPA: $downloadedIPA)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -52,7 +67,7 @@ struct EmbeddedIPASignerView: View {
                     .foregroundStyle(.secondary)
             }
             .padding()
-            .navigationTitle("IPA Signer")
+            .navigationTitle("Install in WebView")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -74,6 +89,31 @@ private struct EmbeddedSignerWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         // Do not persist website sessions, certificate form fields or WASM caches.
         config.websiteDataStore = .nonPersistent()
+        // The first-party signer already has a functioning submit button. Inside
+        // the installer WebView label it as the beginning of the install workflow,
+        // not as a claim that iOS has installed anything.
+        let webViewInstallScript = #"""
+        (function() {
+          function prepare() {
+            if (location.hostname !== "itamaros-web-emulator.onrender.com" ||
+                !location.pathname.startsWith("/signer/")) return;
+            const button = document.getElementById("sign");
+            if (!button || document.getElementById("itamaros-install-note")) return;
+            button.textContent = "Install — sign IPA first";
+            const note = document.createElement("p");
+            note.id = "itamaros-install-note";
+            note.className = "note warning";
+            note.textContent = "Install starts here in the WebView: sign with your own valid certificate, then save the signed IPA. A normal iOS WebView cannot directly install that IPA. Installation requires Apple-supported distribution or a device-install tool.";
+            button.closest(".actions")?.insertAdjacentElement("beforebegin", note);
+          }
+          if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", prepare);
+          else prepare();
+        })();
+        """#
+        config.userContentController.addUserScript(
+            WKUserScript(source: webViewInstallScript,
+                         injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
