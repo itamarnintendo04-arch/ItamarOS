@@ -45,56 +45,61 @@ struct CertificateMatch: Identifiable {
 
 enum IPAAnalyzer {
     static func importIPA(_ source: URL) throws -> IPAInspection {
-        let scoped = source.startAccessingSecurityScopedResource()
-        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        let scope = source.startAccessingSecurityScopedResource()
+        defer { if scope { source.stopAccessingSecurityScopedResource() } }
         guard source.pathExtension.lowercased() == "ipa" else {
-            throw VaultError.message("Choose an IPA file, not a ZIP or other document.")
-        }
-        let bytes = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard bytes > 0, bytes < 2_000_000_000 else {
-            throw VaultError.message("The IPA is empty or exceeds the 2 GB import limit.")
+            throw VaultError.message("Choose an IPA file from Files.")
         }
         let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("CustomIPAs", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let target = folder.appendingPathComponent(UUID().uuidString + ".ipa")
-        try FileManager.default.copyItem(at: source, to: target)
+        let path = folder.appendingPathComponent(UUID().uuidString + ".ipa")
+        try FileManager.default.copyItem(at: source, to: path)
         do {
-            guard let archive = Archive(url: target, accessMode: .read) else {
-                throw VaultError.message("IPA is not a readable ZIP archive.")
-            }
-            var metadataEntry: Entry?
-            for entry in archive {
-                if entry.path.range(of: #"^Payload/[^/]+\.app/Info\.plist$"#,
-                                    options: .regularExpression) != nil {
-                    metadataEntry = entry
-                    break
-                }
-            }
-            guard let entry = metadataEntry, entry.uncompressedSize <= 1_000_000 else {
-                throw VaultError.message("IPA does not contain a valid app Info.plist.")
-            }
-            var bytes = Data()
-            _ = try archive.extract(entry) { chunk in
-                if bytes.count + chunk.count > 1_000_000 {
-                    throw VaultError.message("IPA metadata exceeds the safe import size.")
-                }
-                bytes.append(chunk)
-            }
-            guard let plist = try PropertyListSerialization.propertyList(from: bytes,
-                                      options: [], format: nil) as? [String: Any],
-                  let bundle = plist["CFBundleIdentifier"] as? String,
-                  bundle.count >= 3, bundle.count < 240,
-                  bundle.contains(".") else {
-                throw VaultError.message("IPA has no readable application Bundle ID.")
-            }
-            let version = plist["CFBundleShortVersionString"] as? String ?? "Unknown"
-            return IPAInspection(url: target, fileName: source.lastPathComponent,
-                                 bundleIdentifier: bundle, version: version)
+            return try inspectLocalIPA(path, displayName: source.lastPathComponent)
         } catch {
-            try? FileManager.default.removeItem(at: target)
+            try? FileManager.default.removeItem(at: path)
             throw error
         }
+    }
+
+    static func inspectLocalIPA(_ path: URL, displayName: String? = nil) throws -> IPAInspection {
+        guard path.pathExtension.lowercased() == "ipa" else {
+            throw VaultError.message("This is not an IPA archive.")
+        }
+        let bytes = try path.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard bytes > 0 && bytes < 2_000_000_000 else {
+            throw VaultError.message("The IPA is empty or exceeds the 2 GB import limit.")
+        }
+        guard let archive = Archive(url: path, accessMode: .read) else {
+            throw VaultError.message("IPA is not a readable ZIP archive.")
+        }
+        var metadata: Entry?
+        for entry in archive {
+            guard entry.path.range(of: #"^Payload/[^/]+\.app/Info\.plist$"#,
+                                   options: .regularExpression) != nil else { continue }
+            metadata = entry
+            break
+        }
+        guard let entry = metadata, entry.uncompressedSize <= 1_000_000 else {
+            throw VaultError.message("IPA does not contain a valid app Info.plist.")
+        }
+        var plistBytes = Data()
+        _ = try archive.extract(entry) { chunk in
+            if plistBytes.count + chunk.count > 1_000_000 {
+                throw VaultError.message("IPA Info.plist exceeds the safety limit.")
+            }
+            plistBytes.append(chunk)
+        }
+        guard let plist = try PropertyListSerialization.propertyList(from: plistBytes,
+                                    options: [], format: nil) as? [String: Any],
+              let bundle = plist["CFBundleIdentifier"] as? String,
+              bundle.count >= 3 && bundle.count < 240 && bundle.contains(".") else {
+            throw VaultError.message("IPA has no readable application Bundle ID.")
+        }
+        let version = plist["CFBundleShortVersionString"] as? String ?? "Unknown"
+        return IPAInspection(url: path, fileName: displayName ?? path.lastPathComponent,
+                             bundleIdentifier: bundle, version: version)
     }
 }
 
