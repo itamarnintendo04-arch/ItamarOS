@@ -98,9 +98,16 @@ def native_rows(yml: str, release: dict | None = None) -> list[dict]:
     for target, block in ios_target_blocks(yml):
         known = TARGETS.get(target, {})
         source_folder = target[:-3]
-        found_folder = re.search(r"^\s+- path:\s+([A-Za-z0-9_/-]+)", block, re.MULTILINE)
-        if found_folder:
-            source_folder = found_folder.group(1).split("/")[0]
+        if target == "ItamarOSiOS":
+            source_folder = "iOS"
+        elif target in TARGETS:
+            source_folder = known.get("folder") or known.get("art", "").split("/")[2]
+            if not source_folder:
+                source_folder = target[:-3]
+        else:
+            found_folder = re.search(r"^\s+- path:\s+([A-Za-z0-9_/-]+)", block, re.MULTILINE)
+            if found_folder:
+                source_folder = found_folder.group(1).split("/")[0]
         name = known.get("name") or re.sub(r"([a-z])([A-Z])", r"\1 \2", target[:-3]).strip()
         raw_slug = known.get("slug") or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
         icon = known.get("art") or ""
