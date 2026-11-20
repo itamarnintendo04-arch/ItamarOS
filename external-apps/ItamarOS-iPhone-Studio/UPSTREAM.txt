@@ -1,0 +1,3 @@
+Upstream: https://github.com/itamarnintendo04-arch/ItamarOS-iPhone-Studio
+Commit: d664d4358ff2614652d597c99de64bdf56b0ae36
+Sync: source only; do not store signing keys.

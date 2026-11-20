@@ -1,0 +1,7 @@
+"customize_app" = "Change Name & Icon";
+"app_name" = "App Name";
+"choose_icon" = "Choose Icon";
+"restore_default" = "Restore Default";
+"backup_title" = "Back Up Your iPhone";
+"backup_message" = "Before modifying your device, create an iCloud backup and verify that it completed.";
+"unsupported" = "Not supported on this iOS version";

@@ -1,0 +1,27 @@
+name: ItamarOSiPhoneStudio
+options:
+  bundleIdPrefix: net.itamaros
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1,2"
+targets:
+  ItamarOSiPhoneStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOSApp
+        excludes:
+          - Localization
+      - path: Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.itamaros.iphonestudio
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: iPhone Studio
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Select an icon image for your custom Home Screen shortcut.
+        CODE_SIGN_STYLE: Automatic

@@ -1,0 +1,7 @@
+"customize_app" = "שנה שם ואייקון";
+"app_name" = "שם האפליקציה";
+"choose_icon" = "בחר אייקון";
+"restore_default" = "שחזר לברירת המחדל";
+"backup_title" = "גבה את האייפון";
+"backup_message" = "לפני שינוי המכשיר, צור גיבוי ב־iCloud וודא שהגיבוי הושלם.";
+"unsupported" = "לא נתמך בגרסת iOS זו";

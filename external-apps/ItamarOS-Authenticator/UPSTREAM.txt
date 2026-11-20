@@ -1,0 +1,3 @@
+Upstream: https://github.com/itamarnintendo04-arch/ItamarOS-Authenticator
+Commit: 30723782c7288035ebef769f0b7225bf28807c11
+Sync: source only; do not store signing keys.
