@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import os
+import plistlib
+import zipfile
 import queue
 import sys
 import threading
 import webbrowser
 from pathlib import Path
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from PIL import Image
 import urllib.parse
 import urllib.request
@@ -331,6 +333,12 @@ class Installer(ctk.CTk):
                      "The IPA must already be properly signed; Apple ID sign-in alone cannot sign an IPA.",
                      text_color=MUTED,wraplength=750,justify="left",font=("Segoe UI",12)).pack(
                          fill="x",padx=23,pady=(0,22))
+        ctk.CTkButton(
+            panel, text="Install Local IPA over USB (no manifest)",
+            command=self.install_local_ipa, height=44, corner_radius=12,
+            fg_color=TEAL, text_color=BG, hover_color="#58f1d6",
+            font=("Segoe UI", 14, "bold")
+        ).pack(fill="x", padx=23, pady=(0, 20))
         if command_for_device_tool() is None:
             ctk.CTkButton(self.content,text="Copy device helper setup instructions",
                           fg_color="#263749",command=self.show_helper_setup,
@@ -433,6 +441,66 @@ class Installer(ctk.CTk):
         self.progress.set(1)
         if not hasattr(self,"cards_container") or not self.cards_container.winfo_exists():
             self.show_device()
+
+    def install_local_ipa(self):
+        """Install a signed IPA selected from local disk using Apple's USB device service.
+
+        No manifest, remote hosting, or P12 upload required. Apple/iOS rejects
+        invalid signatures and profiles. This does not sign the IPA.
+        """
+        if not self.selected_udid:
+            messagebox.showwarning("No iPhone", "Connect and select your trusted iPhone under My iPhone first.")
+            self.show_device()
+            return
+        if command_for_device_tool() is None:
+            messagebox.showerror(
+                "Device helper missing",
+                "Install the supported iPhone USB helper before installing IPA files. "
+                "See My iPhone → Copy device helper setup instructions."
+            )
+            return
+        selected=filedialog.askopenfilename(
+            title="Choose a signed IPA for your iPhone",
+            filetypes=[("iPhone IPA files", "*.ipa"), ("All files", "*.*")]
+        )
+        if not selected:
+            return
+        source=Path(selected)
+        try:
+            if source.suffix.lower() != ".ipa" or not source.is_file() or source.stat().st_size > 2_000_000_000:
+                raise ValueError("Choose a local IPA smaller than 2 GB.")
+            with zipfile.ZipFile(source) as archive:
+                infos=[item.filename for item in archive.infolist()
+                       if item.filename.startswith("Payload/")
+                       and item.filename.count("/") == 2
+                       and item.filename.endswith(".app/Info.plist")
+                       and item.file_size < 1_000_000]
+                if len(infos) != 1:
+                    raise ValueError("IPA must contain one app with an Info.plist.")
+                info=plistlib.loads(archive.read(infos[0]))
+                display=info.get("CFBundleDisplayName") or info.get("CFBundleName") or source.name
+                bundle=info.get("CFBundleIdentifier")
+                if not isinstance(bundle,str) or not bundle:
+                    raise ValueError("IPA lacks a valid Bundle ID.")
+        except (OSError, ValueError, zipfile.BadZipFile, plistlib.InvalidFileException) as exc:
+            messagebox.showerror("Invalid IPA", str(exc))
+            return
+        if not messagebox.askyesno(
+            "Install Local IPA",
+            f"App: {display}\\nBundle ID: {bundle}\\n\\n"
+            "Install this file on the connected iPhone over USB?\\n\\n"
+            "It must already be signed by an authorized Apple-issued identity "
+            "and provisioned for this device. iOS makes the final decision."
+        ):
+            return
+        self.status.configure(text="Installing local IPA over USB…")
+        self._run(lambda: install_ipa(source,self.selected_udid),
+                  lambda _: self._install_local_ready(str(display)))
+
+    def _install_local_ready(self, name):
+        self.status.configure(text=name+" installed successfully over USB")
+        messagebox.showinfo("Installation Complete",
+            name+" was installed using the selected local IPA. No manifest was needed.")
 
     def install_app(self,app):
         if not self.selected_udid:
