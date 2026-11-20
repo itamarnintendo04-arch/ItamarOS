@@ -1,0 +1,81 @@
+name: Validate Distinct ItamarOS App Icon Variants
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'native-apps/apple/scripts/generate_icon_variants.py'
+      - 'native-apps/apple/Shared/ChangeAppIconView.swift'
+      - 'native-apps/apple/ItamarOSInstallerMobile/ChangeAppIconView.swift'
+      - 'external-apps/ItamarOS-Authenticator/scripts/generate_icon_variants.py'
+      - '.github/workflows/validate-distinct-app-icons.yml'
+permissions:
+  contents: read
+jobs:
+  distinct-icons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pillow
+        run: python3 -m pip install --upgrade Pillow
+      - name: Generate all six first-party variants
+        run: |
+          python3 -m py_compile native-apps/apple/scripts/generate_icon_variants.py
+          python3 -m py_compile external-apps/ItamarOS-Authenticator/scripts/generate_icon_variants.py
+          python3 native-apps/apple/scripts/generate_icon_variants.py --app ItamarOS
+      - name: Validate separate compositions and render a seven-icon comparison
+        run: |
+          python3 - <<'PY'
+          from itertools import combinations
+          from pathlib import Path
+          from PIL import Image, ImageChops, ImageDraw, ImageStat
+          icons = Path("native-apps/apple/iOS/Assets.xcassets")
+          names = [
+            ("Original", "AppIcon.appiconset/Icon.png"),
+            ("Rainbow Glitch", "ItamarIconBlue.appiconset/Icon.png"),
+            ("Prism Shatter", "ItamarIconGreen.appiconset/Icon.png"),
+            ("RGB Ghost", "ItamarIconPurple.appiconset/Icon.png"),
+            ("Hologram Waves", "ItamarIconPink.appiconset/Icon.png"),
+            ("Liquid Vortex", "ItamarIconOrange.appiconset/Icon.png"),
+            ("Neon Pixel Storm", "ItamarIconRed.appiconset/Icon.png"),
+          ]
+          previews = []
+          for title, relpath in names:
+            path = icons / relpath
+            with Image.open(path) as im:
+              assert im.size == (1024, 1024), title
+              previews.append(im.convert("RGB").resize((160, 160), Image.Resampling.LANCZOS))
+          # Perceptual diversity measured at the same approximate Home Screen
+          # display size. Check every pair of *alternate* variants.
+          for i, j in combinations(range(1, len(previews)), 2):
+            left = previews[i].resize((64, 64), Image.Resampling.BILINEAR)
+            right = previews[j].resize((64, 64), Image.Resampling.BILINEAR)
+            gap = ImageStat.Stat(ImageChops.difference(left, right)).mean
+            average = sum(gap) / 3
+            print(f"{names[i][0]} <-> {names[j][0]}: {average:.2f} color difference")
+            if average < 14:
+              raise AssertionError(f"Alternates look too similar: {names[i][0]} and {names[j][0]}")
+          width = 7 * 184 + 20
+          sheet = Image.new("RGB", (width, 233), (14, 21, 40))
+          draw = ImageDraw.Draw(sheet)
+          for n, ((name, _), preview) in enumerate(zip(names, previews)):
+            x = 14 + n * 184
+            sheet.paste(preview, (x, 16))
+            # Wrap captions for small gallery images.
+            words = name.split()
+            first = " ".join(words[:2])
+            second = " ".join(words[2:])
+            draw.text((x + 4, 185), first, fill=(255, 255, 255))
+            if second:
+              draw.text((x + 4, 202), second, fill=(180, 220, 255))
+          Path("artifacts").mkdir(exist_ok=True)
+          sheet.save("artifacts/itamaros-seven-distinct-icons.png", optimize=True)
+          print("Validated six visually distinct icon designs and saved gallery preview.")
+          PY
+      - name: Upload icon preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: ItamarOS-Six-Distinct-Icons-Preview
+          path: artifacts/itamaros-seven-distinct-icons.png
+          if-no-files-found: error
