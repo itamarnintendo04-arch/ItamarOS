@@ -8,9 +8,6 @@ on:
 permissions:
   contents: write
   actions: read
-concurrency:
-  group: itamaros-app-releases-fast-track
-  cancel-in-progress: false
 jobs:
   build-mirrored-authenticator:
     runs-on: macos-latest
