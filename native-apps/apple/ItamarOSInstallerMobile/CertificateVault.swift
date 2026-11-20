@@ -156,7 +156,10 @@ final class CertificateVault: ObservableObject {
         }
     }
 
-    func importFiles(_ sources: [URL]) throws -> Int {
+    func importFiles(_ sources: [URL], password: String) throws -> Int {
+        guard password.count <= 512 else {
+            throw VaultError.message("Certificate password is too long.")
+        }
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temp) }
@@ -203,24 +206,16 @@ final class CertificateVault: ObservableObject {
         }
         let p12s = collected.filter { $0.pathExtension.lowercased() == "p12" }
         if p12s.isEmpty {
-            throw VaultError.message("No .p12 certificate was found. Import a ZIP with a P12 and password TXT.")
+            throw VaultError.message("No .p12 certificate found. Select a P12 file or ZIP archive containing your own P12.")
         }
         if records.count + p12s.count > 100 {
             throw VaultError.message("This vault supports up to 100 certificates.")
         }
-        let textFiles = collected.filter { $0.pathExtension.lowercased() == "txt" }
         let profiles = collected.filter { $0.pathExtension.lowercased() == "mobileprovision" }
         var imported = 0
         var problems: [String] = []
         for p12 in p12s {
             do {
-                let candidate = textFiles.first {
-                    $0.deletingLastPathComponent().standardizedFileURL == p12.deletingLastPathComponent().standardizedFileURL
-                } ?? (textFiles.count == 1 ? textFiles.first : nil)
-                guard let txt = candidate else {
-                    throw VaultError.message("Matching password TXT not found.")
-                }
-                let password = try readPassword(txt)
                 let p12Data = try Data(contentsOf: p12)
                 let (name, expiry, fingerprint) = try inspect(p12Data, password: password)
                 let matchingProfile = profiles.first {
@@ -246,24 +241,6 @@ final class CertificateVault: ObservableObject {
         return imported
     }
 
-    private func readPassword(_ url: URL) throws -> String {
-        let raw = try Data(contentsOf: url)
-        guard raw.count < 100_000, let txt = String(data: raw, encoding: .utf8) else {
-            throw VaultError.message("TXT password file must contain readable UTF-8 text.")
-        }
-        let lines = txt.replacingOccurrences(of: "\u{FEFF}", with: "")
-            .split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard let line = lines.first else { throw VaultError.message("The TXT password file is empty.") }
-        let parts = line.split(separator: ":", maxSplits: 1).map(String.init)
-        let text = (parts.count > 1 && ["password", "pass", "p12 password", "סיסמה"].contains(parts[0].lowercased()))
-            ? parts[1].trimmingCharacters(in: .whitespaces) : line
-        guard !text.isEmpty && text.count <= 512 else {
-            throw VaultError.message("Could not read a certificate password from TXT.")
-        }
-        return text
-    }
-
     private func inspect(_ p12: Data, password: String) throws -> (String, Date?, String) {
         var identities: CFArray?
         let status = SecPKCS12Import(p12 as CFData,
@@ -272,7 +249,7 @@ final class CertificateVault: ObservableObject {
               let rows = identities as? [[String: Any]],
               let row = rows.first,
               let identity = row[kSecImportItemIdentity as String] as! SecIdentity? else {
-            throw VaultError.message("P12 could not be unlocked with the matching TXT password.")
+            throw VaultError.message("P12 could not be unlocked. Check the password you entered for this certificate.")
         }
         var cert: SecCertificate?
         guard SecIdentityCopyCertificate(identity, &cert) == errSecSuccess, let cert else {
