@@ -82,7 +82,26 @@ jobs:
           }
           for app in catalog["apps"]:
             if app["id"] == "ItamarOS-Authenticator":
-              continue  # Published by the independent Mac build job below.
+              # The original source is mirrored into the main repository.
+              # Publish a source preview without pretending that a Mac build succeeded.
+              dst = out / app["release_tag"]
+              dst.mkdir(parents=True, exist_ok=True)
+              source = pathlib.Path("external-apps/ItamarOS-Authenticator")
+              archive = dst / "ItamarOS-Authenticator-source.zip"
+              with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+                for file in source.rglob("*"):
+                  if file.is_file():
+                    z.write(file, file.relative_to(source.parent))
+              (dst / "RELEASE_NOTES.md").write_text(
+                "# ItamarOS Authenticator — source preview\\n\\n"
+                "Contains mirrored source code. The unsigned iOS IPA will be published "
+                "only after the first-party macOS build succeeds. This source archive "
+                "does not install on an iPhone and contains no private signing credentials.\\n"
+              )
+              (dst / "SHA256SUMS.txt").write_text(
+                hashlib.sha256(archive.read_bytes()).hexdigest() + "  " + archive.name + "\\n"
+              )
+              continue
             tag, name = app["release_tag"], app["asset_name"]
             matches = [f for f in input_files if f.name == name]
             if len(matches) != 1:
@@ -217,7 +236,9 @@ jobs:
           PY
           tag="$(cat RELEASE_TAG.txt)"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Authenticator prerelease already exists"
+            echo "Adding verified unsigned IPA to the existing Authenticator source prerelease"
+            gh release upload "$tag" unsigned-authenticator/*.ipa SHA256SUMS.txt               --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY"               --title 'ItamarOS Authenticator — iOS unsigned preview'               --notes-file NOTES.md
             exit 0
           fi
           gh release create "$tag" unsigned-authenticator/*.ipa SHA256SUMS.txt \
