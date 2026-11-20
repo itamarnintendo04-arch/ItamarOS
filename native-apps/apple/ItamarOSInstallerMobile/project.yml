@@ -6,8 +6,8 @@ settings:
     SWIFT_VERSION: '5.0'
     IPHONEOS_DEPLOYMENT_TARGET: '18.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '1.1.0'
-    CURRENT_PROJECT_VERSION: '2'
+    MARKETING_VERSION: '1.2.0'
+    CURRENT_PROJECT_VERSION: '3'
     CODE_SIGNING_ALLOWED: NO
 packages:
   ZIPFoundation:
@@ -23,6 +23,8 @@ targets:
       - path: CertificateVault.swift
       - path: Catalog.swift
       - path: CustomIPA.swift
+      - path: ManifestInstallView.swift
+      - path: EmbeddedIPASignerView.swift
       - path: Assets.xcassets
     dependencies:
       - package: ZIPFoundation
@@ -30,8 +32,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: ItamarOS Installer
-        CFBundleShortVersionString: '1.1.0'
-        CFBundleVersion: '2'
+        CFBundleShortVersionString: '1.2.0'
+        CFBundleVersion: '3'
         UILaunchScreen: {}
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
