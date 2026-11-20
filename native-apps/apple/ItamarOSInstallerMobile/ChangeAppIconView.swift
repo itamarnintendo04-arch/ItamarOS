@@ -18,12 +18,12 @@ struct ChangeAppIconView: View {
 
     private let options: [Option] = [
         .init(id: "original", title: "Original", assetName: nil, previewName: "ItamarIconPreviewOriginal"),
-        .init(id: "blue", title: "Blue", assetName: "ItamarIconBlue", previewName: "ItamarIconPreviewBlue"),
-        .init(id: "green", title: "Green", assetName: "ItamarIconGreen", previewName: "ItamarIconPreviewGreen"),
-        .init(id: "purple", title: "Purple", assetName: "ItamarIconPurple", previewName: "ItamarIconPreviewPurple"),
-        .init(id: "pink", title: "Pink", assetName: "ItamarIconPink", previewName: "ItamarIconPreviewPink"),
-        .init(id: "orange", title: "Orange", assetName: "ItamarIconOrange", previewName: "ItamarIconPreviewOrange"),
-        .init(id: "red", title: "Red", assetName: "ItamarIconRed", previewName: "ItamarIconPreviewRed")
+        .init(id: "blue", title: "Rainbow Glitch", assetName: "ItamarIconBlue", previewName: "ItamarIconPreviewBlue"),
+        .init(id: "green", title: "Prism Shift", assetName: "ItamarIconGreen", previewName: "ItamarIconPreviewGreen"),
+        .init(id: "purple", title: "RGB Split", assetName: "ItamarIconPurple", previewName: "ItamarIconPreviewPurple"),
+        .init(id: "pink", title: "Holographic", assetName: "ItamarIconPink", previewName: "ItamarIconPreviewPink"),
+        .init(id: "orange", title: "Liquid Spectrum", assetName: "ItamarIconOrange", previewName: "ItamarIconPreviewOrange"),
+        .init(id: "red", title: "Neon Noise", assetName: "ItamarIconRed", previewName: "ItamarIconPreviewRed")
     ]
 
     private var columns: [GridItem] {
@@ -34,7 +34,7 @@ struct ChangeAppIconView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Choose a color for the original app logo. The selected icon appears on your iPhone Home Screen and in Search.")
+                Text("Choose a multicolor glitch version of the original logo. Each icon blends multiple rainbow colors with RGB distortion, prismatic light and holographic effects.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
