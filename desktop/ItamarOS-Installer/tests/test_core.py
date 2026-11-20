@@ -4,6 +4,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
+from catalog_native import native_rows, ios_target_blocks, TARGETS
+
 from installer_core import (
     CatalogApp, InstallerError, catalog_from_repos, friendly_error, inspect_ipa,
     parse_devices, safe_filename, download_ipa
@@ -19,6 +21,18 @@ class InstallerTests(unittest.TestCase):
             "description": "2FA app",
             "html_url": "https://github.com/" + OWNER + "/ItamarOS-Authenticator"
         }
+    def test_actual_native_catalog(self):
+        spec = (Path(__file__).resolve().parents[3] / "native-apps" / "apple" / "project.yml").read_text(encoding="utf-8")
+        native = native_rows(spec)
+        names = {app["name"] for app in native}
+        self.assertGreaterEqual(len(native), 9)
+        self.assertEqual(len(native), len(names))
+        self.assertTrue({"Cloud Climb", "ItamarOS", "ItamarCut", "BrowserOS", "Voice Recorder", "ItamarOS Games", "Arena Rush", "Skybound Isles", "ItamarOS Screen Balance"}.issubset(names))
+        for app in native:
+            self.assertTrue(app["repository_url"].startswith("https://github.com/itamarnintendo04-arch/"))
+            self.assertTrue(app["icon_slug"])
+            self.assertEqual(app["source_kind"], "native_ios")
+
     def test_signed_release(self):
         release = {"tag_name": "v1.5", "assets": [
             {"name": "unsigned.ipa", "browser_download_url":
