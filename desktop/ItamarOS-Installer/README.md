@@ -88,3 +88,13 @@ website or third-party source.
 The companion Store and its **Installed** tab are features of the separately installed **ItamarOS Installer Mobile** iPhone app. A correctly signed, provisioned initial installation of that iPhone IPA is required before using mobile-triggered installs. Once paired, the iPhone requests an installation from this Windows application. Only a successful desktop installation report unlocks the Installed tab; it does not enumerate installed iOS apps.
 
 Current automated CI produces a Windows EXE and an **unsigned** iPhone IPA. Certificate import/metadata sync does not yet auto-sign arbitrary IPAs. If Wi-Fi device detection or an Apple signing check fails, the app displays an error instead of reporting success.
+
+## Import P12 certificates from ZIP archives
+
+Open **Signing Certificates → Import ZIP archives (select multiple)**. Select one or several ZIPs at once (up to 20). ItamarOS extracts only *.p12* and *.mobileprovision* into a private, local application-data folder. It never executes any ZIP content and never trusts member paths. The app tries to match profiles to P12 names, or selects the only profile in an archive if one exists.
+
+For each P12, the password dialog shows the **full TXT file contents** from that ZIP in a read-only area beside the masked password field. The user chooses whether to use the displayed password; it is not automatically applied. Plain *.txt* contents are kept in memory for the dialog only, not written to disk, added to the registry, logged, sent to the companion, or included in Releases.
+
+Oversized archives, oversized TXT/P12/profile entries, symlinks and malformed ZIPs are rejected. The extracted P12/profile files remain on the local computer because the registered identity must continue to work after restarting the app. Removing an identity from the registry does not delete the extracted source files.
+
+**Important:** A valid P12 password alone does not sign an IPA. The current Installer build still requires an authorized signing workflow and a compatible paired iPhone for installation.
