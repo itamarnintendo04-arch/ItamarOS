@@ -1,5 +1,22 @@
 # ItamarOS Installer Mobile — iPhone
 
+## Required iPhone installer app — current desktop-companion flow
+
+You **must first install ItamarOS Installer Mobile on the iPhone** to use its native Store, secure pairing, and installation requests. The desktop EXE alone does not add a Store tab to iOS.
+
+1. Install a correctly signed and provisioned build of the ItamarOS Installer Mobile IPA using an authorized initial installation method.
+2. Open ItamarOS Installer on Windows and start its Wi-Fi Companion server, then pair via the iPhone app's QR scanner.
+3. Select an official app from the iPhone installer; the PC receives the request and requires desktop confirmation.
+4. The **Installed** tab stays locked until this paired computer reports a successful installation. Its list is an app-local installation receipt, not a system-wide inventory.
+5. If connection or install fails, the app shows a status/error code. An unsigned IPA needs valid signing and a detected paired device; these steps are not yet fully automated.
+
+Signing identity metadata is synchronized from the Windows desktop; P12 files and passwords stay on the computer. The preexisting on-device certificate vault and WebView signer are legacy tooling and are not the new desktop signing workflow.
+
+**Known limitations:** There is no one-tap automatic P12 re-signing from the desktop yet, no guarantee that Apple Devices/iTunes Wi-Fi Sync exposes the phone to the installation helper, and no way for a normal iPhone app to install arbitrary IPAs itself. This IPA build is unsigned, so it cannot serve as its own bootstrap installation.
+
+---
+
+
 Native SwiftUI catalog for all ItamarOS iOS apps, a local personal-signing certificate vault, and an iOS-authorized installation workflow.
 
 ## Importing your own signing certificate
