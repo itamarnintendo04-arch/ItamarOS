@@ -17,3 +17,12 @@ Native iOS authenticator for ItamarOS (SwiftUI, iOS 16+).
 **Important:** The remote approval service is *not active* until the Supabase migration and Edge Function in the separate source package are deployed, thoroughly tested and integrated with the host apps. Do not substitute an approval for a real authenticated session without server-side verification. Push while closed requires valid APNs configuration. This repository currently builds the native app. See [docs/AUTO_SIGN_IN.md](docs/AUTO_SIGN_IN.md).
 
 **All UI strings are in English.**
+
+
+## Email sign-in robustness update (2026-11-21)
+
+The iPhone Authenticator now keeps the verified Supabase email OTP session in Keychain even when the optional device-approval Edge Function is not deployed. The UI shows an explicit warning and a **Retry approval setup** action instead of claiming email sign-in failed. A successful later approval service sync clears the unavailable state.
+
+**Deployment required:** The ItamarOS Supabase project currently does not contain the `itamar-authenticator` Edge Function or approval tables. Accordingly device approval, automatic cross-service sign-in and background push remain unavailable until the secure broker and database policies are deployed and tested. The six-digit email code also requires the project email template to be configured for OTP, rather than Magic Link only.
+
+No private Apple signing credentials are included, and this app does not automatically sign or install IPA files.
