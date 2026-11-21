@@ -428,7 +428,7 @@ class Installer(StoreUIMixin, ctk.CTk):
         dialog.transient(self)
         result = {"value": None}
         ctk.CTkLabel(dialog,
-                     text=f"Certificate: {certificate_name[:90]}\\nArchive: {archive_name[:90]}",
+                     text=f"Certificate: {certificate_name[:90]}\nArchive: {archive_name[:90]}",
                      text_color=WHITE, justify="left", wraplength=590).pack(
                          anchor="w", padx=20, pady=(18, 8))
         if text_notes:
@@ -437,7 +437,7 @@ class Installer(StoreUIMixin, ctk.CTk):
             textbox = ctk.CTkTextbox(dialog, height=175, wrap="word")
             textbox.pack(fill="both", expand=True, padx=20, pady=(5, 12))
             for filename, note in text_notes:
-                textbox.insert("end", f"=== {filename} ===\\n{note}\\n\\n")
+                textbox.insert("end", f"=== {filename} ===\n{note}\n\n")
             textbox.configure(state="disabled")
         else:
             ctk.CTkLabel(dialog, text="No TXT note found in this ZIP.",
@@ -495,7 +495,7 @@ class Installer(StoreUIMixin, ctk.CTk):
                 password = None
         message = f"Imported {imported} certificate(s) from {len(archives)} ZIP archive(s)."
         if failures:
-            message += "\\n\\nSome certificates failed:\\n" + "\\n".join(failures[:10])
+            message += "\n\nSome certificates failed:\n" + "\n".join(failures[:10])
         messagebox.showinfo("Certificate ZIP import", message)
         self.show_certificates()
 
