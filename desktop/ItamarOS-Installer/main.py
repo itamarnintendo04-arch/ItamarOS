@@ -426,9 +426,9 @@ class Installer(StoreUIMixin, ctk.CTk):
             "unsupported": "Windows only",
         }.get(result.service, result.service)
         info = (
-            f"Apple Mobile Device Service: {service_label}\\n"
-            f"Apple Devices app: {'Installed' if result.apple_devices_app else 'Not detected'}\\n"
-            f"Windows Package Manager: {'Available' if result.winget_available else 'Unavailable'}\\n"
+            f"Apple Mobile Device Service: {service_label}\n"
+            f"Apple Devices app: {'Installed' if result.apple_devices_app else 'Not detected'}\n"
+            f"Windows Package Manager: {'Available' if result.winget_available else 'Unavailable'}\n"
             "The button remains available even when Apple software is installed."
         )
         if hasattr(self, "driver_status") and self.driver_status.winfo_exists():
@@ -444,10 +444,10 @@ class Installer(StoreUIMixin, ctk.CTk):
             return
         answer = messagebox.askyesno(
             "Install Drivers",
-            "Install or update Apple Devices from the official Microsoft Store?\\n\\n"
+            "Install or update Apple Devices from the official Microsoft Store?\n\n"
             "ItamarOS will use Windows Package Manager (winget) if it is available. "
             "Microsoft Store agreements will be accepted for this installation. "
-            "If winget is unavailable, the Store page will open instead.\\n\\n"
+            "If winget is unavailable, the Store page will open instead.\n\n"
             "Windows may request permission. Continue?"
         )
         if not answer:
@@ -461,13 +461,13 @@ class Installer(StoreUIMixin, ctk.CTk):
             self.status.configure(text="Apple Devices installation command completed")
             messagebox.showinfo(
                 "Install Drivers",
-                info + "\\n\\nReconnect the iPhone, unlock it, tap Trust and use Check Drivers."
+                info + "\n\nReconnect the iPhone, unlock it, tap Trust and use Check Drivers."
             )
         else:
             self.status.configure(text="Open Microsoft Store to finish installing Apple Devices")
             messagebox.showwarning(
                 "Install Drivers",
-                info + "\\n\\nThe official Microsoft Store page will open so you can install or repair Apple Devices."
+                info + "\n\nThe official Microsoft Store page will open so you can install or repair Apple Devices."
             )
             open_official_store()
         self.check_apple_drivers()
