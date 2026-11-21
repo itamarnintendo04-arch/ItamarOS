@@ -18,6 +18,8 @@ import customtkinter as ctk
 from lan_bridge import CompanionServer, InstallRequest, local_ipv4
 from official_catalog import OfficialCatalog
 import qrcode
+from store_sources import CommunitySources
+from store_ui import StoreUIMixin
 
 from installer_core import (
     GitHubCatalog, CatalogApp, InstallerError, DOWNLOAD_DIR,
@@ -32,7 +34,7 @@ TEAL, HOVER, WHITE, MUTED = "#25e0c0", "#137e73", "#e9f7fa", "#92aab9"
 BORDER = "#213c4d"
 
 
-class Installer(ctk.CTk):
+class Installer(StoreUIMixin, ctk.CTk):
     def __init__(self):
         super().__init__(fg_color=BG)
         self.title("ItamarOS Installer")
@@ -46,6 +48,13 @@ class Installer(ctk.CTk):
         self.busy = False
         self.catalog = GitHubCatalog()
         self.official = OfficialCatalog()
+        self.store_sources = CommunitySources(self.official)
+        self.store_rows = []
+        self.store_section = "Discover"
+        self.store_search_var = ctk.StringVar()
+        self.store_search_var.trace_add(
+            "write", lambda *_: self._render_store_cards()
+            if hasattr(self, "store_cards") else None)
         self.lan_server: CompanionServer | None = None
         self.lan_image = None
         self.lan_status_text = None
@@ -56,8 +65,8 @@ class Installer(ctk.CTk):
         self.device_choice = ctk.StringVar(value="No iPhone selected")
         self._init_shell()
         self.after(100, self._handle_events)
-        self.after(180, lambda: self.refresh_catalog(force=False))
-        self.after(400, self.scan_device)
+        self.after(180, self._refresh_store)
+        self.after(2500, self.scan_device)
         self.after(1_200_000, self._periodic_refresh)
 
     def _init_shell(self):
@@ -75,6 +84,12 @@ class Installer(ctk.CTk):
             ctk.CTkLabel(logo, text="◈", font=("Segoe UI", 31, "bold"), text_color=TEAL).pack(side="left")
         ctk.CTkLabel(logo, text="ItamarOS\nInstaller", font=("Segoe UI", 20, "bold"),
                      text_color=WHITE, justify="left").pack(side="left", padx=12)
+        self._nav(side, "✦  Discover", lambda: self.show_store("Discover"))
+        self._nav(side, "▦  Apps", lambda: self.show_store("Apps"))
+        self._nav(side, "◈  Games", lambda: self.show_store("Games"))
+        self._nav(side, "↻  Updates", lambda: self.show_store("Updates"))
+        self._nav(side, "▣  Library", lambda: self.show_store("Library"))
+        self._nav(side, "⊞  Sources", lambda: self.show_store("Sources"))
         self._nav(side, "▦  App Catalog", self.show_catalog)
         self._nav(side, "◉  My iPhone", self.show_device)
         self._nav(side, "⌁  Wi-Fi Companion", self.show_wifi_companion)
@@ -89,7 +104,7 @@ class Installer(ctk.CTk):
                       font=("Segoe UI", 13, "bold")).pack(fill="x", padx=20, pady=8)
         ctk.CTkLabel(side, text="Apple sign-in uses a browser,\nnever a password field here.",
                      justify="left", font=("Segoe UI", 11), text_color=MUTED).pack(anchor="w", padx=24)
-        ctk.CTkLabel(side, text="ItamarOS Installer v2.2\nWindows 10 / 11",
+        ctk.CTkLabel(side, text="ItamarOS Installer v2.3\nWindows 10 / 11",
                      text_color="#7892a1", font=("Segoe UI", 11), justify="left").pack(
                          side="bottom", anchor="w", padx=24, pady=24)
 
@@ -118,7 +133,7 @@ class Installer(ctk.CTk):
                                           fg_color="#203744", progress_color=TEAL)
         self.progress.set(0)
         self.progress.pack(side="right", padx=25)
-        self.show_catalog()
+        self.show_store("Discover")
 
     def _nav(self, sidebar, text, callback):
         ctk.CTkButton(sidebar, text=text, command=callback, anchor="w",
