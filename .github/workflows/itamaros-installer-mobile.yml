@@ -49,3 +49,5 @@ jobs:
           if-no-files-found: error
 
 # Rebuild after desktop/iPhone certificate metadata sync; successful build artifacts are published as preview releases.
+
+# Build trigger requested 2026-11-21 (manual refresh)
