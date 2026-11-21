@@ -17,6 +17,7 @@ import urllib.request
 import customtkinter as ctk
 from lan_bridge import CompanionServer, InstallRequest, local_ipv4
 from desktop_certificates import DesktopCertificates
+from driver_setup import check_drivers, install_apple_devices, open_official_store
 from certificate_archives import extract_archives
 from official_catalog import OfficialCatalog
 import qrcode
@@ -95,6 +96,7 @@ class Installer(StoreUIMixin, ctk.CTk):
         self._nav(side, "⊞  Sources", lambda: self.show_store("Sources"))
         self._nav(side, "▦  App Catalog", self.show_catalog)
         self._nav(side, "◉  My iPhone", self.show_device)
+        self._nav(side, "↓  Install Drivers", self.show_driver_setup)
         self._nav(side, "⌁  Wi-Fi Companion", self.show_wifi_companion)
         self._nav(side, "♢  Signing Certificates", self.show_certificates)
         self._nav(side, "⇣  Downloads", self.open_downloads)
@@ -357,6 +359,9 @@ class Installer(StoreUIMixin, ctk.CTk):
                           corner_radius=10,height=40).pack(side="left",fill="x",expand=True)
         ctk.CTkButton(selector,text="Scan Again",fg_color=HOVER,hover_color="#159d88",
                       command=self.scan_device,height=40,width=130).pack(side="right",padx=(12,0))
+        ctk.CTkButton(panel, text="Install Drivers", command=self.show_driver_setup,
+                      fg_color="#284b62", text_color=WHITE, height=43,
+                      font=("Segoe UI", 13, "bold")).pack(fill="x", padx=23, pady=(0, 16))
         ctk.CTkLabel(panel,text="Installations use Apple's mobile device drivers and the pymobiledevice3 helper. "
                      "The IPA must already be properly signed; Apple ID sign-in alone cannot sign an IPA.",
                      text_color=MUTED,wraplength=750,justify="left",font=("Segoe UI",12)).pack(
@@ -371,6 +376,105 @@ class Installer(StoreUIMixin, ctk.CTk):
             ctk.CTkButton(self.content,text="Copy device helper setup instructions",
                           fg_color="#263749",command=self.show_helper_setup,
                           height=43).pack(anchor="w",padx=8,pady=14)
+
+    def show_driver_setup(self):
+        """Driver action stays available whether or not Apple software exists."""
+        self._clear()
+        self._section("Install Drivers", "Official Apple device connection software for Windows.")
+        panel = self._card(self.content)
+        panel.pack(fill="x", padx=8, pady=12)
+        ctk.CTkLabel(panel, text="Apple Devices — Microsoft Store",
+                     text_color=WHITE, font=("Segoe UI", 19, "bold")).pack(
+                         anchor="w", padx=22, pady=(22, 7))
+        self.driver_status = ctk.CTkLabel(
+            panel, text="Select Check Drivers to inspect this computer.",
+            text_color=MUTED, justify="left", wraplength=730)
+        self.driver_status.pack(anchor="w", padx=22, pady=(0, 14))
+        ctk.CTkButton(panel, text="Install Drivers", command=self.install_drivers,
+                      height=44, fg_color=TEAL, text_color=BG,
+                      font=("Segoe UI", 14, "bold")).pack(
+                          fill="x", padx=22, pady=(5, 9))
+        ctk.CTkButton(panel, text="Check Drivers", command=self.check_apple_drivers,
+                      height=41, fg_color="#284b62").pack(
+                          fill="x", padx=22, pady=(0, 9))
+        ctk.CTkButton(panel, text="Open Official Microsoft Store",
+                      command=self.open_apple_store, height=41,
+                      fg_color="#284b62").pack(fill="x", padx=22, pady=(0, 15))
+        ctk.CTkLabel(panel,
+                     text="Install Drivers always remains available. You can install or update "
+                          "Apple Devices using Microsoft's official Store. After installation, "
+                          "connect the iPhone by USB, unlock it and tap Trust This Computer. "
+                          "Wi-Fi Sync does not guarantee wireless IPA installation. "
+                          "The separate pymobiledevice3 helper may still be required.",
+                     text_color=MUTED, wraplength=740, justify="left").pack(
+                         anchor="w", padx=22, pady=(0, 20))
+        self.after(100, self.check_apple_drivers)
+
+    def check_apple_drivers(self):
+        if self.busy:
+            self.status.configure(text="Finish the current operation, then check drivers.")
+            return
+        if hasattr(self, "driver_status") and self.driver_status.winfo_exists():
+            self.driver_status.configure(text="Checking installed Apple components…")
+        self.status.configure(text="Checking Apple device drivers…")
+        self._run(check_drivers, self._drivers_checked)
+
+    def _drivers_checked(self, result):
+        service_label = {
+            "running": "Running", "stopped": "Installed but stopped",
+            "missing": "Not detected", "unavailable": "Could not check",
+            "unsupported": "Windows only",
+        }.get(result.service, result.service)
+        info = (
+            f"Apple Mobile Device Service: {service_label}\\n"
+            f"Apple Devices app: {'Installed' if result.apple_devices_app else 'Not detected'}\\n"
+            f"Windows Package Manager: {'Available' if result.winget_available else 'Unavailable'}\\n"
+            "The button remains available even when Apple software is installed."
+        )
+        if hasattr(self, "driver_status") and self.driver_status.winfo_exists():
+            self.driver_status.configure(text=info)
+        self.status.configure(text="Apple driver check completed")
+
+    def install_drivers(self):
+        if sys.platform != "win32":
+            messagebox.showinfo("Install Drivers", "Apple device drivers can be installed on Windows 10 or 11.")
+            return
+        if self.busy:
+            messagebox.showinfo("Install Drivers", "Finish the current operation before installing drivers.")
+            return
+        answer = messagebox.askyesno(
+            "Install Drivers",
+            "Install or update Apple Devices from the official Microsoft Store?\\n\\n"
+            "ItamarOS will use Windows Package Manager (winget) if it is available. "
+            "Microsoft Store agreements will be accepted for this installation. "
+            "If winget is unavailable, the Store page will open instead.\\n\\n"
+            "Windows may request permission. Continue?"
+        )
+        if not answer:
+            return
+        self.status.configure(text="Installing Apple Devices from Microsoft Store…")
+        self._run(install_apple_devices, self._drivers_installed)
+
+    def _drivers_installed(self, result):
+        installed, info = result
+        if installed:
+            self.status.configure(text="Apple Devices installation command completed")
+            messagebox.showinfo(
+                "Install Drivers",
+                info + "\\n\\nReconnect the iPhone, unlock it, tap Trust and use Check Drivers."
+            )
+        else:
+            self.status.configure(text="Open Microsoft Store to finish installing Apple Devices")
+            messagebox.showwarning(
+                "Install Drivers",
+                info + "\\n\\nThe official Microsoft Store page will open so you can install or repair Apple Devices."
+            )
+            open_official_store()
+        self.check_apple_drivers()
+
+    def open_apple_store(self):
+        if not open_official_store():
+            messagebox.showerror("Install Drivers", "Unable to open the Microsoft Store in your browser.")
 
     def show_certificates(self):
         self._clear()
