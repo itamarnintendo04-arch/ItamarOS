@@ -1,0 +1,126 @@
+name: Publish ItamarOS Store iPhone IPA after successful build
+on:
+  workflow_run:
+    workflows:
+      - Build ItamarOS Installer Mobile IPA
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Successful ItamarOS Installer Mobile Actions run ID"
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the successful unsigned iPhone IPA
+        shell: bash
+        env:
+          INPUT_RUN: ${{ inputs.run_id }}
+          TRIGGER_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          RUN_ID="$INPUT_RUN"
+          if [ -z "$RUN_ID" ]; then RUN_ID="$TRIGGER_RUN"; fi
+          if [ -z "$RUN_ID" ] || ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "Missing numeric source workflow run ID"
+            exit 1
+          fi
+          mkdir -p incoming
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir incoming
+          echo "$RUN_ID" > input-run.txt
+      - name: Verify IPA version, bundle, app icons and iOS Store metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, pathlib, plistlib, zipfile
+          apps=list(pathlib.Path("incoming").rglob("*.ipa"))
+          assert len(apps)==1, f"Expected one unsigned IPA: {apps}"
+          ipa=apps[0]
+          assert ipa.stat().st_size>200_000, "Empty IPA"
+          with zipfile.ZipFile(ipa) as archive:
+            assert archive.testzip() is None, "Corrupted IPA"
+            infofiles=[name for name in archive.namelist()
+                       if name.startswith("Payload/") and
+                       name.count("/")==2 and name.endswith(".app/Info.plist")]
+            assert len(infofiles)==1, "Expected exactly one app Info.plist"
+            info=plistlib.loads(archive.read(infofiles[0]))
+            assert info.get("CFBundleIdentifier")=="net.itamaros.installer.mobile"
+            assert info.get("CFBundleShortVersionString")=="1.6.0", \
+                   "This is an older IPA; do not publish it as the App Store build"
+            assert "_itamaros._tcp" in info.get("NSBonjourServices",[]), \
+                   "Wi-Fi Companion capability is missing"
+            assert "NSCameraUsageDescription" in info, "Source QR scanner permission missing"
+          name="ItamarOS-Installer-Store-v1.6-UNSIGNED.ipa"
+          pathlib.Path(name).write_bytes(ipa.read_bytes())
+          digest=hashlib.sha256(ipa.read_bytes()).hexdigest()
+          pathlib.Path("SHA256SUMS.txt").write_text(f"{digest}  {name}\n")
+          pathlib.Path("NOTES.md").write_text(
+            "# ItamarOS Installer Mobile 1.6 — App Store Preview\n\n"
+            "**UNSIGNED IPA** — requires authorized Apple signing and "
+            "compatible provisioning before it can be installed on an iPhone.\n\n"
+            "- Redesigned app store: Discover, Apps, Games, Updates, Library and Sources\n"
+            "- Immutable ItamarOS Official source includes everyday apps and games\n"
+            "- Optional public HTTPS community catalogs with user approval, QR scanning, "
+            "enable/disable/remove and warnings for unverified apps\n"
+            "- Detailed listings, search, icons, screenshots where available, and version metadata\n"
+            "- IPA download with Bundle ID check, export and existing authorized signing WebView\n"
+            "- Existing private certificate vault and Wi-Fi Companion retained\n\n"
+            "Downloading an IPA does not install it on iOS. This release "
+            "never includes or shares P12 private keys or passwords. "
+            "Community sources are not security-reviewed by ItamarOS.\n\n"
+            f"Build run: {pathlib.Path('input-run.txt').read_text().strip()}\n"
+            f"SHA-256: {digest}\n"
+          )
+          print("Validated iPhone App Store package",name,ipa.stat().st_size)
+          PY
+      - name: Publish version 1.6 prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=ios-installer-2026.11.21-store.1
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists. Keeping published assets."
+          else
+            gh release create "$TAG" ItamarOS-Installer-Store-v1.6-UNSIGNED.ipa SHA256SUMS.txt \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title "ItamarOS Installer 1.6 — iPhone App Store (Unsigned)" \
+              --notes-file NOTES.md
+          fi
+      - name: Point official catalog to the verified iOS Store release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B main origin/main
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("catalog/ios-apps.json")
+          catalog=json.loads(p.read_text())
+          app=next((x for x in catalog["apps"] if x["id"]=="ItamarOS-Installer"),None)
+          assert app is not None
+          app["release_tag"]="ios-installer-2026.11.21-store.1"
+          app["asset_name"]="ItamarOS-Installer-Store-v1.6-UNSIGNED.ipa"
+          app["description"]="ItamarOS iPhone App Store with everyday apps, games, HTTPS community sources, QR source scanner and Wi-Fi Companion."
+          p.write_text(json.dumps(catalog,indent=2)+"\n")
+          PY
+          if git diff --quiet -- catalog/ios-apps.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalog/ios-apps.json
+          git commit -m "Update official iOS Installer catalog to verified App Store 1.6 IPA"
+          git push origin HEAD:main
