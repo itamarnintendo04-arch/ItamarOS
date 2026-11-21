@@ -57,3 +57,28 @@ The Windows installer has a native CustomTkinter store with app cards, source ba
 - Community sources are unverified. Downloads are limited, use public HTTPS, and check the IPA Bundle ID. This does **not** establish publisher trust or malware safety.
 - The official first-party IPA is downloaded from `catalog/ios-apps.json` in GitHub Releases automatically; the user does not need to browse for an IPA in the store. Unsigned previews still require authorized Apple signing before installation.
 
+
+
+## Desktop certificate sync (development)
+
+The **Signing Certificates** screen in the desktop application imports an Apple-issued
+P12 identity (password checked in memory, never stored), and optionally registers a
+matching .mobileprovision file. It records public certificate metadata and local file
+paths in the user's application-data folder. Removing a registration never deletes
+the original certificate file.
+
+After pairing via the existing private Wi-Fi QR/TLS companion, the iPhone can request
+`GET /v1/certificates` and select an available identity. The iPhone receives only
+ID, public certificate subject, expiration and availability/profile flags. It sends
+the chosen ID with a normal install request. The desktop rejects invalid/unavailable
+identity IDs and still requires explicit approval for installation.
+
+**Not yet implemented:** automatic IPA re-signing using a registered P12, real
+Apple Developer account sign-in, cloud-mediated background connectivity, and
+guaranteed Wi-Fi installation. The existing helper can install *already-signed*
+and properly provisioned IPAs when it detects the paired iPhone. Apple Devices /
+iTunes Wi-Fi Sync alone does not guarantee that helper connection.
+
+Older iPhone-local certificates are not migrated, uploaded or synchronized.
+Keep your original files safely backed up and do not expose P12 credentials to a
+website or third-party source.
