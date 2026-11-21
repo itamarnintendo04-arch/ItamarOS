@@ -126,11 +126,11 @@
     {
       "id": "ItamarOS-Installer",
       "name": "ItamarOS Installer",
-      "description": "Native iPhone installer with private certificate vault, secure Wi-Fi pairing and automatic official app catalog.",
+      "description": "ItamarOS iPhone App Store with everyday apps, games, HTTPS community sources, QR source scanner and Wi-Fi Companion.",
       "category": "Utilities",
       "bundle_id": "net.itamaros.installer.mobile",
-      "release_tag": "ios-installer-2026.11.20-wifi.1",
-      "asset_name": "ItamarOS-Installer-WiFi-v1.5-UNSIGNED.ipa",
+      "release_tag": "ios-installer-2026.11.21-store.1",
+      "asset_name": "ItamarOS-Installer-Store-v1.6-UNSIGNED.ipa",
       "source_path": "native-apps/apple/ItamarOSInstallerMobile",
       "icon_path": "",
       "requires_signing": true
