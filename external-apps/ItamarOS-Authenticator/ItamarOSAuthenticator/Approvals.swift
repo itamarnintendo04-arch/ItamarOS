@@ -173,6 +173,7 @@ final class ItamarApprovals: ObservableObject {
             let data = try await post("/functions/v1/itamar-authenticator",
                 data: ["action": "pending"], bearer: active.access)
             let elements = data["requests"] as? [[String: Any]] ?? []
+            approvalServiceReady = true
             requests = elements.compactMap { entry in
                 guard let id = entry["id"] as? String,
                       let service = entry["service"] as? String,
