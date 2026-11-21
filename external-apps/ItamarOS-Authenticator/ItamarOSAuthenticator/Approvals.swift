@@ -33,6 +33,7 @@ final class ItamarApprovals: ObservableObject {
     @Published private(set) var linkedEmail: String = ""
     @Published private(set) var requests: [SignInRequest] = []
     @Published var message = ""
+    @Published private(set) var approvalServiceReady = false
     private var session: LinkSession?
     private var pushToken: String?
 
@@ -66,8 +67,8 @@ final class ItamarApprovals: ObservableObject {
         return payload
     }
     private func store(_ value: LinkSession) throws {
-        session = value
         try SecureKeychain.save(JSONEncoder().encode(value), key: ConnectionConfig.storageKey)
+        session = value
         linkedEmail = value.email
     }
     private func valid() async throws -> LinkSession {
@@ -108,9 +109,18 @@ final class ItamarApprovals: ObservableObject {
             expiresAt: Date().addingTimeInterval((info["expires_in"] as? Double) ?? 3500),
             email: cleaned, deviceID: nil)
         try store(value)
-        try await enroll()
-        message = "Connected to your ItamarOS account."
-        enableNotifications()
+        message = "Email verified. Your ItamarOS account is connected."
+        // Approval enrolment is an optional second stage. Never report the
+        // email sign-in itself as failed because an Edge Function is not deployed.
+        do {
+            try await enroll()
+            approvalServiceReady = true
+            message = "Account connected. Sign-in approvals are ready."
+            enableNotifications()
+        } catch {
+            approvalServiceReady = false
+            message = "Account connected. Approval service unavailable: " + error.localizedDescription
+        }
     }
     private func identity() throws -> P256.Signing.PrivateKey {
         if let existing = SecureKeychain.read(ConnectionConfig.deviceKey),
@@ -137,6 +147,7 @@ final class ItamarApprovals: ObservableObject {
         }
         try store(LinkSession(access: active.access, refresh: active.refresh,
             expiresAt: active.expiresAt, email: active.email, deviceID: id))
+        approvalServiceReady = true
     }
     func enableNotifications() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
@@ -154,6 +165,9 @@ final class ItamarApprovals: ObservableObject {
     }
     func refresh() async {
         guard session != nil else { return }
+        // If the approval backend is unavailable, keep the verified account
+        // connected. Polling is only meaningful after successful enrolment.
+        if session?.deviceID == nil { return }
         do {
             let active = try await valid()
             let data = try await post("/functions/v1/itamar-authenticator",
@@ -171,7 +185,10 @@ final class ItamarApprovals: ObservableObject {
                 return SignInRequest(id: id, service: service, matchNumber: number,
                     challenge: challenge, expiresAt: parsed ?? Date().addingTimeInterval(60))
             }
-        } catch { message = error.localizedDescription }
+        } catch {
+            approvalServiceReady = false
+            message = "Approval service unavailable: " + error.localizedDescription
+        }
     }
     func decide(_ entry: SignInRequest, approve: Bool) async throws {
         let active = try await valid()
@@ -204,6 +221,7 @@ final class ItamarApprovals: ObservableObject {
         SecureKeychain.remove(ConnectionConfig.deviceKey)
         session = nil
         linkedEmail = ""
+        approvalServiceReady = false
         requests = []
         message = "Disconnected locally. Revoke the old device in account security settings."
     }
@@ -262,6 +280,14 @@ struct ApprovalsView: View {
                     } else {
                         Label(approvals.linkedEmail, systemImage: "checkmark.circle.fill")
                             .font(.subheadline).foregroundStyle(.mint)
+                        if !approvals.approvalServiceReady {
+                            Label("Email sign-in connected; approvals are not active yet.",
+                                  systemImage: "exclamationmark.shield")
+                                .font(.footnote).foregroundStyle(.orange)
+                            Button("Retry approval setup") {
+                                Task { await run { try await approvals.enroll() } }
+                            }.disabled(busy)
+                        }
                         HStack {
                             Text("Pending sign-ins").font(.headline)
                             Spacer()
