@@ -246,15 +246,27 @@ class CommunitySources:
         allowed = next((a for a in self.community_apps if a["id"] == item["id"]), None)
         if allowed is None:
             raise InvalidSource("Community source is disabled or no longer available.")
-        data = retrieve(allowed["download_url"], MAX_IPA)
+        # Stream untrusted IPA downloads in bounded chunks. Never allocate
+        # an entire potentially multi-gigabyte IPA in RAM.
+        checked = public_https(allowed["download_url"])
+        resolve_public_host(checked)
         destination_dir = BASE_DIR / "CommunityDownloads"
         destination_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix=".ipa", dir=destination_dir, delete=False) as tmp:
             path = Path(tmp.name)
-            tmp.write(data)
         try:
-            # Verify the actual package's identifier. This is NOT a security
-            # review or cryptographic verification of the publisher.
+            req = urllib.request.Request(
+                checked, headers={"User-Agent": "ItamarOS-Store/1.0"})
+            with urllib.request.build_opener(HTTPSOnlyRedirect).open(req, timeout=120) as response:
+                total = 0
+                with path.open("wb") as out:
+                    while chunk := response.read(256 * 1024):
+                        total += len(chunk)
+                        if total > MAX_IPA:
+                            raise InvalidSource("Community IPA exceeds the 2 GB limit.")
+                        out.write(chunk)
+            # Verify the IPA structure and declared Bundle ID. This is not
+            # a code-signing or malware security review.
             signed = OfficialCatalog._inspect(path, allowed["bundle_id"])
             final = destination_dir / (allowed["source_id"] + "-" + allowed["app_id"] + ".ipa")
             path.replace(final)
