@@ -44,3 +44,16 @@ Run: python main.py
 Tests: python -m unittest discover -s tests -v
 
 Not affiliated with or endorsed by Apple.
+
+
+## ItamarOS Store 2.3 — Discover, Apps, Games, Updates, Library, Sources
+
+The Windows installer has a native CustomTkinter store with app cards, source badges, search, individual app details, community source management, and automatic downloading of official iOS IPAs.
+
+- **ItamarOS Official** is built in, cannot be deleted or disabled, and contains everyday apps (BrowserOS, ItamarCut, Voice Recorder, Screen Balance, Authenticator, Installer, ItamarOS) **and games**.
+- Add community JSON catalogs via **Sources → Add HTTPS Community Source**; they are separate and clearly labeled *Community*, never *Official*. A source can be enabled, disabled or removed.
+- **Apps** shows non-games. **Games** shows games. **Discover** shows both. **Library** contains downloaded IPAs. **Updates** shows previously downloaded entries for a manual release check, not a claim that the iPhone already installed them.
+- Source JSON schema and example: `catalog/SOURCE_FORMAT.md` and `catalog/example-community-source.json`.
+- Community sources are unverified. Downloads are limited, use public HTTPS, and check the IPA Bundle ID. This does **not** establish publisher trust or malware safety.
+- The official first-party IPA is downloaded from `catalog/ios-apps.json` in GitHub Releases automatically; the user does not need to browse for an IPA in the store. Unsigned previews still require authorized Apple signing before installation.
+
