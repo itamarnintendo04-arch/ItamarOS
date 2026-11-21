@@ -8,7 +8,7 @@ struct StorefrontScreen: View {
     @State private var section: StoreSection = .discover
     @State private var activeItem: StoreItem?
     @State private var newSource = ""
-    @State private var showingAddSource = false
+    @State private var scanningSourceQR = false
     @State private var pendingSource = ""
     @State private var confirmCommunitySource = false
 
@@ -59,6 +59,20 @@ struct StorefrontScreen: View {
                 Button("OK") { store.error = nil }
             } message: {
                 Text(store.error ?? "")
+            }
+            .sheet(isPresented: $scanningSourceQR) {
+                NavigationStack {
+                    SourceQRScanner { url in
+                        newSource = url
+                        scanningSourceQR = false
+                    }
+                    .navigationTitle("Scan Source QR")
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Cancel") { scanningSourceQR = false }
+                        }
+                    }
+                }
             }
             .alert("Add Community Source", isPresented: $confirmCommunitySource) {
                 Button("Cancel", role: .cancel) { pendingSource = "" }
@@ -308,15 +322,23 @@ struct StorefrontScreen: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
-                Button {
-                    pendingSource = newSource
-                    confirmCommunitySource = true
-                } label: {
-                    Label("Add Community Source", systemImage: "plus.circle.fill")
-                        .frame(maxWidth: .infinity)
+                HStack {
+                    Button {
+                        pendingSource = newSource
+                        confirmCommunitySource = true
+                    } label: {
+                        Label("Add Source", systemImage: "plus.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(newSource.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    Button {
+                        scanningSourceQR = true
+                    } label: {
+                        Label("Scan QR", systemImage: "qrcode.viewfinder")
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(newSource.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Text("Community sources use HTTPS JSON catalogs. They are not endorsed or security-reviewed by ItamarOS. App files are checked for their stated Bundle ID before being saved. Certificates and passwords are never sent to sources.")
                     .font(.footnote).foregroundStyle(.secondary)
                 Link("Source format and examples",
