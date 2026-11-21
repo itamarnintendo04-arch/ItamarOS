@@ -1,0 +1,59 @@
+name: Validate ItamarOS Storefront
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'store.html'
+      - 'catalog/ios-apps.json'
+      - 'catalog/example-community-source.json'
+      - 'catalog/SOURCE_FORMAT.md'
+      - '.github/workflows/validate-itamaros-storefront.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check website JavaScript syntax
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,re
+          source=pathlib.Path("store.html").read_text(encoding="utf-8")
+          scripts=re.findall(r"<script>(.*?)</script>",source,flags=re.S|re.I)
+          assert len(scripts)==1, "Expected exactly one storefront script"
+          pathlib.Path("/tmp/itamaros-store.js").write_text(scripts[0],encoding="utf-8")
+          for tab in ("Discover","Apps","Games","Updates","Library","Sources"):
+              assert tab in source, f"Missing store section {tab}"
+          assert 'id="official-iphone-apps"' in pathlib.Path("downloads.html").read_text(encoding="utf-8")
+          PY
+          node --check /tmp/itamaros-store.js
+      - name: Check official apps and community source format
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,re
+          official=json.loads(pathlib.Path("catalog/ios-apps.json").read_text())
+          example=json.loads(pathlib.Path("catalog/example-community-source.json").read_text())
+          assert official["schema_version"]==example["schema_version"]==1
+          apps=official["apps"]
+          assert len(apps)>=11
+          assert len(set(a["id"] for a in apps))==len(apps)
+          for name in ("BrowserOS","ItamarCut","Voice Recorder","ItamarOS Screen Balance","ItamarOS Authenticator"):
+              assert any(a["name"]==name for a in apps), f"Missing official non-game app {name}"
+          assert any(a["category"]=="Games" for a in apps)
+          for app in apps:
+              assert re.fullmatch(r"[A-Za-z0-9._-]+",app["release_tag"])
+              assert app["asset_name"].lower().endswith(".ipa")
+              assert app["bundle_id"].count(".")>=1
+          for app in example["apps"]:
+              assert app["download_url"].startswith("https://")
+              assert app["download_url"].endswith(".ipa")
+          print(f"Validated {len(apps)} official iOS apps including non-game apps and games")
+          PY
