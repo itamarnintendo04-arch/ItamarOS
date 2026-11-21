@@ -175,7 +175,7 @@ final class LANCompanionModel: NSObject, ObservableObject,
         } catch {
             await MainActor.run {
                 paired = false
-                state = error.localizedDescription
+                state = Self.readableError(error)
             }
         }
     }
@@ -218,9 +218,12 @@ final class LANCompanionModel: NSObject, ObservableObject,
     }
 
     func requestInstall(_ app: LANOfficialApp) async {
-        guard paired else { return }
+        guard paired else {
+            await MainActor.run { state = "ITAMAROSERVER CANT BE FOUND (ITA-001). Connect to your computer first." }
+            return
+        }
         guard !selectedUDID.isEmpty else {
-            await MainActor.run { state = "The computer has not detected a paired iPhone yet." }
+            await MainActor.run { state = "ITA-404: The computer has not detected a paired iPhone. Check USB pairing and Wi-Fi sync." }
             return
         }
         do {
@@ -240,27 +243,38 @@ final class LANCompanionModel: NSObject, ObservableObject,
                 guard let job = answer["request"] as? [String: Any],
                       let phase = job["state"] as? String else { continue }
                 let detail = job["detail"] as? String ?? ""
+                let code = job["code"] as? String ?? ""
                 if ["installed", "failed", "denied", "requires_signing"].contains(phase) {
                     let update = phase == "installed" ? "Installed on iPhone."
                         : phase == "requires_signing" ? "Downloaded to computer; signing required."
                         : phase == "denied" ? "Declined by computer." : "Installation failed."
                     await MainActor.run {
-                        state = [update, detail].filter { !$0.isEmpty }.joined(separator: " ")
+                        state = [code, update, detail].filter { !$0.isEmpty }.joined(separator: " ")
                         activeRequest = ""
                     }
                     return
                 }
             }
             await MainActor.run {
-                state = "The request is still processing. Check ItamarOS Installer on the computer."
+                state = "ITA-408: Installation timed out. Check ItamarOS Installer on the computer."
                 activeRequest = ""
             }
         } catch {
             await MainActor.run {
-                state = error.localizedDescription
+                state = Self.readableError(error)
                 activeRequest = ""
             }
         }
+    }
+
+    private static func readableError(_ error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain && [NSURLErrorCannotConnectToHost, NSURLErrorCannotFindHost,
+            NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut, NSURLErrorNotConnectedToInternet,
+            NSURLErrorSecureConnectionFailed].contains(ns.code) {
+            return "ITAMAROSERVER CANT BE FOUND (ITA-001). Check that the computer app and Wi-Fi server are running."
+        }
+        return error.localizedDescription
     }
 
     private func api(_ method: String, path: String,
@@ -281,16 +295,22 @@ final class LANCompanionModel: NSObject, ObservableObject,
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw PairingFailure.message(Self.readableError(error))
+        }
         guard data.count <= 250_000,
               let http = response as? HTTPURLResponse else {
             throw PairingFailure.message("Unexpected response from the local server.")
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw PairingFailure.message(
-                http.statusCode == 403 ? "Pairing code expired or is incorrect."
-                : http.statusCode == 401 ? "Pairing session expired. Scan the QR again."
-                : "Server returned error \(http.statusCode).")
+            let payload = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let code = payload?["code"] as? String ?? "ITA-HTTP-\(http.statusCode)"
+            let reason = payload?["error"] as? String ?? "Request failed"
+            throw PairingFailure.message("\(code): \(reason.replacingOccurrences(of: "_", with: " "))")
         }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw PairingFailure.message("The local server returned unreadable data.")
