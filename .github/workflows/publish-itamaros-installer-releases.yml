@@ -51,13 +51,54 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           gh run download "$RUN_ID" --repo "$GH_REPO" --name "$ARTIFACT" --dir dist
-      - name: Check file exists and record checksum
+      - name: Extract Actions wrapper and stage direct EXE or IPA asset
         env:
           FILENAME: ${{ steps.edition.outputs.file }}
         shell: bash
         run: |
           set -euo pipefail
-          test -s "dist/$FILENAME"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile, BadZipFile
+          name = os.environ["FILENAME"]
+          assert name in ("ItamarOS Installer.exe", "ItamarOSInstallerMobile-unsigned.ipa")
+          root = Path("dist")
+          # gh run download normally extracts the Actions artifact wrapper already.
+          # Some older jobs upload a ZIP inside that wrapper. Unwrap only those,
+          # never the IPA payload itself (IPA is itself a ZIP-format package).
+          matches = [p for p in root.rglob(name) if p.is_file()]
+          if not matches:
+              for archive in root.rglob("*.zip"):
+                  try:
+                      with ZipFile(archive) as z:
+                          candidates = [entry for entry in z.infolist()
+                                        if not entry.is_dir()
+                                        and Path(entry.filename).name == name
+                                        and entry.file_size < 1_000_000_000]
+                          if len(candidates) != 1:
+                              continue
+                          data = z.read(candidates[0])
+                          (root / name).write_bytes(data)
+                          matches = [root / name]
+                          break
+                  except BadZipFile:
+                      continue
+          if len(matches) != 1 or matches[0].stat().st_size == 0:
+              raise SystemExit(f"Expected one nonempty installable build asset: {name}")
+          target = root / name
+          if matches[0] != target:
+              target.write_bytes(matches[0].read_bytes())
+          if name.endswith(".ipa"):
+              with ZipFile(target) as ipa:
+                  if ipa.testzip() is not None or not any(
+                      x.startswith("Payload/") and ".app/" in x for x in ipa.namelist()
+                  ):
+                      raise SystemExit("The IPA is corrupt or lacks an app bundle")
+          elif target.read_bytes()[:2] != b"MZ":
+              raise SystemExit("EXE does not have a Windows executable header")
+          print(f"Direct release asset ready: {target} ({target.stat().st_size} bytes)")
+          PY
           (cd dist && sha256sum "$FILENAME" > SHA256SUMS.txt)
       - name: Publish preview release
         env:
