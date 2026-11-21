@@ -47,3 +47,5 @@ jobs:
           name: ItamarOS-Installer-Mobile-Unsigned-IPA
           path: native-apps/apple/ItamarOSInstallerMobile/ItamarOSInstallerMobile-unsigned.ipa
           if-no-files-found: error
+
+# Rebuild after desktop/iPhone certificate metadata sync; successful build artifacts are published as preview releases.
