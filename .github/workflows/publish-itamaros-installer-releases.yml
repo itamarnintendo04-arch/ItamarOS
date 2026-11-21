@@ -74,4 +74,4 @@ jobs:
           gh release create "$RELEASE_TAG" "dist/$RELEASE_FILE" dist/SHA256SUMS.txt \
             --repo "$GH_REPO" --target "$RELEASE_SHA" \
             --title "$RELEASE_NAME (preview, run ${{ github.event.workflow_run.run_number }})" \
-            --notes-file notes.txt --prerelease --verify-tag
+            --notes-file notes.txt --prerelease
