@@ -34,7 +34,7 @@ class CommunitySourceTests(unittest.TestCase):
         items = self.store.items()
         self.assertEqual(len(items), 3)
         self.assertTrue(all(i["official"] for i in items))
-        self.assertEqual([a["category"] for a in items], ["Apps", "Creative", "Games"])
+        self.assertEqual([a["category"] for a in items], ["Utilities", "Creative", "Games"])
 
     def test_disallow_private_urls_and_credentials(self):
         for url in ["http://example.com/source.json", "https://localhost/catalog.json",
