@@ -349,7 +349,7 @@ final class LANCompanionModel: NSObject, ObservableObject,
 }
 
 struct WiFiCompanionScreen: View {
-    @StateObject private var model = LANCompanionModel()
+    @EnvironmentObject private var model: LANCompanionModel
     @State private var showCamera = false
 
     var body: some View {
