@@ -403,7 +403,7 @@ struct WiFiCompanionScreen: View {
                             if let identity = model.certificates.first(where: { $0.id == model.selectedCertificateID }) {
                                 LabeledContent("Expires", value: String(identity.expires.prefix(10)))
                                 Text(identity.hasProfile ? "Provisioning profile registered on computer" : "Provisioning profile missing")
-                                    .font(.caption).foregroundStyle(identity.hasProfile ? .secondary : .orange)
+                                    .font(.caption).foregroundStyle(identity.hasProfile ? Color.secondary : Color.orange)
                             }
                             Text("Names and status sync from the PC. Private keys, P12 files and passwords never leave it. Signing is not automatic.")
                                 .font(.caption).foregroundStyle(.secondary)
