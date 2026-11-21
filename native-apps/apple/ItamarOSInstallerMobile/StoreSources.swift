@@ -292,7 +292,7 @@ final class ItamarStore: ObservableObject {
                 throw error
             }
         } catch {
-            error = error.localizedDescription
+            self.error = error.localizedDescription
         }
     }
 
