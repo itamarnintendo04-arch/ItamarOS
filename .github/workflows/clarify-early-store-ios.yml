@@ -1,0 +1,41 @@
+name: Clarify early ItamarOS Store iOS preview notes
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/clarify-early-store-ios.yml'
+permissions:
+  contents: write
+jobs:
+  fix-notes:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clarify features present in the earliest 1.6 unsigned preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > NOTES.md <<'EOF'
+          # ItamarOS Installer 1.6 — Early App Store Preview
+          
+          **UNSIGNED IPA** — requires authorized Apple signing and compatible provisioning before installing on an iPhone.
+          
+          - Native Store with Discover, Apps, Games, Updates, Library and Sources
+          - Immutable official ItamarOS source with first-party everyday apps and games
+          - Optional user-approved HTTPS community sources (add by URL), enable/disable/remove, distinct unverified badges
+          - App listings with search, version, developer and screenshots when supplied
+          - Download and Bundle ID verification, export and authorized signing WebView
+          - Existing P12 certificate vault, Wi-Fi companion and Wi-Fi pairing QR retained
+          
+          **The early Store preview does not yet show the community-source QR scan button.** The newer source scanner was added in source code afterward and will be published in a separately verified IPA build.
+          
+          Downloading and signing an IPA do not themselves install it in iOS. No P12 keys or passwords are included in releases or sent to third-party app sources.
+          
+          Verified iPhone build origin: GitHub Actions run 44875931117.
+          EOF
+          gh release edit ios-installer-2026.11.21-store.1 \
+            --repo "$GITHUB_REPOSITORY" --notes-file NOTES.md \
+            --title 'ItamarOS Installer 1.6 — Early iPhone App Store Preview (Unsigned)'
