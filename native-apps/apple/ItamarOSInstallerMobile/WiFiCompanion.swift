@@ -249,6 +249,17 @@ final class LANCompanionModel: NSObject, ObservableObject,
                         : phase == "requires_signing" ? "Downloaded to computer; signing required."
                         : phase == "denied" ? "Declined by computer." : "Installation failed."
                     await MainActor.run {
+                        if phase == "installed" {
+                            let key = "itamaros.installed.apps.v1"
+                            let existing = UserDefaults.standard.string(forKey: key) ?? "[]"
+                            let names = (existing.data(using: .utf8))
+                                .flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
+                            let updated = Array(Set(names + [app.name])).sorted()
+                            if let data = try? JSONEncoder().encode(updated),
+                               let json = String(data: data, encoding: .utf8) {
+                                UserDefaults.standard.set(json, forKey: key)
+                            }
+                        }
                         state = [code, update, detail].filter { !$0.isEmpty }.joined(separator: " ")
                         activeRequest = ""
                     }
