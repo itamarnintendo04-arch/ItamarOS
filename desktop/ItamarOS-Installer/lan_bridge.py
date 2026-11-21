@@ -165,7 +165,7 @@ class CompanionServer:
                     if expiry > now and token:
                         owner.sessions[token] = now + 3600
                         return True
-                self._json(401, {"error": "pairing_required"})
+                self._json(401, {"error": "pairing_required", "code": "ITA-401"})
                 return False
 
             def _read_json(self) -> dict | None:
@@ -257,10 +257,10 @@ class CompanionServer:
                 allowed = {str(a.get("id", "")) for a in owner.get_apps()}
                 paired = {str(d.get("udid", "")) for d in owner.get_devices()}
                 if app_id not in allowed or udid not in paired:
-                    self._json(400, {"error": "unknown_app_or_device"})
+                    self._json(400, {"error": "unknown_app_or_device", "code": "ITA-404"})
                     return
                 if certificate_id and not any(c.get("id") == certificate_id and c.get("available") for c in owner.get_certificates()):
-                    self._json(400, {"error": "unknown_or_unavailable_certificate"})
+                    self._json(400, {"error": "unknown_or_unavailable_certificate", "code": "ITA-422"})
                     return
                 request = InstallRequest(secrets.token_urlsafe(16), app_id, udid, time.time(), certificate_id)
                 with owner.guard:
@@ -303,7 +303,10 @@ class CompanionServer:
         with self.guard:
             if request_id in self.requests:
                 self.requests[request_id].update(
-                    state=state, detail=detail[:320]
+                    state=state, detail=detail[:320],
+                    code={"denied": "ITA-403", "downloading": "ITA-102",
+                          "requires_signing": "ITA-310", "installed": "ITA-200",
+                          "failed": "ITA-500"}[state]
                 )
 
     def stop(self) -> None:
