@@ -29,36 +29,21 @@ struct MainScreen: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        header
-                        HStack(spacing: 10) {
-                            Label("Import your P12", systemImage: "square.and.arrow.down")
-                                .font(.headline)
-                            Spacer()
-                            Button { importing = true } label: {
-                                Image(systemName: "plus.circle.fill").font(.title2)
-                            }
-                        }
-                        .padding(.horizontal)
-                        Text("Choose a P12 or ZIP from Files, then enter its password securely. TXT files are not needed; private keys stay on this iPhone.")
-                            .font(.footnote).foregroundStyle(.secondary).padding(.horizontal)
-                        if vault.records.isEmpty {
-                            ContentUnavailableView("No certificates yet", systemImage: "lock.shield",
-                                description: Text("Import an authorized .p12 certificate and a matching .mobileprovision file. You will be asked for its password."))
-                                .padding(.top, 40)
-                        }
-                        ForEach(vault.records) { cert in
-                            certificateCard(cert)
-                        }
-                    }.padding(.vertical)
-                }
-                .navigationTitle("Certificates")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Import") { importing = true }
+                Form {
+                    Section("Desktop-managed certificates") {
+                        Label("Signing identities are managed by ItamarOS Installer on your computer.",
+                              systemImage: "desktopcomputer")
+                        Text("Open Signing Certificates on the computer to import P12 and provisioning profiles. Then pair over Wi-Fi and select an available identity in the Wi-Fi tab.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Section("Privacy") {
+                        Label("Only certificate names, expiration and availability sync to this iPhone.",
+                              systemImage: "lock.shield")
+                        Text("Private keys and passwords remain on the computer. Previously imported iPhone certificates are not transferred automatically.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                .navigationTitle("Certificates")
             }
             .tabItem { Label("Certificates", systemImage: "checkmark.shield.fill") }.tag(0)
             StorefrontScreen()
@@ -74,23 +59,9 @@ struct MainScreen: View {
                             Label("Change App Icon", systemImage: "paintpalette.fill")
                         }
                     }
-                    Section("Selected certificate") {
-                        if let selected = vault.selected {
-                            Text(selected.name)
-                            Text(selected.statusLabel).foregroundStyle(selected.dateExpired ? .red : .secondary)
-                        } else {
-                            Text("No certificate selected")
-                        }
-                        Toggle("Prefer the newest valid certificate automatically", isOn: $vault.autoSelect)
-                            .onChange(of: vault.autoSelect) { value in
-                                vault.saveAutoPreference()
-                            }
-                    }
-                    Section("Privacy") {
-                        Label("Stored encrypted only on this iPhone", systemImage: "lock.shield")
-                        Label("Encryption key stays in iOS Keychain", systemImage: "key.fill")
-                        Text("Enter your P12 password when you import a certificate. The certificate and its password are stored encrypted on this iPhone, never sent to a server.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                    Section("Computer signing") {
+                        Text("Choose signing identities in Wi-Fi Companion after pairing with the computer.")
+                        Label("P12 passwords are never requested by the iPhone.", systemImage: "lock.shield")
                     }
                     Section("Important") {
                         Text("Wi-Fi Companion connects to a paired Windows installer over a local encrypted connection. The computer shares device information and downloads official IPAs automatically. Apple verifies signatures and provisioning; unsigned developer builds still require signing.")
