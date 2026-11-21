@@ -9,9 +9,10 @@ import UIKit
 @main
 struct ItamarOSMobileInstaller: App {
     @StateObject private var vault = CertificateVault()
+    @StateObject private var companion = LANCompanionModel()
     var body: some Scene {
         WindowGroup {
-            MainScreen().environmentObject(vault)
+            MainScreen().environmentObject(vault).environmentObject(companion)
                 .preferredColorScheme(.dark)
                 .tint(.cyan)
         }
