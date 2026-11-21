@@ -95,16 +95,19 @@ class InstallRequest:
     app_id: str
     target_udid: str
     created_at: float
+    certificate_id: str = ""
 
 
 class CompanionServer:
     def __init__(self, get_devices: Callable[[], list[dict]],
                  get_apps: Callable[[], list[dict]],
                  on_request: Callable[[InstallRequest], None],
+                 get_certificates: Callable[[], list[dict]] | None = None,
                  host: str = HOST, port: int = 0):
         self.get_devices = get_devices
         self.get_apps = get_apps
         self.on_request = on_request
+        self.get_certificates = get_certificates or (lambda: [])
         self.host = host
         self.port = port
         self.fingerprint = ""
@@ -201,6 +204,8 @@ class CompanionServer:
                     ]})
                 elif path == "/v1/apps":
                     self._json(200, {"apps": owner.get_apps()[:50]})
+                elif path == "/v1/certificates":
+                    self._json(200, {"certificates": owner.get_certificates()[:100]})
                 elif path.startswith("/v1/requests/"):
                     key = path.removeprefix("/v1/requests/")
                     with owner.guard:
@@ -245,7 +250,8 @@ class CompanionServer:
                     return
                 app_id = str(data.get("app_id", ""))
                 udid = str(data.get("udid", ""))
-                if len(app_id) > 100 or len(udid) > 80:
+                certificate_id = str(data.get("certificate_id", ""))
+                if len(app_id) > 100 or len(udid) > 80 or len(certificate_id) > 100:
                     self._json(400, {"error": "invalid_arguments"})
                     return
                 allowed = {str(a.get("id", "")) for a in owner.get_apps()}
@@ -253,10 +259,14 @@ class CompanionServer:
                 if app_id not in allowed or udid not in paired:
                     self._json(400, {"error": "unknown_app_or_device"})
                     return
-                request = InstallRequest(secrets.token_urlsafe(16), app_id, udid, time.time())
+                if certificate_id and not any(c.get("id") == certificate_id and c.get("available") for c in owner.get_certificates()):
+                    self._json(400, {"error": "unknown_or_unavailable_certificate"})
+                    return
+                request = InstallRequest(secrets.token_urlsafe(16), app_id, udid, time.time(), certificate_id)
                 with owner.guard:
                     owner.requests[request.id] = {"id": request.id, "app_id": app_id,
-                                                  "state": "waiting_for_desktop_approval"}
+                                                  "state": "waiting_for_desktop_approval",
+                                                  "certificate_id": certificate_id}
                 owner.on_request(request)
                 self._json(202, {"request_id": request.id, "state": "waiting_for_desktop_approval"})
 
