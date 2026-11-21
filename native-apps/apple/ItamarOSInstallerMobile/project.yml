@@ -26,6 +26,7 @@ targets:
       - path: Catalog.swift
       - path: StoreSources.swift
       - path: Storefront.swift
+      - path: SourceQRScanner.swift
       - path: CustomIPA.swift
       - path: ComputerInstallView.swift
       - path: EmbeddedIPASignerView.swift
