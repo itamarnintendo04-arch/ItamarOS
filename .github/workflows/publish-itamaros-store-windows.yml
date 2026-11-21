@@ -1,0 +1,67 @@
+name: Publish ItamarOS Store for Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-itamaros-store-windows.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download successful Store 2.3 Windows build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p original
+          gh run download 44875989353 --repo "$GITHUB_REPOSITORY" --dir original
+      - name: Validate the executable and prepare release notes
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import pathlib
+          import shutil
+          executables = list(pathlib.Path("original").rglob("*.exe"))
+          assert len(executables) == 1, f"Expected one Windows EXE, got {executables}"
+          data = executables[0].read_bytes()
+          assert len(data) > 500_000 and data[:2] == b"MZ", "Invalid Windows PE executable"
+          name = "ItamarOS-Installer-Store-v2.3.exe"
+          pathlib.Path(name).write_bytes(data)
+          sha = hashlib.sha256(data).hexdigest()
+          pathlib.Path("SHA256SUMS.txt").write_text(f"{sha}  {name}\n")
+          pathlib.Path("NOTES.md").write_text(
+            "# ItamarOS Installer 2.3 — Windows App Store\n\n"
+            "- New Discover, Apps, Games, Updates, Library and Sources screens\n"
+            "- Official first-party source includes regular apps and games\n"
+            "- Optional HTTPS JSON community sources with enable, remove and publisher labeling\n"
+            "- App detail pages, search, version, developer and category metadata\n"
+            "- Source and IPA validation, Bundle ID checks, and local file downloads\n"
+            "- Existing private Wi-Fi Companion and device installation workflows retained\n\n"
+            "**Safety and limitations:** Community source listings are not vetted or endorsed. "
+            "An IPA download is not an installation. Unsigned apps must be legitimately "
+            "signed with Apple-issued credentials and compatible provisioning before "
+            "installation through an Apple-supported method.\n\n"
+            "Build verified in GitHub Actions run 44875989353.\n"
+            f"SHA-256: {sha}\n"
+          )
+          print(f"Validated {name}, bytes={len(data)}")
+          PY
+      - name: Publish new Windows Store prerelease
+        run: |
+          set -euo pipefail
+          TAG=windows-installer-2026.11.21-store.1
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release exists; preserving assets"
+            exit 0
+          fi
+          gh release create "$TAG" ItamarOS-Installer-Store-v2.3.exe SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "ItamarOS Installer 2.3 — Windows App Store" --notes-file NOTES.md
