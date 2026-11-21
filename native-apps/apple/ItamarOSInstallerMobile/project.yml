@@ -6,8 +6,8 @@ settings:
     SWIFT_VERSION: '5.0'
     IPHONEOS_DEPLOYMENT_TARGET: '18.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '1.5.0'
-    CURRENT_PROJECT_VERSION: '6'
+    MARKETING_VERSION: '1.6.0'
+    CURRENT_PROJECT_VERSION: '7'
     CODE_SIGNING_ALLOWED: NO
 packages:
   ZIPFoundation:
@@ -24,6 +24,8 @@ targets:
       - path: ChangeAppIconView.swift
       - path: CertificateVault.swift
       - path: Catalog.swift
+      - path: StoreSources.swift
+      - path: Storefront.swift
       - path: CustomIPA.swift
       - path: ComputerInstallView.swift
       - path: EmbeddedIPASignerView.swift
@@ -34,8 +36,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: ItamarOS Installer
-        CFBundleShortVersionString: '1.5.0'
-        CFBundleVersion: '6'
+        CFBundleShortVersionString: '1.6.0'
+        CFBundleVersion: '7'
         UILaunchScreen: {}
         NSCameraUsageDescription: Scan the pairing QR shown by your trusted ItamarOS Installer on Windows.
         NSLocalNetworkUsageDescription: Find and securely connect to your ItamarOS Installer computer on the same Wi-Fi network.
