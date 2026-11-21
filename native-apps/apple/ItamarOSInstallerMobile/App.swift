@@ -61,8 +61,8 @@ struct MainScreen: View {
                 }
             }
             .tabItem { Label("Certificates", systemImage: "checkmark.shield.fill") }.tag(0)
-            CatalogScreen()
-                .tabItem { Label("ItamarOS Apps", systemImage: "square.grid.2x2.fill") }.tag(1)
+            StorefrontScreen()
+                .tabItem { Label("Store", systemImage: "bag.fill") }.tag(1)
             CustomIPAScreen()
                 .tabItem { Label("Custom IPA", systemImage: "square.and.arrow.down.on.square") }.tag(2)
             WiFiCompanionScreen()
