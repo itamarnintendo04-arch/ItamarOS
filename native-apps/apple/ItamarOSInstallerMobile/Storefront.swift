@@ -400,6 +400,7 @@ private struct StoreAppIcon: View {
 }
 
 private struct StoreAppDetails: View {
+    @EnvironmentObject private var companion: LANCompanionModel
     let item: StoreItem
     @ObservedObject var store: ItamarStore
     @Environment(\.dismiss) private var dismiss
@@ -436,6 +437,27 @@ private struct StoreAppDetails: View {
                                 Label("Share IPA", systemImage: "square.and.arrow.up")
                             }
                             .buttonStyle(.bordered)
+                        }
+                    }
+                    if item.official {
+                        Button {
+                            if let app = companion.apps.first(where: { $0.id == item.appID }) {
+                                Task { await companion.requestInstall(app) }
+                            } else {
+                                companion.state = "ITA-404: This app is not available from the paired computer's official catalog."
+                            }
+                        } label: {
+                            Label("Install with paired computer", systemImage: "iphone.and.arrow.forward")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!companion.paired || !companion.activeRequest.isEmpty)
+                        Text(companion.paired
+                             ? "The paired computer must approve the request. Signing and a compatible iPhone connection are required."
+                             : "ITAMAROSERVER CANT BE FOUND (ITA-001). Pair the iPhone in the Wi-Fi tab first.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        if !companion.state.isEmpty {
+                            Text(companion.state).font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Text("Downloading is not installing. An unsigned IPA must be signed with an authorized certificate and installed through an Apple-supported method.")
