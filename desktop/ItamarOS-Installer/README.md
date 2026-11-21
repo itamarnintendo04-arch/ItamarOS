@@ -82,3 +82,9 @@ iTunes Wi-Fi Sync alone does not guarantee that helper connection.
 Older iPhone-local certificates are not migrated, uploaded or synchronized.
 Keep your original files safely backed up and do not expose P12 credentials to a
 website or third-party source.
+
+## iPhone app prerequisite (November 21 update)
+
+The companion Store and its **Installed** tab are features of the separately installed **ItamarOS Installer Mobile** iPhone app. A correctly signed, provisioned initial installation of that iPhone IPA is required before using mobile-triggered installs. Once paired, the iPhone requests an installation from this Windows application. Only a successful desktop installation report unlocks the Installed tab; it does not enumerate installed iOS apps.
+
+Current automated CI produces a Windows EXE and an **unsigned** iPhone IPA. Certificate import/metadata sync does not yet auto-sign arbitrary IPAs. If Wi-Fi device detection or an Apple signing check fails, the app displays an error instead of reporting success.
