@@ -69,6 +69,14 @@ struct LANDevice: Identifiable {
     var id: String { udid }
 }
 
+struct LANSigningIdentity: Identifiable {
+    let id: String
+    let name: String
+    let expires: String
+    let available: Bool
+    let hasProfile: Bool
+}
+
 struct LANOfficialApp: Identifiable {
     let id: String
     let name: String
@@ -83,6 +91,8 @@ final class LANCompanionModel: NSObject, ObservableObject,
     @Published var discovered: [String] = []
     @Published var devices: [LANDevice] = []
     @Published var apps: [LANOfficialApp] = []
+    @Published var certificates: [LANSigningIdentity] = []
+    @Published var selectedCertificateID = ""
     @Published var selectedUDID = ""
     @Published var activeRequest = ""
     @Published var paired = false
@@ -171,10 +181,10 @@ final class LANCompanionModel: NSObject, ObservableObject,
     }
 
     func reload() async throws {
-        let (deviceJSON, appJSON) = try await (
-            api("GET", path: "/v1/devices"),
-            api("GET", path: "/v1/apps")
-        )
+        async let fetchedDevices = api("GET", path: "/v1/devices")
+        async let fetchedApps = api("GET", path: "/v1/apps")
+        async let fetchedCertificates = api("GET", path: "/v1/certificates")
+        let (deviceJSON, appJSON, certificateJSON) = try await (fetchedDevices, fetchedApps, fetchedCertificates)
         let deviceRows = (deviceJSON["devices"] as? [[String: Any]] ?? [])
             .compactMap { d -> LANDevice? in
                 guard let id = d["udid"] as? String, !id.isEmpty else { return nil }
@@ -188,7 +198,17 @@ final class LANCompanionModel: NSObject, ObservableObject,
                                       description: d["description"] as? String ?? "",
                                       signed: d["signed"] as? Bool ?? false)
             }
+        let certificateRows = (certificateJSON["certificates"] as? [[String: Any]] ?? []).compactMap { item -> LANSigningIdentity? in
+            guard let id = item["id"] as? String, let name = item["name"] as? String else { return nil }
+            return LANSigningIdentity(id: id, name: name, expires: item["expires"] as? String ?? "",
+                                      available: item["available"] as? Bool ?? false,
+                                      hasProfile: item["has_profile"] as? Bool ?? false)
+        }
         await MainActor.run {
+            certificates = certificateRows
+            if !certificateRows.contains(where: { $0.id == selectedCertificateID && $0.available }) {
+                selectedCertificateID = certificateRows.first(where: { $0.available })?.id ?? ""
+            }
             devices = deviceRows
             apps = appRows
             if !deviceRows.contains(where: { $0.udid == selectedUDID }) {
@@ -209,7 +229,8 @@ final class LANCompanionModel: NSObject, ObservableObject,
                 state = "Requesting \(app.name) from the computer…"
             }
             let result = try await api("POST", path: "/v1/request-install",
-                                       body: ["app_id": app.id, "udid": selectedUDID])
+                                       body: ["app_id": app.id, "udid": selectedUDID,
+                                              "certificate_id": selectedCertificateID])
             guard let id = result["request_id"] as? String else {
                 throw PairingFailure.message("No installation request ID was returned.")
             }
@@ -366,6 +387,26 @@ struct WiFiCompanionScreen: View {
                                 LabeledContent("Device ID", value: selected.udid)
                                     .font(.caption.monospaced())
                             }
+                        }
+                    }
+                    Section("Computer certificates") {
+                        if model.certificates.isEmpty {
+                            Text("No desktop signing identities are available. Add your P12 and provisioning profile in the computer app.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        } else {
+                            Picker("Signing identity", selection: $model.selectedCertificateID) {
+                                Text("No identity (already signed IPA)").tag("")
+                                ForEach(model.certificates.filter(\.available)) { identity in
+                                    Text(identity.name).tag(identity.id)
+                                }
+                            }
+                            if let identity = model.certificates.first(where: { $0.id == model.selectedCertificateID }) {
+                                LabeledContent("Expires", value: String(identity.expires.prefix(10)))
+                                Text(identity.hasProfile ? "Provisioning profile registered on computer" : "Provisioning profile missing")
+                                    .font(.caption).foregroundStyle(identity.hasProfile ? .secondary : .orange)
+                            }
+                            Text("Names and status sync from the PC. Private keys, P12 files and passwords never leave it. Signing is not automatic.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Section("Official ItamarOS apps") {
