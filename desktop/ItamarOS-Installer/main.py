@@ -17,6 +17,7 @@ import urllib.request
 import customtkinter as ctk
 from lan_bridge import CompanionServer, InstallRequest, local_ipv4
 from desktop_certificates import DesktopCertificates
+from certificate_archives import extract_archives
 from official_catalog import OfficialCatalog
 import qrcode
 from store_sources import CommunitySources
@@ -379,7 +380,10 @@ class Installer(StoreUIMixin, ctk.CTk):
         panel.pack(fill="x", padx=8, pady=12)
         ctk.CTkButton(panel, text="Add P12 and provisioning profile",
                       command=self.add_desktop_certificate, height=42,
-                      fg_color=TEAL, text_color=BG).pack(anchor="w", padx=20, pady=16)
+                      fg_color=TEAL, text_color=BG).pack(anchor="w", padx=20, pady=(16, 6))
+        ctk.CTkButton(panel, text="Import ZIP archives (select multiple)",
+                      command=self.import_certificate_zips, height=42,
+                      fg_color="#284b62", text_color=WHITE).pack(anchor="w", padx=20, pady=(4, 16))
         entries = self.desktop_certificates.public_list()
         if not entries:
             ctk.CTkLabel(panel, text="No desktop certificates imported.",
@@ -413,6 +417,86 @@ class Installer(StoreUIMixin, ctk.CTk):
             self.desktop_certificates.import_identity(p12, password, profile)
         except (ValueError, OSError) as exc:
             messagebox.showerror("Certificate import", str(exc))
+        self.show_certificates()
+
+    def _request_archive_password(self, certificate_name, archive_name, text_notes):
+        """Display every TXT note from the ZIP during password entry."""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Certificate password — local only")
+        dialog.geometry("660x485" if text_notes else "560x245")
+        dialog.minsize(500, 230)
+        dialog.transient(self)
+        result = {"value": None}
+        ctk.CTkLabel(dialog,
+                     text=f"Certificate: {certificate_name[:90]}\\nArchive: {archive_name[:90]}",
+                     text_color=WHITE, justify="left", wraplength=590).pack(
+                         anchor="w", padx=20, pady=(18, 8))
+        if text_notes:
+            ctk.CTkLabel(dialog, text="TXT contents from this ZIP (read-only; not sent to any server):",
+                         text_color=MUTED).pack(anchor="w", padx=20)
+            textbox = ctk.CTkTextbox(dialog, height=175, wrap="word")
+            textbox.pack(fill="both", expand=True, padx=20, pady=(5, 12))
+            for filename, note in text_notes:
+                textbox.insert("end", f"=== {filename} ===\\n{note}\\n\\n")
+            textbox.configure(state="disabled")
+        else:
+            ctk.CTkLabel(dialog, text="No TXT note found in this ZIP.",
+                         text_color=MUTED).pack(anchor="w", padx=20, pady=6)
+        ctk.CTkLabel(dialog, text="P12 password (never saved):",
+                     text_color=WHITE).pack(anchor="w", padx=20, pady=(5, 3))
+        entry = ctk.CTkEntry(dialog, show="*", width=610)
+        entry.pack(fill="x", padx=20, pady=(0, 12))
+        buttons = ctk.CTkFrame(dialog, fg_color="transparent")
+        buttons.pack(fill="x", padx=20, pady=(0, 18))
+        def finish(accepted):
+            if accepted:
+                result["value"] = entry.get()
+            entry.delete(0, "end")
+            dialog.destroy()
+        ctk.CTkButton(buttons, text="Import certificate", height=38,
+                      command=lambda: finish(True),
+                      fg_color=TEAL, text_color=BG).pack(side="left")
+        ctk.CTkButton(buttons, text="Skip", height=38,
+                      command=lambda: finish(False),
+                      fg_color="#283948").pack(side="right")
+        dialog.protocol("WM_DELETE_WINDOW", lambda: finish(False))
+        dialog.grab_set()
+        entry.focus_set()
+        self.wait_window(dialog)
+        return result["value"]
+
+    def import_certificate_zips(self):
+        archives = filedialog.askopenfilenames(
+            title="Select one or more certificate ZIP archives",
+            filetypes=[("ZIP archives", "*.zip")],
+            parent=self,
+        )
+        if not archives:
+            return
+        try:
+            identities = extract_archives(list(archives))
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Certificate ZIP import", str(exc))
+            return
+        imported = 0
+        failures = []
+        for item in identities:
+            password = self._request_archive_password(
+                item.certificate_name, item.archive_name, item.txt_notes)
+            if password is None:
+                continue
+            try:
+                self.desktop_certificates.import_identity(
+                    item.p12_path, password, item.profile_path)
+                imported += 1
+            except (OSError, ValueError, TypeError) as exc:
+                failures.append(item.certificate_name + ": " + str(exc)[:160])
+            finally:
+                password = None
+        message = f"Imported {imported} certificate(s) from {len(archives)} ZIP archive(s)."
+        if failures:
+            message += "\\n\\nSome certificates failed:\\n" + "\\n".join(failures[:10])
+        messagebox.showinfo("Certificate ZIP import", message)
         self.show_certificates()
 
     def remove_desktop_certificate(self, identity_id):
