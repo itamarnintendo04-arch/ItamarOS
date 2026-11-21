@@ -98,3 +98,15 @@ For each P12, the password dialog shows the **full TXT file contents** from that
 Oversized archives, oversized TXT/P12/profile entries, symlinks and malformed ZIPs are rejected. The extracted P12/profile files remain on the local computer because the registered identity must continue to work after restarting the app. Removing an identity from the registry does not delete the extracted source files.
 
 **Important:** A valid P12 password alone does not sign an IPA. The current Installer build still requires an authorized signing workflow and a compatible paired iPhone for installation.
+
+## Always-visible Install Drivers button
+
+**Install Drivers** appears permanently in the left sidebar and in **My iPhone**, even when the connected iPhone is already detected or Apple drivers are present.
+
+- **Check Drivers** inspects the local Apple Mobile Device Service state and whether the official Apple Devices Windows app is installed. This is a prerequisite check, not proof that iPhone pairing works.
+- **Install Drivers** asks for explicit confirmation. On Windows with `winget`, it installs Apple's official **Apple Devices** application from the Microsoft Store using its exact product ID `9NP83LWLPZ9K`; it does not fetch driver packages from random mirrors.
+- If `winget` is unavailable or fails, the app opens the official Microsoft Store listing so installation or repair can be completed manually. **Open Official Microsoft Store** is also always available.
+- After installing, reconnect and unlock the iPhone, trust this computer, and use **Check Drivers** and **Scan Again**. The separate `pymobiledevice3` helper may be needed for IPA operations.
+- A successful Store command does not prove the driver, helper or Wi-Fi installation is functional until a paired device is detected.
+
+The workflow does not bypass Windows permissions, Apple trust pairing, or iOS app-signing requirements.
