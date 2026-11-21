@@ -33,3 +33,18 @@ The iPhone UDID must be provided from a trusted Windows/Mac device, because iOS 
 - Home Screen icon options: original plus six full-spectrum multicolor RGB distortion variants (Rainbow Glitch, Prism Shift, RGB Split, Holographic, Liquid Spectrum, Neon Noise). They distort the original logo's colors rather than recoloring the entire icon uniformly.
 
 No Apple account password, provisioning private key, P12 password TXT, or real signing certificate is committed to the repository.
+
+
+## ItamarOS Store 1.6 — Discover, Apps, Games, Updates, Library, Sources
+
+The **Store** tab replaces the old single-column ItamarOS Apps list. It includes:
+
+- **Discover**: featured first-party app, a full gallery of official everyday apps **and games**, and a separately labeled community section.
+- **Apps / Games**: filter by category; common iPhone utilities and creative apps are in Apps.
+- **Updates**: check release entries for downloaded IPA files. This is not a list of all actually installed apps, which iOS does not expose to ordinary applications.
+- **Library**: IPA downloads saved locally by this installer, not a claim of installation.
+- **Sources**: immutable **ItamarOS Official** source + optional HTTPS JSON community sources. Add by URL or camera QR, enable, disable and remove. Source data is saved locally; no P12 keys or passwords are shared.
+- App details: icon, developer, source badge, Bundle ID, version, screenshots if published, IPA download and manual export/signing handoff.
+
+Community sources must follow `catalog/SOURCE_FORMAT.md`. They are unverified and their downloadable files are not independently security-reviewed. The installer checks the IPA structure and Bundle ID, but cannot bypass iOS signature, provisioning or installation rules.
+
