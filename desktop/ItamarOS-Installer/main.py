@@ -542,7 +542,16 @@ class Installer(StoreUIMixin, ctk.CTk):
             self.lan_server.finish_request(request.id,"failed",
                                           "Desktop is currently busy; request again shortly.")
         else:
-            self._run(job,completed)
+            self.busy = True
+            self.refresh_button.configure(state="disabled")
+            self.progress.set(0)
+            def lan_worker():
+                try:
+                    result = job()
+                    self.events.put(("lan-job-complete", result, completed))
+                except Exception as exc:
+                    self.events.put(("lan-job-failed", (request.id, str(exc)), None))
+            threading.Thread(target=lan_worker, daemon=True).start()
 
     def _select_device(self, text):
         for device in self.devices:
@@ -611,6 +620,20 @@ class Installer(StoreUIMixin, ctk.CTk):
                 if kind=="lan-start-error":
                     self.status.configure(text="Wi-Fi server unavailable")
                     messagebox.showerror("Wi-Fi Companion", str(value))
+                    continue
+                if kind=="lan-job-failed":
+                    request_id, reason = value
+                    if self.lan_server:
+                        self.lan_server.finish_request(request_id, "failed", reason)
+                    self.busy=False
+                    self.refresh_button.configure(state="normal")
+                    self.status.configure(text="Installation failed")
+                    messagebox.showerror("Installation failed", reason)
+                    continue
+                if kind=="lan-job-complete":
+                    self.busy=False
+                    self.refresh_button.configure(state="normal")
+                    callback(value)
                     continue
                 self.busy=False
                 self.refresh_button.configure(state="normal")
