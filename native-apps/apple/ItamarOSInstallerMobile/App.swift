@@ -52,6 +52,8 @@ struct MainScreen: View {
                 .tabItem { Label("Custom IPA", systemImage: "square.and.arrow.down.on.square") }.tag(2)
             WiFiCompanionScreen()
                 .tabItem { Label("Wi-Fi", systemImage: "wifi") }.tag(4)
+            InstalledByItamarOSScreen()
+                .tabItem { Label("Installed", systemImage: "checkmark.circle.fill") }.tag(5)
             NavigationStack {
                 Form {
                     Section("Appearance") {
@@ -181,5 +183,47 @@ struct MainScreen: View {
         .padding()
         .background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18))
         .padding(.horizontal)
+    }
+}
+
+
+/// Shows only apps whose install request the paired desktop confirmed as installed.
+/// This is an installer receipt, not an inventory of everything installed on iOS.
+struct InstalledByItamarOSScreen: View {
+    @AppStorage("itamaros.installed.apps.v1") private var installedJSON = "[]"
+
+    private var receipts: [String] {
+        guard let data = installedJSON.data(using: .utf8),
+              let names = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        return names
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if receipts.isEmpty {
+                    ContentUnavailableView(
+                        "Installed Apps Locked",
+                        systemImage: "lock.app.dashed",
+                        description: Text("Install an app using ItamarOS Installer and wait for the computer to confirm success to unlock this tab.")
+                    )
+                } else {
+                    List {
+                        Section("Installed through ItamarOS") {
+                            ForEach(receipts, id: \.self) { name in
+                                Label(name, systemImage: "checkmark.circle.fill")
+                            }
+                        }
+                        Section {
+                            Text("Only successful installation confirmations from the paired computer appear here. iOS does not allow this app to inspect all installed applications.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Installed")
+        }
     }
 }
