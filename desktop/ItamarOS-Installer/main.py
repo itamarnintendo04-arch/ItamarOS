@@ -9,13 +9,14 @@ import sys
 import threading
 import webbrowser
 from pathlib import Path
-from tkinter import messagebox, filedialog
+from tkinter import messagebox, filedialog, simpledialog
 from PIL import Image
 import urllib.parse
 import urllib.request
 
 import customtkinter as ctk
 from lan_bridge import CompanionServer, InstallRequest, local_ipv4
+from desktop_certificates import DesktopCertificates
 from official_catalog import OfficialCatalog
 import qrcode
 from store_sources import CommunitySources
@@ -48,6 +49,7 @@ class Installer(StoreUIMixin, ctk.CTk):
         self.busy = False
         self.catalog = GitHubCatalog()
         self.official = OfficialCatalog()
+        self.desktop_certificates = DesktopCertificates()
         self.store_sources = CommunitySources(self.official)
         self.store_rows = []
         self.store_section = "Discover"
@@ -93,6 +95,7 @@ class Installer(StoreUIMixin, ctk.CTk):
         self._nav(side, "▦  App Catalog", self.show_catalog)
         self._nav(side, "◉  My iPhone", self.show_device)
         self._nav(side, "⌁  Wi-Fi Companion", self.show_wifi_companion)
+        self._nav(side, "♢  Signing Certificates", self.show_certificates)
         self._nav(side, "⇣  Downloads", self.open_downloads)
         ctk.CTkFrame(side, fg_color=BORDER, height=1).pack(fill="x", padx=23, pady=22)
         ctk.CTkLabel(side, text="APPLE ACCOUNT", font=("Segoe UI", 11, "bold"),
@@ -368,6 +371,55 @@ class Installer(StoreUIMixin, ctk.CTk):
                           fg_color="#263749",command=self.show_helper_setup,
                           height=43).pack(anchor="w",padx=8,pady=14)
 
+    def show_certificates(self):
+        self._clear()
+        self._section("Signing Certificates",
+                      "Certificates stay on this computer. Paired iPhones only receive names, expiry and availability.")
+        panel = self._card(self.content)
+        panel.pack(fill="x", padx=8, pady=12)
+        ctk.CTkButton(panel, text="Add P12 and provisioning profile",
+                      command=self.add_desktop_certificate, height=42,
+                      fg_color=TEAL, text_color=BG).pack(anchor="w", padx=20, pady=16)
+        entries = self.desktop_certificates.public_list()
+        if not entries:
+            ctk.CTkLabel(panel, text="No desktop certificates imported.",
+                         text_color=MUTED).pack(anchor="w", padx=20, pady=14)
+        for cert in entries:
+            line = ctk.CTkFrame(panel, fg_color=INNER)
+            line.pack(fill="x", padx=20, pady=5)
+            state = "Available" if cert["available"] else "Expired or missing file"
+            ctk.CTkLabel(line, text=f'{cert["name"][:100]}  |  {state}  |  {cert["expires"][:10]}',
+                         text_color=WHITE, anchor="w").pack(side="left", padx=12, pady=12)
+            ctk.CTkButton(line, text="Remove", width=90,
+                          command=lambda key=cert["id"]: self.remove_desktop_certificate(key)
+                          ).pack(side="right", padx=8)
+        ctk.CTkLabel(panel,
+                     text="Only metadata is synchronized. P12 passwords are never saved. "
+                          "Importing a certificate does not enable automatic IPA signing.",
+                     wraplength=720, text_color=MUTED).pack(anchor="w", padx=20, pady=18)
+
+    def add_desktop_certificate(self):
+        p12 = filedialog.askopenfilename(title="Select your Apple-issued P12",
+                                         filetypes=[("P12 certificates", "*.p12")])
+        if not p12:
+            return
+        profile = filedialog.askopenfilename(title="Select provisioning profile (optional)",
+                                             filetypes=[("Provisioning profiles", "*.mobileprovision")])
+        password = simpledialog.askstring("P12 Password", "Enter P12 password (not saved):",
+                                          show="*", parent=self)
+        if password is None:
+            return
+        try:
+            self.desktop_certificates.import_identity(p12, password, profile)
+        except (ValueError, OSError) as exc:
+            messagebox.showerror("Certificate import", str(exc))
+        self.show_certificates()
+
+    def remove_desktop_certificate(self, identity_id):
+        if messagebox.askyesno("Remove certificate", "Remove this signing identity from ItamarOS? The original file will not be deleted."):
+            self.desktop_certificates.remove(identity_id)
+            self.show_certificates()
+
     def show_wifi_companion(self):
         self._clear()
         self._section("Wi-Fi Companion",
@@ -424,6 +476,7 @@ class Installer(StoreUIMixin, ctk.CTk):
                 server = CompanionServer(
                     get_devices=lambda: list(self.devices),
                     get_apps=lambda: self.official.list_apps(),
+                    get_certificates=lambda: self.desktop_certificates.public_list(),
                     on_request=lambda req: self.events.put(("lan-request",req,None)),
                 )
                 server.start()
