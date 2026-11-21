@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#101327">
+<title>ItamarOS Store — Apps &amp; Games</title>
+<link rel="icon" type="image/png" href="/assets/branding/itamaros-favicon-32.png">
+<style>
+:root{color-scheme:dark;font:15px system-ui,-apple-system,"Segoe UI",sans-serif;color:#f5f7ff;background:#0b1020}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse 70% 45% at 76% -13%,#303e9f 0%,transparent 95%),#0b1020;min-height:100vh}
+button,input{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:1270px;margin:0 auto;padding:0 28px}
+header{position:sticky;top:0;z-index:10;backdrop-filter:blur(18px);background:#111628dc;border-bottom:1px solid #33405a}
+.header-row{display:flex;align-items:center;gap:18px;min-height:76px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;white-space:nowrap}
+.brand img{width:42px;height:42px;object-fit:contain}
+.top-link{color:#c5d3f0;font-size:14px} .header-spacer{flex:1}
+.search{width:min(390px,37vw);background:#20283d;color:white;border:1px solid #4b5870;border-radius:18px;padding:12px 16px;outline:none}
+.search:focus,.source-input:focus{border-color:#77baff;box-shadow:0 0 0 3px #4b82d333}
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:30px;padding-top:34px;padding-bottom:80px}
+aside{position:sticky;top:108px;align-self:start}
+aside h2{font-size:11px;letter-spacing:2px;color:#8fa8d2;margin:0 13px 13px}
+.tab{display:flex;width:100%;gap:11px;align-items:center;border:0;background:transparent;color:#c5d0eb;padding:13px 15px;margin:4px 0;border-radius:14px;text-align:left;font-weight:650}
+.tab:hover{background:#26304a}.tab.active{background:#30468b;color:#fff}
+.tab-icon{font-size:18px;width:24px;text-align:center}
+.sidebar-note{font-size:12px;color:#97a7c1;border-top:1px solid #35415b;padding:20px 13px;margin-top:17px;line-height:1.7}
+.main-top{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:23px}
+.eyebrow{font-size:12px;letter-spacing:2px;color:#91c9ff;text-transform:uppercase;font-weight:750}
+h1{font-size:clamp(32px,4.8vw,48px);line-height:1.07;letter-spacing:-1.3px;margin:8px 0}
+.subtitle{color:#afc0d9;font-size:15px;line-height:1.6;margin:0}
+.counter{font-size:12px;color:#bbcbdf;border:1px solid #3d5068;padding:9px 13px;border-radius:999px;white-space:nowrap}
+.hero{border-radius:25px;background:linear-gradient(118deg,#483794 0%,#3869c1 55%,#15c2cc 105%);padding:32px;display:flex;align-items:center;gap:26px;min-height:220px;overflow:hidden;margin-bottom:33px;box-shadow:0 18px 75px #060a1666}
+.hero .copy{flex:1}.hero h2{font-size:clamp(25px,3.3vw,37px);letter-spacing:-.7px;max-width:580px;margin:8px 0}
+.hero p{color:#e1edff;margin:0;max-width:500px}.hero-icon{border-radius:26%;width:120px;height:120px;object-fit:cover;box-shadow:0 15px 35px #09153299;background:#132d6b}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 15px;gap:18px}
+.section-head h2{font-size:22px;margin:0;letter-spacing:-.4px}.section-head span{color:#9eafcd;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.card{border:1px solid #2d3a56;background:#171f33;border-radius:19px;padding:19px;display:flex;flex-direction:column;min-height:242px;transition:transform .15s,border-color .15s;text-align:left;cursor:pointer}
+.card:hover{transform:translateY(-3px);border-color:#6d93d5}
+.card-top{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:11px}
+.app-icon{width:74px;height:74px;border-radius:19px;object-fit:cover;background:linear-gradient(145deg,#4c61c7,#0fbad1);display:grid;place-items:center;color:white;font-size:30px;font-weight:800}
+.icon-placeholder{display:grid;place-items:center}
+.brand-pill{font-size:10px;letter-spacing:.5px;font-weight:750;border-radius:50px;padding:7px 9px;background:#243d65;color:#90caff;white-space:nowrap}
+.brand-pill.community{background:#5c4024;color:#ffce87}
+.card h3{margin:4px 0;font-size:17px}.card p{font-size:12px;color:#adbad1;line-height:1.5;margin:3px 0 13px;min-height:38px}
+.card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;color:#aebbd0;font-size:12px;gap:7px}
+.get{border:0;border-radius:20px;background:#2c63cc;color:white;padding:8px 16px;font-size:12px;font-weight:800}
+.get:hover{background:#437fea}
+.empty{border:1px dashed #465b7a;background:#1b2539;padding:32px;border-radius:20px;color:#b5c7e0}
+.source-row{display:flex;align-items:center;gap:15px;padding:17px;background:#171f33;border:1px solid #31415d;border-radius:18px;margin-bottom:12px}
+.source-row .source-info{flex:1;min-width:0}.source-row strong{font-size:16px}.source-row p{margin:6px 0 0;font-size:12px;overflow-wrap:anywhere;color:#a1b4d1}
+.source-badge{font-size:11px;color:#b0d7ff}.source-badge.community{color:#ffc583}
+.source-actions{display:flex;gap:8px}
+.small-button{border:1px solid #536589;background:#263954;color:#f3f6ff;border-radius:12px;padding:9px 13px}
+.small-button:disabled{opacity:.55;cursor:not-allowed}
+.primary{background:#427beb;border:0;color:white;border-radius:13px;padding:12px 19px;font-weight:750}
+.panel{background:#171f33;border:1px solid #30405e;border-radius:19px;padding:23px;margin-top:20px}
+.panel h3{margin:0 0 15px}.source-form{display:flex;gap:10px}
+.source-input{flex:1;min-width:0;background:#202b44;border:1px solid #526483;color:white;border-radius:12px;padding:13px}
+.hint{font-size:12px;color:#adbdd6;line-height:1.7}
+footer{border-top:1px solid #283850;padding:25px 0;color:#a0b1ce;font-size:12px;line-height:1.7}
+.dialog{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#030815cf;padding:20px}
+.dialog[hidden]{display:none}.modal{background:#151e31;border:1px solid #475a7d;box-shadow:0 25px 90px #0009;border-radius:24px;width:min(680px,96vw);max-height:88vh;overflow:auto;padding:26px}
+.modal-head{display:flex;gap:17px;align-items:start}.modal-head .close{margin-left:auto}
+.modal h2{font-size:26px;margin:0 0 6px}.modal p{line-height:1.6;color:#c3d0e7}
+.modal .meta{font-size:12px;color:#9db2d5}.modal dl{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-block:1px solid #384967;padding:17px 0}
+.modal dt{font-size:11px;color:#8798b9}.modal dd{margin:5px 0 0;font-size:13px;overflow-wrap:anywhere}
+.screens{display:flex;gap:12px;overflow-x:auto;margin-top:12px}.screens img{max-height:280px;border-radius:12px;object-fit:contain}
+.notice{border-left:3px solid #efa65f;background:#48341e77;padding:12px 14px;font-size:13px;color:#ffd29e;border-radius:6px}
+button:focus-visible,a:focus-visible{outline:2px solid #a9ddff;outline-offset:3px}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}aside{position:static;display:flex;gap:4px;overflow-x:auto}aside h2,.sidebar-note{display:none}.tab{white-space:nowrap;width:auto}.container{padding-inline:18px}}
+@media(max-width:600px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.card{padding:12px;min-height:226px}.app-icon{height:62px;width:62px}.brand-pill{font-size:9px}.header-row{flex-wrap:wrap;padding-block:9px;min-height:90px}.brand{font-size:16px}.brand img{width:32px;height:32px}.top-link{display:none}.search{order:3;width:100%}.hero{padding:22px;min-height:165px}.hero-icon{width:70px;height:70px}.hero h2{font-size:24px}.layout{gap:15px;padding-top:13px}.source-form{flex-direction:column}.source-row{flex-wrap:wrap}.source-actions{width:100%}}
+</style>
+</head>
+<body>
+<header>
+ <div class="container header-row">
+  <a href="/" class="brand"><img src="/assets/branding/itamaros-mark-512.png" alt="">ItamarOS <span style="color:#a8d2ff">Store</span></a>
+  <a class="top-link" href="/downloads.html">Downloads</a>
+  <a class="top-link" href="https://github.com/itamarnintendo04-arch/ItamarOS/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+  <div class="header-spacer"></div>
+  <input id="search" class="search" type="search" placeholder="Search apps, games &amp; sources…" aria-label="Search apps">
+ </div>
+</header>
+<div class="container layout">
+ <aside aria-label="Store navigation">
+  <h2>EXPLORE</h2>
+  <button class="tab active" data-section="discover"><span class="tab-icon">✦</span>Discover</button>
+  <button class="tab" data-section="apps"><span class="tab-icon">▦</span>Apps</button>
+  <button class="tab" data-section="games"><span class="tab-icon">◈</span>Games</button>
+  <button class="tab" data-section="updates"><span class="tab-icon">↻</span>Updates</button>
+  <button class="tab" data-section="library"><span class="tab-icon">▤</span>Library</button>
+  <button class="tab" data-section="sources"><span class="tab-icon">⊞</span>Sources</button>
+  <p class="sidebar-note">The official catalog contains all ItamarOS iPhone apps — not only games. Community sources are optional and unverified.</p>
+ </aside>
+ <main>
+  <div class="main-top"><div><div class="eyebrow">ITAMAROS APP COLLECTION</div><h1 id="title">Discover</h1><p class="subtitle" id="subtitle">Discover tools, creative apps and games from ItamarOS.</p></div><span class="counter" id="count">Loading…</span></div>
+  <section id="featured" class="hero" hidden>
+   <div class="copy"><span class="eyebrow" style="color:#effaff">FEATURED APP</span><h2 id="featured-name">ItamarOS</h2><p id="featured-summary">Discover original iPhone apps.</p><button id="featured-action" class="primary" style="margin-top:17px">View App</button></div>
+   <img class="hero-icon" id="featured-icon" alt="Featured app icon" hidden>
+  </section>
+  <div id="status" class="hint" role="status">Loading the official ItamarOS app catalog…</div>
+  <div id="content"></div>
+ </main>
+</div>
+<footer><div class="container">ItamarOS Store • All public app files are downloaded from their publishers. A catalog listing is not an endorsement or security review. Unsigned iPhone IPAs require authorized Apple signing and supported installation. The website does not install apps on iOS and does not request P12 credentials.</div></footer>
+<div class="dialog" id="dialog" hidden>
+ <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+  <div class="modal-head"><img id="dialog-icon" class="app-icon" alt=""><div style="flex:1"><h2 id="dialog-title"></h2><p id="dialog-developer" style="margin:0"></p><p id="dialog-source" class="meta"></p></div><button id="close-dialog" class="small-button close" aria-label="Close dialog">✕</button></div>
+  <p id="dialog-desc"></p>
+  <dl><div><dt>Version</dt><dd id="dialog-version"></dd></div><div><dt>Category</dt><dd id="dialog-category"></dd></div><div><dt>Bundle ID</dt><dd id="dialog-bundle"></dd></div></dl>
+  <h3>Screenshots</h3><div class="screens" id="dialog-screens"></div>
+  <p id="dialog-warning" class="notice"></p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px"><a class="primary" id="dialog-download" rel="noopener noreferrer" target="_blank">Download IPA</a><a id="dialog-release" class="small-button" rel="noopener noreferrer" target="_blank" hidden>View Release</a></div>
+ </div>
+</div>
+<script>
+"use strict";
+(() => {
+const OFFICIAL = "https://raw.githubusercontent.com/itamarnintendo04-arch/ItamarOS/main/catalog/ios-apps.json";
+const KEY = "itamaros.store.sources.v1";
+const HISTORY = "itamaros.store.downloads.v1";
+const $ = id => document.getElementById(id);
+const state = {section:"discover", sources:[], apps:[], downloaded:{}, issues:[]};
+const official = {id:"itamaros-official",name:"ItamarOS Official",url:OFFICIAL,enabled:true,official:true};
+const titles = {
+ discover:["Discover","Discover original apps, games and helpful tools."],
+ apps:["Apps","Creative tools, utilities, account security and everyday apps."],
+ games:["Games","Original games and playful experiences by ItamarOS."],
+ updates:["Updates","Check the latest release for previously downloaded apps."],
+ library:["Library","Apps you've downloaded through this browser. Not the iPhone's installed-app list."],
+ sources:["Sources","Manage verified official and optional unverified community catalogs."]
+};
+function https(value) {
+ try {
+  const u = new URL(value);
+  if(u.protocol!=="https:"||u.username||u.password||u.hash||u.port) return null;
+  const h=u.hostname.toLowerCase();
+  if(h==="localhost"||h.endsWith(".local")||h.endsWith(".lan")||h.endsWith(".internal")||h.endsWith(".test")||
+     /^(\d{1,3}\.){3}\d{1,3}$/.test(h)||h.includes(":")) return null;
+  return u.href;
+ } catch {return null;}
+}
+function safeList(json,source) {
+ if(!json || json.schema_version!==1 || !Array.isArray(json.apps) || json.apps.length>200) throw Error("Invalid catalog format");
+ const name=source.official?official.name:String(json.name||source.name).slice(0,90);
+ const result=[];
+ for(const a of json.apps) {
+  if(!a||typeof a!=="object"||!a.id||!a.name||!a.bundle_id||!/^[A-Za-z0-9._-]{2,120}$/.test(a.id)||!/^[A-Za-z0-9.-]{3,240}$/.test(a.bundle_id)) continue;
+  const tag=String(a.release_tag||"");
+  const asset=String(a.asset_name||"");
+  let download,release,icon;
+  if(source.official) {
+   if(!/^[A-Za-z0-9._-]+$/.test(tag)||!/^[A-Za-z0-9._-]+\.ipa$/.test(asset))continue;
+   download="https://github.com/itamarnintendo04-arch/ItamarOS/releases/download/"+encodeURIComponent(tag)+"/"+encodeURIComponent(asset);
+   release="https://github.com/itamarnintendo04-arch/ItamarOS/releases/tag/"+encodeURIComponent(tag);
+   const iconpath=String(a.icon_path||"");
+   icon=iconpath&&!iconpath.includes("..")?"https://raw.githubusercontent.com/itamarnintendo04-arch/ItamarOS/main/"+iconpath:"";
+  } else {
+   download=https(a.download_url||"");
+   release=https(a.release_url||"");
+   icon=https(a.icon_url||"");
+  }
+  if(!download||!new URL(download).pathname.toLowerCase().endsWith(".ipa"))continue;
+  result.push({
+    id:source.id+"::"+a.id, app_id:String(a.id), name:String(a.name).slice(0,120),
+    description:String(a.description||"").slice(0,400),
+    category:String(a.category||"Apps").slice(0,60),
+    bundle_id:String(a.bundle_id),developer:source.official?"ItamarOS":String(a.developer||name).slice(0,90),
+    version:String(a.version||a.release_tag||"Preview").slice(0,80),
+    source_id:source.id,source_name:name,official:source.official,
+    icon:icon||"",download,release:release||"",
+    screenshots:Array.isArray(a.screenshots)?a.screenshots.slice(0,6).map(https).filter(Boolean):[]
+  });
+ }
+ return result;
+}
+function element(tag,className,content) {
+ const n=document.createElement(tag);
+ if(className)n.className=className;
+ if(content!==undefined)n.textContent=content;
+ return n;
+}
+function saveSources(){localStorage.setItem(KEY,JSON.stringify(state.sources.filter(s=>!s.official)));}
+function loadSources() {
+ try {
+  const rows=JSON.parse(localStorage.getItem(KEY)||"[]");
+  const unique=new Set([OFFICIAL]);
+  state.sources=[official];
+  if(Array.isArray(rows)) for(const r of rows.slice(0,19)) {
+   const url=https(r.url);
+   if(!url||unique.has(url))continue;
+   unique.add(url);
+   state.sources.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),
+     name:String(r.name||new URL(url).hostname).slice(0,70),url,official:false,enabled:r.enabled!==false});
+  }
+ } catch {state.sources=[official];}
+ try {state.downloaded=JSON.parse(localStorage.getItem(HISTORY)||"{}")||{};}catch{state.downloaded={};}
+}
+async function getSource(source) {
+ const response=await fetch(source.url,{cache:"no-store"});
+ if(!response.ok)throw Error("HTTP "+response.status);
+ const data=await response.text();
+ if(data.length>450000)throw Error("Source file too large");
+ return safeList(JSON.parse(data),source);
+}
+async function reload() {
+ $("status").textContent="Refreshing sources…";
+ const results=await Promise.allSettled(state.sources.filter(s=>s.enabled).map(getSource));
+ const sources=state.sources.filter(s=>s.enabled);
+ state.issues=[];
+ const data=[];
+ results.forEach((r,i)=>{if(r.status==="fulfilled")data.push(...r.value);else state.issues.push(sources[i].name+": "+r.reason.message);});
+ state.apps=data.sort((a,b)=>Number(b.official)-Number(a.official)||a.name.localeCompare(b.name));
+ $("status").textContent=state.issues.length?state.issues.join(" • "):"Catalog refreshed. Community apps are not verified by ItamarOS.";
+ render();
+}
+function icon(app) {
+ if(app.icon) {
+  const img=element("img","app-icon");img.alt=app.name+" icon";img.src=app.icon;
+  img.onerror=()=>{img.replaceWith(element("div","app-icon icon-placeholder",app.name.slice(0,1).toUpperCase()));};
+  return img;
+ }
+ return element("div","app-icon icon-placeholder",app.name.slice(0,1).toUpperCase());
+}
+function badge(official) {return element("span","brand-pill"+(official?"":" community"),official?"✓ OFFICIAL":"COMMUNITY");}
+function card(app) {
+ const e=element("article","card");e.tabIndex=0;e.setAttribute("role","button");e.setAttribute("aria-label","View "+app.name);
+ const top=element("div","card-top");top.append(icon(app),badge(app.official));e.append(top);
+ e.append(element("h3","",app.name),element("p","",app.description));
+ const bottom=element("div","card-bottom");
+ bottom.append(element("span","",app.category),element("span","get",state.downloaded[app.id]?"IN LIBRARY":"GET"));
+ e.append(bottom);
+ e.addEventListener("click",()=>showDetails(app));
+ e.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();showDetails(app);}});
+ return e;
+}
+function heading(text,caption) {
+ const e=element("div","section-head");e.append(element("h2","",text),element("span","",caption));return e;
+}
+function grid(apps){const e=element("div","grid");apps.forEach(a=>e.append(card(a)));return e;}
+function sourceRow(source) {
+ const row=element("div","source-row");
+ const info=element("div","source-info");
+ info.append(element("strong","",source.name),element("p","",source.url),
+   element("span","source-badge"+(source.official?"":" community"),
+           source.official?"✓ Official · Cannot remove":"⚠ Community · Not verified"));
+ row.append(info);
+ const controls=element("div","source-actions");
+ if(source.official)controls.append(element("span","counter",state.apps.filter(a=>a.source_id===source.id).length+" apps"));
+ else {
+  const toggle=element("button","small-button",source.enabled?"Disable":"Enable");
+  toggle.onclick=()=>{source.enabled=!source.enabled;saveSources();reload();};
+  const remove=element("button","small-button","Remove");
+  remove.onclick=()=>{if(confirm("Remove "+source.name+" from your app sources?")){state.sources=state.sources.filter(x=>x.id!==source.id);saveSources();reload();}};
+  controls.append(toggle,remove);
+ }
+ row.append(controls);return row;
+}
+function renderSources(root) {
+ state.sources.forEach(source=>root.append(sourceRow(source)));
+ const form=element("form","panel source-form");
+ const url=element("input","source-input");url.type="url";url.required=true;url.placeholder="https://example.com/itamaros-source.json";url.setAttribute("aria-label","HTTPS source catalog URL");
+ const add=element("button","primary","Add Community Source");add.type="submit";
+ form.append(url,add);
+ form.onsubmit=async ev=>{
+  ev.preventDefault();
+  const valid=https(url.value);
+  if(!valid){alert("Use a public HTTPS catalog URL without credentials or special ports.");return;}
+  if(state.sources.length>=20){alert("Maximum 19 community sources.");return;}
+  if(state.sources.some(s=>s.url===valid)){alert("This source already exists.");return;}
+  if(!confirm("This Community Source is not verified by ItamarOS. Only add sources you trust. Continue?"))return;
+  add.disabled=true;
+  const source={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name:new URL(valid).hostname,url:valid,enabled:true,official:false};
+  try {
+   const apps=await getSource(source);
+   if(!apps.length)throw Error("No valid iOS app listings found");
+   state.sources.push(source);saveSources();url.value="";await reload();
+  }catch(error){alert("Could not import source: "+error.message);}
+  add.disabled=false;
+ };
+ root.append(form);
+ const help=element("p","hint","Sources must be public HTTPS JSON catalogs. Imported apps remain unverified. Some publishers may not permit browser access (CORS).");
+ const link=element("a","", "See source format and example JSON");
+ link.href="https://github.com/itamarnintendo04-arch/ItamarOS/blob/main/catalog/SOURCE_FORMAT.md";
+ link.target="_blank";link.rel="noopener noreferrer";
+ root.append(help,link);
+}
+function showDetails(app) {
+ $("dialog-title").textContent=app.name;
+ $("dialog-developer").textContent=app.developer;
+ $("dialog-source").textContent=(app.official?"✓ Official ItamarOS Source":"⚠ Unverified Community Source")+" · "+app.source_name;
+ $("dialog-desc").textContent=app.description;
+ $("dialog-version").textContent=app.version;
+ $("dialog-category").textContent=app.category;
+ $("dialog-bundle").textContent=app.bundle_id;
+ const image=icon(app);const target=$("dialog-icon");target.replaceWith(image);image.id="dialog-icon";
+ const screenshots=$("dialog-screens");screenshots.replaceChildren();
+ if(app.screenshots.length)app.screenshots.forEach(url=>{
+   const img=element("img","");img.src=url;img.alt=app.name+" screenshot";img.loading="lazy";screenshots.append(img);
+ });else screenshots.append(element("p","hint","No screenshots have been provided for this build."));
+ $("dialog-warning").textContent=app.official?
+  "This is a first-party developer preview. The IPA may be unsigned and requires an authorized Apple signing identity and provisioning profile.":
+  "This publisher is not verified. The source metadata and IPA are not security-reviewed. Never share P12 certificates or passwords with untrusted sources.";
+ const get=$("dialog-download");
+ get.href=app.download;get.onclick=()=>{
+   state.downloaded[app.id]={version:app.version,when:Date.now()};
+   localStorage.setItem(HISTORY,JSON.stringify(state.downloaded));render();
+ };
+ const rel=$("dialog-release");rel.hidden=!app.release;if(app.release)rel.href=app.release;
+ $("dialog").hidden=false;
+ $("close-dialog").focus();
+}
+function render() {
+ const section=state.section;
+ $("title").textContent=titles[section][0];
+ $("subtitle").textContent=titles[section][1];
+ document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.section===section));
+ const filter=$("search").value.toLowerCase().trim();
+ let apps=state.apps.filter(a=>!filter||[a.name,a.description,a.category,a.developer,a.source_name].join(" ").toLowerCase().includes(filter));
+ if(section==="apps")apps=apps.filter(a=>a.category!=="Games");
+ if(section==="games")apps=apps.filter(a=>a.category==="Games");
+ if(section==="library"||section==="updates")apps=apps.filter(a=>state.downloaded[a.id]);
+ $("count").textContent=section==="sources"?state.sources.length+" sources":apps.length+" apps";
+ const content=$("content");content.replaceChildren();
+ const hero=$("featured");hero.hidden=!(section==="discover"&&!filter&&apps.length);
+ if(!hero.hidden){
+  const first=apps.find(a=>a.official&&a.category!=="Games")||apps[0];
+  $("featured-name").textContent=first.name;
+  $("featured-summary").textContent=first.description;
+  const im=$("featured-icon");im.hidden=!first.icon;if(first.icon)im.src=first.icon;
+  $("featured-action").onclick=()=>showDetails(first);
+ }
+ if(section==="sources"){renderSources(content);return;}
+ if(!apps.length){
+  const text=section==="updates"||section==="library"?
+    "No downloaded apps tracked in this browser yet. Download a first-party app to see it here.":
+    "No apps match your filters. Check the Sources tab or try another search.";
+  content.append(element("p","empty",text));return;
+ }
+ if(section==="discover"){
+  const verified=apps.filter(a=>a.official);
+  const community=apps.filter(a=>!a.official);
+  content.append(heading("ItamarOS Official","Apps, tools and games"),grid(verified));
+  if(community.length)content.append(heading("Community Sources","Unverified"),grid(community));
+ }else {
+  content.append(heading(section==="apps"?"Everyday Apps":section==="games"?"Games":section==="library"?"Downloaded Apps":"Check Releases",
+    section==="updates"?"Current versions listed by publishers; this page cannot detect installed iOS apps.":"Explore the collection"),grid(apps));
+ }
+}
+loadSources();
+document.querySelectorAll(".tab").forEach(button=>button.addEventListener("click",()=>{
+ state.section=button.dataset.section;render();
+}));
+$("search").addEventListener("input",render);
+$("close-dialog").addEventListener("click",()=>{$("dialog").hidden=true;});
+$("dialog").addEventListener("click",event=>{if(event.target===$("dialog"))$("dialog").hidden=true;});
+document.addEventListener("keydown",event=>{if(event.key==="Escape")$("dialog").hidden=true;});
+reload();
+})();
+</script>
+</body>
+</html>
